@@ -1,86 +1,151 @@
 import type { BriefContext } from './context'
 
-export const SYSTEM_PROMPT = `You are Locus — a calm, perceptive life operating system. Your role is to generate a daily brief: a concise AI insight and a short list of prioritized actions tailored to the user's energy level, active goals, and recent habits.
+export const SYSTEM_PROMPT = `You are Locus — a calm, perceptive AI life operating system. You generate a daily brief that feels like a trusted advisor who has studied the user's goals, habits, energy patterns, and state of mind — and gives them exactly what they need to navigate the day well.
 
-Tone guidelines:
-- Warm but direct. Never cheesy or over-motivational.
-- Serif-quality prose — thoughtful, specific, not generic.
-- Acknowledge reality (low energy, blockers) without dwelling on it.
-- Surface one sharp observation that connects the user's data to their day ahead.
+TONE
+- Warm, direct, never motivational-poster generic.
+- Serif-quality prose. Specific, not vague. Reference real goals and habits by name.
+- Acknowledge difficulty (low energy, blockers, stalled progress) without dwelling on it.
+- When momentum is strong, name it clearly — it matters psychologically.
 
-Response format: You MUST respond with a single valid JSON object. No markdown, no explanation, no preamble. The JSON must follow this exact schema:
+INTELLIGENCE RULES
+1. ENERGY-FIRST: Everything is calibrated to today's energy. Low energy (≤4) → protect focus, suggest shorter high-value tasks. High energy (≥7) → push on the most ambitious goal. Moderate (5-6) → balanced mix.
+2. GOAL MOMENTUM: A goal at 80% is not the same as one at 20%. A goal with 3 days left is urgent. A goal stalled for weeks needs a nudge. Notice these patterns and name them.
+3. HABIT SIGNALS: A 7+ day streak is momentum worth protecting. A broken streak is worth acknowledging. Habits not done yet today should appear in priorities when energy allows.
+4. BLOCKER ROUTING: Each blocker maps to an action type. "Unclear priorities" → clarify/plan task. "Low energy" → protect time, reduce friction. "Waiting on others" → async work or habit-focused day. "Too many meetings" → identify one deep work window.
+5. MOOD CONTEXT: Read the mood note for signals — anxiety, excitement, distraction, confidence. Let it color the insight_text but don't quote it back verbatim.
+6. PATTERN RECOGNITION: If energy has been declining for 3+ days, mention recovery. If habits have been consistently high, name the streak. If a goal deadline is close with low progress, flag it.
+
+OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
 {
-  "insight_text": "<1-3 sentence observation about the user's current trajectory, today's energy, and what matters most right now>",
+  "insight_text": "<2-4 sentences. Must reference specific goals, habits, or energy patterns by name. Should feel like it was written knowing this exact person today — not a generic observation.>",
   "priorities": [
     {
-      "title": "<specific action, max 12 words>",
-      "category": "<one of: work | health | personal | learning>",
-      "estimated_time": "<e.g. 30 min | 1 hr | 15 min>",
-      "time_of_day": "<one of: morning | afternoon | evening | flexible>",
-      "reasoning": "<one sentence connecting this to their goals or energy>"
+      "title": "<specific, actionable task — max 12 words>",
+      "category": "<work | health | personal | learning>",
+      "estimated_time": "<e.g. 25 min | 1 hr | 15 min>",
+      "time_of_day": "<morning | afternoon | evening | flexible>",
+      "reasoning": "<one sentence: why this, why now, connected to a specific goal or habit>"
     }
   ],
-  "energy_score": <number 1-10, your assessment of their likely productive energy today>
+  "energy_score": <number 1-10, your read of today's productive capacity>
 }
 
-Produce 3 priorities. Order them by impact and energy fit. If energy is low (≤4), lean toward shorter, high-leverage tasks. If energy is high (≥7), include at least one ambitious goal-advancing action.`
+Produce exactly 3 priorities. Order: highest-impact first. At least one must advance an active goal. At least one must connect to a habit (done or not yet done today).`
 
 export function buildUserMessage(ctx: BriefContext): string {
   const lines: string[] = []
+  const today = ctx.date
 
-  lines.push(`Date: ${ctx.date}`)
-  lines.push('')
+  lines.push(`DATE: ${today}`)
+  lines.push('─'.repeat(40))
 
-  // Today's check-in
+  // ── TODAY'S CHECK-IN ──
   if (ctx.todayCheckin) {
+    const e = ctx.todayCheckin.energy_level
+    const energyLabel = e >= 9 ? 'Exceptional' : e >= 7 ? 'High' : e >= 5 ? 'Moderate' : e >= 3 ? 'Low' : 'Depleted'
     lines.push(`TODAY'S CHECK-IN`)
-    lines.push(`Energy: ${ctx.todayCheckin.energy_level}/10`)
+    lines.push(`Energy: ${e}/10 (${energyLabel})`)
     if (ctx.todayCheckin.mood_note) {
-      lines.push(`Mood note: "${ctx.todayCheckin.mood_note}"`)
+      lines.push(`Mood: "${ctx.todayCheckin.mood_note}"`)
     }
-    if (ctx.todayCheckin.blockers.length > 0) {
-      lines.push(`Blockers: ${ctx.todayCheckin.blockers.join(', ')}`)
+    const realBlockers = ctx.todayCheckin.blockers.filter(b => b !== 'No blockers today')
+    if (realBlockers.length > 0) {
+      lines.push(`Blockers: ${realBlockers.join(' · ')}`)
+    } else {
+      lines.push(`Blockers: None`)
     }
   } else {
-    lines.push(`TODAY'S CHECK-IN: Not completed yet`)
+    lines.push(`TODAY'S CHECK-IN: Not completed`)
     if (ctx.avgEnergy !== null) {
-      lines.push(`7-day avg energy: ${ctx.avgEnergy}/10`)
+      lines.push(`Recent avg energy: ${ctx.avgEnergy}/10`)
     }
   }
   lines.push('')
 
-  // Recent energy trend
-  if (ctx.recentCheckins.length > 1) {
-    const trend = ctx.recentCheckins.slice(0, 5).map(c => `${c.date}: ${c.energy_level}`).join(', ')
-    lines.push(`RECENT ENERGY TREND (last ${Math.min(ctx.recentCheckins.length, 5)} days): ${trend}`)
+  // ── ENERGY TREND ──
+  if (ctx.recentCheckins.length >= 3) {
+    const recent = ctx.recentCheckins.slice(0, 7)
+    const vals = recent.map(c => c.energy_level)
+    const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+    const trend = vals[0] > vals[vals.length - 1] ? '↓ declining' : vals[0] < vals[vals.length - 1] ? '↑ rising' : '→ stable'
+    lines.push(`ENERGY TREND (${recent.length} days): avg ${avg}/10, ${trend}`)
+    lines.push(`Daily readings: ${recent.map(c => `${c.date.slice(5)}: ${c.energy_level}`).join(' | ')}`)
     lines.push('')
   }
 
-  // Active goals
+  // ── ACTIVE GOALS ──
   if (ctx.goals.length > 0) {
     lines.push(`ACTIVE GOALS (${ctx.goals.length})`)
+
     ctx.goals.forEach(g => {
-      lines.push(`- [${g.category.toUpperCase()} · ${g.timeframe}] "${g.title}"`)
-      lines.push(`  Progress: ${g.progress_pct}%`)
+      const urgency = getGoalUrgency(g.target_date, g.progress_pct)
+      lines.push(`• [${g.category.toUpperCase()}] "${g.title}"`)
+      lines.push(`  Progress: ${g.progress_pct}% ${getProgressBar(g.progress_pct)} ${urgency}`)
       if (g.next_action) lines.push(`  Next action: ${g.next_action}`)
-      if (g.target_date) lines.push(`  Target date: ${g.target_date}`)
+      if (g.target_date) {
+        const daysLeft = Math.ceil((new Date(g.target_date).getTime() - Date.now()) / 86400000)
+        lines.push(`  Deadline: ${g.target_date} (${daysLeft > 0 ? `${daysLeft} days left` : daysLeft === 0 ? 'DUE TODAY' : `${Math.abs(daysLeft)} days overdue`})`)
+      }
+      lines.push(`  Timeframe: ${g.timeframe}`)
     })
   } else {
     lines.push(`ACTIVE GOALS: None set yet`)
   }
   lines.push('')
 
-  // Habit performance
+  // ── HABITS ──
   if (ctx.habits.length > 0) {
-    lines.push(`HABITS THIS WEEK (${ctx.weekHabitRate}% completion rate)`)
+    const todayLogged = ctx.habits.filter(h => h.logs.some(l => l.logged_date === today))
+    const todayPending = ctx.habits.filter(h => !h.logs.some(l => l.logged_date === today))
+
+    lines.push(`HABITS — Today: ${todayLogged.length}/${ctx.habits.length} done · Week rate: ${ctx.weekHabitRate}%`)
+    lines.push('')
+
+    if (todayLogged.length > 0) {
+      lines.push(`  ✓ Done today: ${todayLogged.map(h => `${h.emoji} ${h.name}`).join(', ')}`)
+    }
+    if (todayPending.length > 0) {
+      lines.push(`  ○ Still pending: ${todayPending.map(h => `${h.emoji} ${h.name}`).join(', ')}`)
+    }
+    lines.push('')
+
+    lines.push(`  Streaks & momentum:`)
     ctx.habits.forEach(h => {
-      const status = h.weekCompletions >= h.target_count ? '✓ on track' : `${h.weekCompletions}/${h.target_count}`
-      lines.push(`- ${h.emoji} ${h.name} [${h.frequency}]: ${status}, streak: ${h.streak} days`)
+      const streakTag = h.streak >= 14 ? '🔥 strong streak' : h.streak >= 7 ? '⚡ building' : h.streak >= 3 ? '↑ going' : h.streak === 0 ? '○ not started' : `${h.streak}d`
+      const weekStatus = h.weekCompletions >= h.target_count ? '✓ on track' : `${h.weekCompletions}/${h.target_count} this week`
+      lines.push(`  ${h.emoji} ${h.name} [${h.frequency}]: streak ${h.streak} days (${streakTag}) · ${weekStatus}`)
     })
   } else {
     lines.push(`HABITS: None set yet`)
   }
+  lines.push('')
+
+  // ── RECENT MOOD PATTERNS ──
+  const notesWithMood = ctx.recentCheckins.filter(c => c.mood_note && c.mood_note.trim().length > 0).slice(0, 3)
+  if (notesWithMood.length > 0) {
+    lines.push(`RECENT MOOD NOTES`)
+    notesWithMood.forEach(c => {
+      lines.push(`  ${c.date}: "${c.mood_note}"`)
+    })
+    lines.push('')
+  }
 
   return lines.join('\n')
+}
+
+function getGoalUrgency(targetDate: string | null, progress: number): string {
+  if (!targetDate) return ''
+  const daysLeft = Math.ceil((new Date(targetDate).getTime() - Date.now()) / 86400000)
+  if (daysLeft <= 0) return '⚠️ OVERDUE'
+  if (daysLeft <= 7 && progress < 80) return '🔴 URGENT'
+  if (daysLeft <= 14 && progress < 50) return '🟡 AT RISK'
+  if (progress >= 80) return '🟢 NEAR FINISH'
+  return ''
+}
+
+function getProgressBar(pct: number): string {
+  const filled = Math.round(pct / 10)
+  return '[' + '█'.repeat(filled) + '░'.repeat(10 - filled) + ']'
 }
