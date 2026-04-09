@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getActiveGoals } from '@/lib/db/goals'
+import { getRecentJournals } from '@/lib/db/journals'
 import { getAnthropicClient } from '@/lib/ai/client'
 import { readUserMemory } from '@/lib/ai/memory'
 import { updateMemoryInsights } from '@/lib/memory/update-insights'
@@ -47,11 +48,12 @@ export async function POST() {
 
   const today = new Date()
 
-  const [checkins, habits, goals, memory] = await Promise.all([
+  const [checkins, habits, goals, memory, journals] = await Promise.all([
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
     readUserMemory(user.id),
+    getRecentJournals(user.id, 7),
   ])
 
   const avgEnergy = checkins.length
@@ -75,6 +77,7 @@ export async function POST() {
     totalHabitTarget: totalTarget,
     habitRate,
     memory,
+    journals,
   }
 
   const userMessage = buildWeeklyUserMessage(ctx)

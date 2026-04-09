@@ -2,7 +2,8 @@ import { getActiveGoals } from '@/lib/db/goals'
 import { getTodayCheckin, getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { readUserMemory, type UserMemory } from '@/lib/ai/memory'
-import type { Goal, CheckIn, HabitWithLogs } from '@/lib/types'
+import { getTodayJournal, getRecentJournals } from '@/lib/db/journals'
+import type { Goal, CheckIn, HabitWithLogs, JournalEntry } from '@/lib/types'
 
 export type BriefContext = {
   date: string
@@ -13,15 +14,19 @@ export type BriefContext = {
   avgEnergy: number | null
   weekHabitRate: number // 0-100
   memory: UserMemory | null
+  todayJournal: JournalEntry | null
+  recentJournals: JournalEntry[]
 }
 
 export async function buildBriefContext(userId: string, date: string): Promise<BriefContext> {
-  const [goals, todayCheckin, recentCheckins, habits, memory] = await Promise.all([
+  const [goals, todayCheckin, recentCheckins, habits, memory, todayJournal, recentJournals] = await Promise.all([
     getActiveGoals(userId),
     getTodayCheckin(userId),
     getRecentCheckins(userId, 7),
     getUserHabitsWithLogs(userId),
     readUserMemory(userId),
+    getTodayJournal(userId),
+    getRecentJournals(userId, 7),
   ])
 
   const avgEnergy = recentCheckins.length
@@ -43,5 +48,7 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     avgEnergy,
     weekHabitRate,
     memory,
+    todayJournal,
+    recentJournals,
   }
 }

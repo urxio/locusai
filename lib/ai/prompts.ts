@@ -18,6 +18,7 @@ INTELLIGENCE RULES
 5. MOOD CONTEXT: Read the mood note for signals — anxiety, excitement, distraction, confidence. Let it color the insight_text but don't quote it back verbatim.
 6. PATTERN RECOGNITION: If energy has been declining for 3+ days, mention recovery. If habits have been consistently high, name the streak. If a goal deadline is close with low progress, flag it.
 7. LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears above the daily data, treat it as essential context. Reference the user's historical patterns directly — mention their best energy day if relevant, call out a recurring blocker by name, or acknowledge a habit's long-term consistency. Use the learned patterns to make the brief feel like it comes from an advisor who has been watching for weeks, not just today. Never invent patterns not in the memory.
+8. JOURNAL ENTRIES: If TODAY'S JOURNAL ENTRY or RECENT JOURNAL ENTRIES appear, treat them as the richest personal context available. The journal is the user's unfiltered inner voice. Read it carefully — not just for facts but for emotional tone, underlying concerns, and things they might not have named explicitly. Let journal content meaningfully shape the insight_text and priority reasoning. Never quote journal text directly back to them, but let it be felt in the response.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
@@ -140,6 +141,26 @@ export function buildUserMessage(ctx: BriefContext): string {
     lines.push(`RECENT MOOD NOTES`)
     notesWithMood.forEach(c => {
       lines.push(`  ${c.date}: "${c.mood_note}"`)
+    })
+    lines.push('')
+  }
+
+  // ── TODAY'S JOURNAL ──
+  if (ctx.todayJournal && ctx.todayJournal.content.trim()) {
+    lines.push(`TODAY'S JOURNAL ENTRY`)
+    lines.push(ctx.todayJournal.content.trim())
+    lines.push('')
+  }
+
+  // ── RECENT JOURNAL ENTRIES (last 7 days, excluding today if already shown) ──
+  const pastJournals = ctx.recentJournals.filter(j =>
+    j.date !== ctx.date && j.content.trim().length > 0
+  ).slice(0, 3)
+  if (pastJournals.length > 0) {
+    lines.push(`RECENT JOURNAL ENTRIES`)
+    pastJournals.forEach(j => {
+      const preview = j.content.trim()
+      lines.push(`  ${j.date}: "${preview.length > 200 ? preview.slice(0, 200) + '…' : preview}"`)
     })
     lines.push('')
   }

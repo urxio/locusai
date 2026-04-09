@@ -1,4 +1,4 @@
-import type { CheckIn, HabitWithLogs, Goal } from '@/lib/types'
+import type { CheckIn, HabitWithLogs, Goal, JournalEntry } from '@/lib/types'
 import { type UserMemory, formatMemoryForPrompt } from '@/lib/ai/memory'
 
 export type WeeklyContext = {
@@ -14,6 +14,7 @@ export type WeeklyContext = {
   totalHabitTarget: number
   habitRate: number
   memory: UserMemory | null
+  journals: JournalEntry[]
 }
 
 export const WEEKLY_SYSTEM_PROMPT = `You are Locus — an AI companion and life operating system generating a user's weekly reflection. This is not a performance review. It's a weekly conversation with someone who genuinely knows them — who has been watching their energy, habits, and goals all week and wants to help them understand themselves better, not just optimize harder.
@@ -54,7 +55,8 @@ Rules:
 - "what_to_adjust" must have 3-5 items. Be concrete — not "be more productive" but "protect morning hours for deep work".
 - paragraphs must total 3 exactly.
 - Each paragraph must stand alone and add something new.
-- LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears in the user message, use it to contextualize this week against the user's historical baseline. Did this week outperform their average? Are their recurring blockers reappearing? Are habits improving or regressing against their 30-day rate? Reference learned patterns explicitly when relevant.`
+- LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears in the user message, use it to contextualize this week against the user's historical baseline. Did this week outperform their average? Are their recurring blockers reappearing? Are habits improving or regressing against their 30-day rate? Reference learned patterns explicitly when relevant.
+- JOURNAL ENTRIES: If JOURNAL ENTRIES THIS WEEK appears, treat them as the most direct window into the user's inner experience. They reveal what the numbers don't — emotional texture, context behind the energy dips, what they were genuinely wrestling with. Let journal themes meaningfully shape the weekly reflection paragraphs. Do not quote journal text directly, but let the emotional content inform the tone and insights you offer.`
 
 export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
   const lines: string[] = []
@@ -131,6 +133,22 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
 
   // Days checked in
   lines.push(`CHECK-IN DAYS: ${ctx.checkins.length}/7`)
+  lines.push('')
+
+  // Journal entries this week
+  const journalsWithContent = ctx.journals.filter(j => j.content.trim().length > 0)
+  if (journalsWithContent.length > 0) {
+    lines.push(`JOURNAL ENTRIES THIS WEEK (${journalsWithContent.length})`)
+    journalsWithContent.forEach(j => {
+      const wordCount = j.content.trim().split(/\s+/).filter(Boolean).length
+      const preview   = j.content.trim()
+      lines.push(`  ${j.date} (${wordCount} words):`)
+      lines.push(`  "${preview.length > 300 ? preview.slice(0, 300) + '…' : preview}"`)
+    })
+    lines.push('')
+  } else {
+    lines.push(`JOURNAL ENTRIES: None this week`)
+  }
 
   return lines.join('\n')
 }

@@ -90,8 +90,10 @@ export async function updateMemoryStats(userId: string): Promise<void> {
       .slice(0, 6)
       .map(([b]) => b)
 
-    /* ── MOOD THEMES ── */
+    /* ── MOOD THEMES (from mood notes + journal entries) ── */
     const wordFreq: Record<string, number> = {}
+
+    // Extract from check-in mood notes
     checkins.forEach(c => {
       if (!c.mood_note) return
       c.mood_note
@@ -101,10 +103,28 @@ export async function updateMemoryStats(userId: string): Promise<void> {
         .filter((w: string) => w.length > 4 && !STOP_WORDS.has(w))
         .forEach((w: string) => { wordFreq[w] = (wordFreq[w] ?? 0) + 1 })
     })
+
+    // Also extract from journal entries (weighted ×2 — richer signal)
+    const { data: journals } = await supabase
+      .from('journal_entries')
+      .select('content')
+      .eq('user_id', userId)
+      .gte('date', since.toISOString().split('T')[0])
+      .gt('content', '')
+
+    ;(journals ?? []).forEach((j: { content: string }) => {
+      j.content
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '')
+        .split(/\s+/)
+        .filter((w: string) => w.length > 4 && !STOP_WORDS.has(w))
+        .forEach((w: string) => { wordFreq[w] = (wordFreq[w] ?? 0) + 2 })
+    })
+
     const moodThemes = Object.entries(wordFreq)
       .filter(([, n]) => n >= 2)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
+      .slice(0, 10)
       .map(([word]) => word)
 
     /* ── HABIT RATES (last 30 days) ── */
