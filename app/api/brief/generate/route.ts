@@ -47,8 +47,7 @@ export async function POST(request: NextRequest) {
   try {
     const response = await client.messages.create({
       model: 'claude-opus-4-6',
-      max_tokens: 1024,
-      thinking: { type: 'adaptive' },
+      max_tokens: 8000,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     })
@@ -62,9 +61,14 @@ export async function POST(request: NextRequest) {
         break
       }
     }
-  } catch (err) {
-    console.error('Claude API call failed:', err)
-    return NextResponse.json({ error: 'AI generation failed' }, { status: 502 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('Claude API call failed:', message)
+    // Surface the real error in development
+    return NextResponse.json(
+      { error: 'AI generation failed', detail: message },
+      { status: 502 }
+    )
   }
 
   // 5. Parse response
