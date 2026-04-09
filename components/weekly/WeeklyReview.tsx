@@ -8,6 +8,7 @@ type Props = {
   checkins: CheckIn[]
   habits: HabitWithLogs[]
   goals: Goal[]
+  initialReflection: WeeklyReflection | null
 }
 
 function getWeekNumber(d: Date) {
@@ -43,23 +44,30 @@ function HighlightedText({ text }: { text: string }) {
   )
 }
 
-export default function WeeklyReview({ checkins, habits, goals }: Props) {
+export default function WeeklyReview({ checkins, habits, goals, initialReflection }: Props) {
   const today = new Date()
   const weekNumber = getWeekNumber(today)
   const weekRange  = getWeekRange(today)
   const cacheKey   = `locus-weekly-${today.getFullYear()}-w${weekNumber}`
 
-  const [reflection, setReflection] = useState<WeeklyReflection | null>(null)
+  // initialReflection from DB takes priority; fall back to localStorage
+  const [reflection, setReflection] = useState<WeeklyReflection | null>(initialReflection ?? null)
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
 
-  // Load from localStorage on mount
+  // Sync localStorage with DB value on mount (also catches stale local cache)
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(cacheKey)
-      if (cached) setReflection(JSON.parse(cached))
-    } catch {}
-  }, [cacheKey])
+    if (initialReflection) {
+      // DB is authoritative — write to localStorage so it's available offline
+      try { localStorage.setItem(cacheKey, JSON.stringify(initialReflection)) } catch {}
+    } else {
+      // Nothing in DB — try localStorage as fallback (older entries)
+      try {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) setReflection(JSON.parse(cached))
+      } catch {}
+    }
+  }, [cacheKey, initialReflection])
 
   const generate = async (force = false) => {
     if (generating) return

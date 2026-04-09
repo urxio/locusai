@@ -239,17 +239,22 @@ body::before {
     display: none;
   }
 
-  .app-main {
-    padding-bottom: 0;
-  }
-
   .bottom-nav {
     display: flex;
   }
 
+  /*
+   * Safari scroll fix: padding-bottom on the SCROLL CONTAINER itself
+   * is far more reliable than on child elements. Safari's overflow:auto
+   * containers sometimes ignore children's bottom padding.
+   * nav height (60px) + safe area + breathing room.
+   */
+  .app-main {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
+  }
+
   .page-pad {
-    /* 60px nav + safe area + 20px breathing room */
-    padding: 20px 16px calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
+    padding: 20px 16px 8px;
   }
 
   .stats-grid-3 {
@@ -280,15 +285,15 @@ body::before {
     max-width: 100%;
   }
 
-  /* Touch-friendly tap targets */
-  button, a[role="button"] {
+  /* Touch-friendly tap targets — excludes icon buttons */
+  button:not(.icon-btn), a[role="button"] {
     min-height: 44px;
   }
 }
 
 @media (max-width: 480px) {
   .page-pad {
-    padding: 16px 14px calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
+    padding: 16px 14px 8px;
   }
 
   .stats-grid-3 {

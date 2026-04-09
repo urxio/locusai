@@ -401,6 +401,7 @@ function GoalCard({ goal, stepsMap, generatingFor, expanded, onToggleExpand, onE
         {/* Steps toggle button */}
         <button
           onClick={() => onToggleExpand(goal.id)}
+          className="icon-btn"
           style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '12px', fontWeight: 600, padding: '0', letterSpacing: '0.04em', textTransform: 'uppercase' }}
         >
           <svg width="12" height="12" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
@@ -460,6 +461,7 @@ function GoalCard({ goal, stepsMap, generatingFor, expanded, onToggleExpand, onE
                 <button
                   onClick={() => onRegenerate(goal.id)}
                   title="Regenerate steps with AI"
+                  className="icon-btn"
                   style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '11px', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', letterSpacing: '0.04em' }}
                 >
                   ✦ Re-generate
@@ -512,6 +514,7 @@ function StepRow({ step, onToggle, onUpdate, onDelete }: {
       {/* Checkbox */}
       <button
         onClick={() => onToggle(!step.completed)}
+        className="icon-btn"
         style={{ width: '18px', height: '18px', borderRadius: '50%', border: `2px solid ${step.completed ? 'var(--sage)' : 'var(--border-bright)'}`, background: step.completed ? 'var(--sage)' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', padding: 0 }}
       >
         {step.completed && (
@@ -555,16 +558,17 @@ function StepRow({ step, onToggle, onUpdate, onDelete }: {
           <button
             onClick={() => setEditDate(true)}
             title="Edit due date"
+            className="icon-btn"
             style={{ fontSize: '11px', color: isOverdue ? '#e07060' : step.completed ? 'var(--text-3)' : daysLeft !== null && daysLeft <= 3 ? '#e0a060' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', fontFamily: 'inherit' }}
           >
             {isOverdue ? '⚠ ' : ''}{formattedDate}
           </button>
         ) : hovered ? (
-          <button onClick={() => setEditDate(true)} style={{ fontSize: '10px', color: 'var(--text-3)', background: 'none', border: '1px dashed var(--border-md)', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px', fontFamily: 'inherit' }}>+ date</button>
+          <button onClick={() => setEditDate(true)} className="icon-btn" style={{ fontSize: '10px', color: 'var(--text-3)', background: 'none', border: '1px dashed var(--border-md)', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px', fontFamily: 'inherit' }}>+ date</button>
         ) : null}
 
         {hovered && !editing && (
-          <button onClick={onDelete} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 2px', borderRadius: '4px' }} title="Remove step">×</button>
+          <button onClick={onDelete} className="icon-btn" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 2px', borderRadius: '4px' }} title="Remove step">×</button>
         )}
       </div>
     </div>
