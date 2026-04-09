@@ -8,8 +8,9 @@ const NAV = [
   {
     section: 'Today',
     items: [
-      { href: '/brief', label: 'Daily Brief', badge: null, icon: <BriefIcon /> },
-      { href: '/checkin', label: 'Check-in', badge: null, icon: <CheckinIcon /> },
+      { href: '/brief',   label: 'Daily Brief', badge: null, icon: <BriefIcon /> },
+      { href: '/checkin', label: 'Check-in',    badge: null, icon: <CheckinIcon /> },
+      { href: '/habits',  label: 'Habits',      badge: null, icon: <HabitsIcon /> },
     ]
   },
   {
@@ -105,6 +106,9 @@ export default function Sidebar({ userName, avatarUrl }: { userName: string; ava
   )
 }
 
+function HabitsIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18"><circle cx="10" cy="10" r="7"/><path d="M7 10l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
 function BriefIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18"><path d="M3 10h14M3 5h8M3 15h10" strokeLinecap="round"/></svg>
 }
