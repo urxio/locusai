@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Goal } from '@/lib/types'
+import type { Goal, GoalStep, GoalWithSteps } from '@/lib/types'
 
 export async function getActiveGoals(userId: string): Promise<Goal[]> {
   const supabase = await createClient()
@@ -22,6 +22,20 @@ export async function getAllGoals(userId: string): Promise<Goal[]> {
     .order('created_at', { ascending: true })
   if (error) { console.error('getAllGoals:', error); return [] }
   return data ?? []
+}
+
+export async function getAllGoalsWithSteps(userId: string): Promise<GoalWithSteps[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*, goal_steps(*)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  if (error) { console.error('getAllGoalsWithSteps:', error); return [] }
+  return (data ?? []).map(g => ({
+    ...g,
+    steps: ((g.goal_steps ?? []) as GoalStep[]).sort((a, b) => a.position - b.position),
+  }))
 }
 
 export async function createGoal(userId: string, goal: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Goal | null> {

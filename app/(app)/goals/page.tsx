@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAllGoals } from '@/lib/db/goals'
+import { getAllGoalsWithSteps } from '@/lib/db/goals'
 import GoalsList from '@/components/goals/GoalsList'
 
 export const dynamic = 'force-dynamic'
@@ -9,6 +9,6 @@ export default async function GoalsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const goals = await getAllGoals(user.id)
+  const goals = await getAllGoalsWithSteps(user.id)
   return <GoalsList goals={goals} />
 }

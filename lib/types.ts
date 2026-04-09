@@ -89,3 +89,19 @@ export type HabitWithLogs = Habit & {
   streak: number
   weekCompletions: number
 }
+
+export type GoalStep = {
+  id: string
+  goal_id: string
+  user_id: string
+  title: string
+  due_date: string | null
+  completed: boolean
+  completed_at: string | null
+  position: number
+  created_at: string
+}
+
+export type GoalWithSteps = Goal & {
+  steps: GoalStep[]
+}
