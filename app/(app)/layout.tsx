@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
+import BottomNav from '@/components/layout/BottomNav'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -19,14 +20,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div className="app-shell">
       <Sidebar
         userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
         avatarUrl={profile?.avatar_url ?? null}
       />
-      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: 'var(--bg-0)' }}>
+      <main className="app-main">
         {children}
       </main>
+      <BottomNav />
     </div>
   )
 }

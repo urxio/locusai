@@ -101,7 +101,7 @@ export default function WeeklyReview({ checkins, habits, goals }: Props) {
   const habitRate   = totalTarget > 0 ? Math.round((totalDone / totalTarget) * 100) : 0
 
   return (
-    <div style={{ padding: '36px 40px 60px', maxWidth: '900px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+    <div className="page-pad" style={{ maxWidth: '900px', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
@@ -121,7 +121,7 @@ export default function WeeklyReview({ checkins, habits, goals }: Props) {
         <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600, marginBottom: '18px' }}>
           Energy this week {avgEnergy ? `· avg ${avgEnergy}/10` : ''}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+        <div className="energy-week-grid">
           {weekDays.map(day => {
             const pct = day.energy ? (day.energy / maxEnergy) * 100 : 0
             const color = day.energy
@@ -212,7 +212,7 @@ export default function WeeklyReview({ checkins, habits, goals }: Props) {
           </div>
 
           {/* What worked / What to adjust */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="two-col">
             <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '18px 20px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '14px' }}>
                 What Worked

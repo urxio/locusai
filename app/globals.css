@@ -114,3 +114,224 @@ body::before {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 4px; }
 * { scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; }
+
+/* ── LAYOUT SHELL ─────────────────────────── */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s var(--ease);
+}
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-0);
+}
+
+/* ── RESPONSIVE LAYOUT HELPERS ────────────── */
+.page-pad {
+  padding: 36px 40px 60px;
+}
+
+.stats-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.energy-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── BOTTOM NAV (mobile only) ─────────────── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 4px;
+  text-decoration: none;
+  color: var(--text-3);
+  transition: color 0.15s;
+  border-radius: var(--radius-sm);
+}
+
+.bottom-nav-item.active {
+  color: var(--gold);
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* ── MODAL MOBILE ─────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.modal-box {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* ── MOBILE BREAKPOINT ────────────────────── */
+@media (max-width: 768px) {
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-main {
+    padding-bottom: 0;
+  }
+
+  .bottom-nav {
+    display: flex;
+  }
+
+  .page-pad {
+    padding: 20px 16px 84px;
+  }
+
+  .stats-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .energy-week-grid {
+    grid-template-columns: repeat(7, minmax(36px, 1fr));
+    overflow-x: auto;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-box {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+  }
+
+  /* Touch-friendly tap targets */
+  button, a[role="button"] {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-pad {
+    padding: 16px 14px 84px;
+  }
+
+  .stats-grid-3 {
+    gap: 6px;
+  }
+
+  /* Tighter serif headings on very small phones */
+  .serif-hero {
+    font-size: 26px !important;
+  }
+}
+
+/* ── MOBILE HEADER SAFE AREA ──────────────── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .app-main {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .bottom-nav {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── INPUT FOCUS RING ─────────────────────── */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(212, 168, 83, 0.3);
+}
+
+/* ── RANGE INPUT THUMB (cross-browser) ───── */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}

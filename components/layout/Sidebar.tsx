@@ -36,12 +36,7 @@ export default function Sidebar({ userName, avatarUrl }: { userName: string; ava
   const initial = userName.charAt(0).toUpperCase()
 
   return (
-    <aside style={{
-      width: 'var(--sidebar-w)', flexShrink: 0,
-      background: 'var(--bg-1)', borderRight: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      position: 'relative'
-    }}>
+    <aside className="app-sidebar">
       {/* Fade bottom */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, var(--bg-1), transparent)', pointerEvents: 'none', zIndex: 1 }} />
 

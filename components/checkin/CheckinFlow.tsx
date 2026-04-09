@@ -37,7 +37,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
   const energyColor = energy >= 7 ? 'var(--sage)' : energy >= 5 ? 'var(--gold)' : '#c08060'
 
   return (
-    <div style={{ padding: '36px 40px 60px', maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+    <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
       <div style={{ marginBottom: '32px' }}>
         <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85 }}>
           {isRedo ? 'Updating Check-in' : 'Daily Check-in'}
@@ -140,7 +140,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
               </div>
 
               {/* Today's summary */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              <div className="stats-grid-3">
                 <SummaryTile label="Energy" value={`${energy}/10`} sub={energyLabel} color={energyColor} />
                 <SummaryTile label="Mood note" value={moodNote ? '✓ logged' : '—'} sub={moodNote ? moodNote.slice(0, 24) + (moodNote.length > 24 ? '…' : '') : 'skipped'} />
                 <SummaryTile label="Blockers" value={`${blockers.filter(b => b !== 'No blockers today').length}`} sub={blockers.length === 0 || blockers.includes('No blockers today') ? 'none today' : blockers[0]} />

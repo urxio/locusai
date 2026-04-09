@@ -74,7 +74,7 @@ export default function GoalsList({ goals: initial }: { goals: Goal[] }) {
 
   return (
     <>
-      <div style={{ padding: '36px 40px 60px', maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+      <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', gap: '16px' }}>
@@ -337,9 +337,10 @@ function GoalModal({ mode, goal, onClose, onSaved }: {
   return (
     <div
       onClick={onBackdrop}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', animation: 'fadeUp 0.15s var(--ease) both' }}
+      className="modal-overlay"
+      style={{ backdropFilter: 'blur(4px)', animation: 'fadeUp 0.15s var(--ease) both' }}
     >
-      <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '32px', width: '100%', maxWidth: '500px', boxShadow: '0 8px 60px rgba(0,0,0,0.5)', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-box" style={{ padding: '32px', boxShadow: '0 8px 60px rgba(0,0,0,0.5)' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'var(--text-0)' }}>

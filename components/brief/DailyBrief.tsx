@@ -65,7 +65,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   }
 
   return (
-    <div style={{ padding: '36px 40px 60px', maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+    <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85 }}>
@@ -134,7 +134,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       ) : null}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+      <div className="stats-grid-3">
         <StatCard value={`${goals.filter(g => g.status === 'active').length}`} label="Active goals" delta={null} />
         <StatCard value={`${Math.round(goals.filter(g => g.status === 'active').reduce((s, g) => s + g.progress_pct, 0) / (goals.length || 1))}%`} label="Avg progress" delta={null} />
         <StatCard value={`${completedHabits}/${habits.length}`} label="Habits this week" delta={null} />
