@@ -25,6 +25,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${cormorant.variable} ${plusJakarta.variable} h-full`}>
+      <head>
+        {/* Prevent flash: set theme before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var t = localStorage.getItem('locus-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+          } catch(e) {}
+        `}} />
+      </head>
       <body className="h-full">{children}</body>
     </html>
   )

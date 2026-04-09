@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import ThemeToggle from './ThemeToggle'
 
 const NAV = [
   {
@@ -85,7 +86,7 @@ export default function Sidebar({ userName, avatarUrl }: { userName: string; ava
         ))}
       </nav>
 
-      {/* User */}
+      {/* User + Theme toggle */}
       <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, position: 'relative', zIndex: 2 }}>
         {avatarUrl ? (
           <img src={avatarUrl} alt={userName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
@@ -98,6 +99,7 @@ export default function Sidebar({ userName, avatarUrl }: { userName: string; ava
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-0)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
           <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '1px' }}>🔥 Keep the streak</div>
         </div>
+        <ThemeToggle />
       </div>
     </aside>
   )
