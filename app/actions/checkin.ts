@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { markBriefStale } from '@/lib/db/briefs'
+import { updateMemoryStats } from '@/lib/memory/update-stats'
 import { revalidatePath } from 'next/cache'
 
 type CheckinInput = {
@@ -35,6 +36,9 @@ export async function submitCheckin(input: CheckinInput) {
 
   // Mark today's brief as stale so it regenerates with new check-in data
   await markBriefStale(user.id)
+
+  // Update memory stats in background (non-blocking, non-fatal)
+  await updateMemoryStats(user.id)
 
   revalidatePath('/brief')
   revalidatePath('/checkin')

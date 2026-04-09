@@ -4,6 +4,8 @@ import { getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getActiveGoals } from '@/lib/db/goals'
 import { getAnthropicClient } from '@/lib/ai/client'
+import { readUserMemory } from '@/lib/ai/memory'
+import { updateMemoryInsights } from '@/lib/memory/update-insights'
 import {
   WEEKLY_SYSTEM_PROMPT,
   buildWeeklyUserMessage,
@@ -45,10 +47,11 @@ export async function POST() {
 
   const today = new Date()
 
-  const [checkins, habits, goals] = await Promise.all([
+  const [checkins, habits, goals, memory] = await Promise.all([
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
+    readUserMemory(user.id),
   ])
 
   const avgEnergy = checkins.length
@@ -71,6 +74,7 @@ export async function POST() {
     totalHabitCompletions: totalDone,
     totalHabitTarget: totalTarget,
     habitRate,
+    memory,
   }
 
   const userMessage = buildWeeklyUserMessage(ctx)
@@ -86,6 +90,9 @@ export async function POST() {
 
     const rawText = response.content.find(b => b.type === 'text')?.text ?? ''
     const reflection = parseWeeklyResponse(rawText)
+
+    // Fire-and-forget: update AI insights from accumulated data (throttled to once per 6 days)
+    updateMemoryInsights(user.id).catch(err => console.error('[weekly] insight update failed:', err))
 
     return NextResponse.json({
       reflection,
