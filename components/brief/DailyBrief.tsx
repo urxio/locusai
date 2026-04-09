@@ -24,16 +24,16 @@ const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
 export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration }: Props) {
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
-  const [genError, setGenError] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
 
   const handleBriefReady = useCallback((b: Brief) => {
     setBrief(b)
     setGenerating(false)
   }, [])
 
-  const handleGenError = useCallback(() => {
+  const handleGenError = useCallback((detail: string) => {
     setGenerating(false)
-    setGenError(true)
+    setGenError(detail)
   }, [])
 
   const energy = checkin?.energy_level ?? avgEnergy ?? 7
@@ -47,18 +47,18 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
 
   const handleRegenerate = async () => {
     setGenerating(true)
-    setGenError(false)
+    setGenError(null)
     try {
       const res = await fetch('/api/brief/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ force: true }),
       })
-      if (!res.ok) throw new Error('Generation failed')
-      const { brief: newBrief } = await res.json()
-      setBrief(newBrief)
-    } catch {
-      setGenError(true)
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json?.detail ?? json?.error ?? `HTTP ${res.status}`)
+      setBrief(json.brief)
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setGenerating(false)
     }
@@ -85,7 +85,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
           <BriefLoader onBriefReady={handleBriefReady} onError={handleGenError} />
         </div>
       ) : genError ? (
-        <ErrorCard onRetry={handleRegenerate} />
+        <ErrorCard message={genError} onRetry={handleRegenerate} />
       ) : brief ? (
         <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} />
       ) : (
@@ -184,11 +184,14 @@ function NoBriefCard({ hasCheckin }: { hasCheckin: boolean }) {
   )
 }
 
-function ErrorCard({ onRetry }: { onRetry: () => void }) {
+function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ background: 'var(--bg-1)', border: '1px solid rgba(200,80,80,0.2)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', marginBottom: '20px', textAlign: 'center' }}>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-1)', lineHeight: 1.6, marginBottom: '16px' }}>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-1)', lineHeight: 1.6, marginBottom: '10px' }}>
         Brief generation encountered an issue.
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-3)', fontFamily: 'monospace', background: 'var(--bg-3)', borderRadius: '6px', padding: '8px 12px', marginBottom: '16px', wordBreak: 'break-all' }}>
+        {message}
       </div>
       <button
         onClick={onRetry}

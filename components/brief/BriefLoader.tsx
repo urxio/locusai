@@ -1,19 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import type { Brief } from '@/lib/types'
 
 type Props = {
   onBriefReady: (brief: Brief) => void
-  onError: () => void
+  onError: (detail: string) => void
 }
 
 export default function BriefLoader({ onBriefReady, onError }: Props) {
   const [dots, setDots] = useState('.')
-  const router = useRouter()
 
-  // Animate dots
   useEffect(() => {
     const id = setInterval(() => {
       setDots(d => (d.length >= 3 ? '.' : d + '.'))
@@ -21,7 +18,6 @@ export default function BriefLoader({ onBriefReady, onError }: Props) {
     return () => clearInterval(id)
   }, [])
 
-  // Trigger generation
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -32,11 +28,15 @@ export default function BriefLoader({ onBriefReady, onError }: Props) {
           body: JSON.stringify({ force: false }),
         })
         if (cancelled) return
-        if (!res.ok) { onError(); return }
-        const { brief } = await res.json()
-        if (!cancelled) onBriefReady(brief)
-      } catch {
-        if (!cancelled) onError()
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          const detail = json?.detail ?? json?.error ?? `HTTP ${res.status}`
+          onError(detail)
+          return
+        }
+        if (!cancelled) onBriefReady(json.brief)
+      } catch (err) {
+        if (!cancelled) onError(err instanceof Error ? err.message : 'Network error')
       }
     })()
     return () => { cancelled = true }

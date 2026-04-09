@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 8000,
+      model: 'claude-haiku-4-5',
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     })
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   // 6. Store in DB
   const stored = await storeBrief(user.id, {
     brief_date: today,
-    model_used: 'claude-opus-4-6',
+    model_used: 'claude-haiku-4-5',
     raw_prompt: userMessage,
     priorities: parsed.priorities,
     insight_text: parsed.insight_text,
