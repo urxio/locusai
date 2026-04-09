@@ -171,16 +171,18 @@ body::before {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  z-index: 1000;
   background: var(--bg-1);
   border-top: 1px solid var(--border);
-  z-index: 200;
-  align-items: center;
-  justify-content: space-around;
-  padding: 0 8px;
+  /* Force stable GPU compositing layer — prevents jitter */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  /* Items always 60px tall; safe area is pure extra padding below */
+  padding-top: 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  align-items: stretch;
+  justify-content: space-around;
 }
 
 .bottom-nav-item {
@@ -188,14 +190,14 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
-  min-height: 44px;
-  padding: 6px 4px;
+  height: 60px;
+  padding: 8px 4px;
   text-decoration: none;
   color: var(--text-3);
   transition: color 0.15s;
-  border-radius: var(--radius-sm);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .bottom-nav-item.active {
@@ -246,7 +248,8 @@ body::before {
   }
 
   .page-pad {
-    padding: 20px 16px 84px;
+    /* 60px nav + safe area + 20px breathing room */
+    padding: 20px 16px calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
   }
 
   .stats-grid-3 {
@@ -285,7 +288,7 @@ body::before {
 
 @media (max-width: 480px) {
   .page-pad {
-    padding: 16px 14px 84px;
+    padding: 16px 14px calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
   }
 
   .stats-grid-3 {
@@ -302,10 +305,6 @@ body::before {
 @supports (padding-top: env(safe-area-inset-top)) {
   .app-main {
     padding-top: env(safe-area-inset-top, 0px);
-  }
-  .bottom-nav {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
-    height: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }
 
