@@ -26,14 +26,16 @@ export async function proxy(request: NextRequest) {
 
   const publicPaths = ['/login', '/signup', '/auth/callback']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
+  // Onboarding is authenticated-only but not a "public" auth page
+  const isOnboarding = pathname.startsWith('/onboarding')
 
   // Redirect unauthenticated users to login
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && isPublic) {
+  // Redirect authenticated users away from auth pages (but not onboarding)
+  if (user && isPublic && !isOnboarding) {
     return NextResponse.redirect(new URL('/brief', request.url))
   }
 

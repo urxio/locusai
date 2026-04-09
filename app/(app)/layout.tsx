@@ -9,9 +9,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('users')
-    .select('name, avatar_url')
+    .select('name, avatar_url, onboarded_at')
     .eq('id', user.id)
     .single()
+
+  // New users haven't onboarded yet — send them to setup
+  if (profile && !profile.onboarded_at) {
+    redirect('/onboarding')
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>

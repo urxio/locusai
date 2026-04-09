@@ -17,6 +17,12 @@ const NAV = [
       { href: '/goals', label: 'Goals', badge: null, icon: <GoalsIcon /> },
       { href: '/review', label: 'Weekly Review', badge: null, icon: <ReviewIcon /> },
     ]
+  },
+  {
+    section: 'Settings',
+    items: [
+      { href: '/onboarding?redo=true', label: 'Redo Setup', badge: null, icon: <SetupIcon /> },
+    ]
   }
 ]
 
@@ -108,4 +114,7 @@ function GoalsIcon() {
 }
 function ReviewIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 4V2M13 4V2M3 8h14" strokeLinecap="round"/></svg>
+}
+function SetupIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18"><circle cx="10" cy="10" r="3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41" strokeLinecap="round"/></svg>
 }
