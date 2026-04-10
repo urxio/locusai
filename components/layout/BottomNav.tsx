@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
-  { href: '/brief',   label: 'Brief',   icon: <BriefIcon /> },
-  { href: '/checkin', label: 'Check-in', icon: <CheckinIcon /> },
-  { href: '/habits',  label: 'Habits',  icon: <HabitsIcon /> },
-  { href: '/goals',   label: 'Goals',   icon: <GoalsIcon /> },
-  { href: '/review',  label: 'Review',  icon: <ReviewIcon /> },
+  { href: '/brief',    label: 'Brief',    icon: <BriefIcon /> },
+  { href: '/checkin',  label: 'Check-in', icon: <CheckinIcon /> },
+  { href: '/habits',   label: 'Habits',   icon: <HabitsIcon /> },
+  { href: '/goals',    label: 'Goals',    icon: <GoalsIcon /> },
+  { href: '/patterns', label: 'Patterns', icon: <PatternsIcon /> },
 ]
 
 export default function BottomNav() {
@@ -74,6 +74,16 @@ function ReviewIcon() {
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20">
       <rect x="3" y="4" width="14" height="13" rx="2" />
       <path d="M7 4V2M13 4V2M3 8h14" strokeLinecap="round" />
+    </svg>
+  )
+}
+function PatternsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20">
+      <path d="M3 14l4-5 3 3 3-4 4 5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7" cy="9" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   )
 }

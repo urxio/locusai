@@ -24,6 +24,9 @@ export type UserMemory = {
   checkin_count: number
   last_stats_update: string
   last_insights_update: string | null
+  // Patterns page cache
+  pattern_narratives?: string[]
+  pattern_generated_at?: string | null
 }
 
 /* ── READ ────────────────────────────────────────────── */
