@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { HabitWithLogs, GoalWithSteps, WeeklyPlanBlock } from '@/lib/types'
 import {
   addPlanBlock,
@@ -656,8 +656,34 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
         </div>
       </div>
 
-      {/* Spin keyframe */}
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      {/* Keyframes */}
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes tooltipIn { from { opacity:0; transform:translateY(3px) } to { opacity:1; transform:translateY(0) } }
+      `}</style>
+    </div>
+  )
+}
+
+/* ── Tooltip ── */
+function Tooltip({ text }: { text: string }) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+      background: 'var(--bg-0)', border: '1px solid var(--border-md)',
+      borderRadius: '6px', padding: '5px 9px', fontSize: '11px', color: 'var(--text-0)',
+      whiteSpace: 'nowrap', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.35)', zIndex: 100, pointerEvents: 'none',
+      animation: 'tooltipIn 0.12s ease both',
+    }}>
+      {text}
+      {/* Arrow */}
+      <div style={{
+        position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+        width: 0, height: 0,
+        borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+        borderTop: '5px solid var(--border-md)',
+      }} />
     </div>
   )
 }
@@ -666,6 +692,11 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 
 function HabitBlock({ habit, onRemove }: { habit: HabitWithLogs; onRemove: () => void }) {
   const [hovered, setHovered] = useState(false)
+  const textRef = useRef<HTMLSpanElement>(null)
+  const isTruncated = hovered && textRef.current
+    ? textRef.current.scrollWidth > textRef.current.clientWidth
+    : false
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -684,8 +715,9 @@ function HabitBlock({ habit, onRemove }: { habit: HabitWithLogs; onRemove: () =>
         position: 'relative',
       }}
     >
+      {isTruncated && <Tooltip text={`${habit.emoji} ${habit.name}`} />}
       <span style={{ fontSize: '12px' }}>{habit.emoji}</span>
-      <span style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+      <span ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
       {hovered && (
         <span style={{ fontSize: '13px', color: 'var(--text-2)', flexShrink: 0, lineHeight: 1 }}>×</span>
       )}
@@ -705,7 +737,11 @@ function PlanBlock({
   onDismiss: () => void
 }) {
   const [hovered, setHovered] = useState(false)
+  const textRef = useRef<HTMLDivElement>(null)
   const isGhost = !block.accepted
+  const isTruncated = hovered && textRef.current
+    ? textRef.current.scrollWidth > textRef.current.clientWidth
+    : false
 
   const bgColor = block.type === 'goal'
     ? 'rgba(212,168,83,0.15)'
@@ -729,7 +765,8 @@ function PlanBlock({
         position: 'relative',
       }}
     >
-      <div style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: isGhost ? '40px' : '16px' }}>
+      {isTruncated && <Tooltip text={block.title} />}
+      <div ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: isGhost ? '40px' : '16px' }}>
         {block.title}
       </div>
 
