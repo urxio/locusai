@@ -6,9 +6,9 @@ import type { HabitWithLogs, Habit } from '@/lib/types'
 import {
   logHabitAction, unlogHabitAction,
   createHabitAction, updateHabitAction, deleteHabitAction,
-  deriveFrequencyMeta,
   type HabitFormData,
 } from '@/app/actions/habits'
+import { deriveFrequencyMeta } from '@/lib/habits/utils'
 import HabitCalendar from './HabitCalendar'
 
 /* ── CONSTANTS ── */

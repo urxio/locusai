@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getUserLocalDate } from '@/lib/db/users'
 import type { UserMemory, SelfProfile } from '@/lib/ai/memory'
-import { deriveFrequencyMeta } from '@/app/actions/habits'
+import { deriveFrequencyMeta } from '@/lib/habits/utils'
 
 export type GoalInput = {
   title: string
