@@ -666,15 +666,22 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 }
 
 /* ── Tooltip ── */
-function Tooltip({ text }: { text: string }) {
+function Tooltip({ text, anchorRect }: { text: string; anchorRect: DOMRect }) {
+  // Use position:fixed so it escapes overflow:auto cells and is never clipped
+  const top  = anchorRect.top - 8
+  const left = anchorRect.left + anchorRect.width / 2
   return (
     <div style={{
-      position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+      position: 'fixed',
+      top,
+      left,
+      transform: 'translate(-50%, -100%)',
       background: 'var(--bg-0)', border: '1px solid var(--border-md)',
-      borderRadius: '6px', padding: '5px 9px', fontSize: '11px', color: 'var(--text-0)',
-      whiteSpace: 'nowrap', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.35)', zIndex: 100, pointerEvents: 'none',
-      animation: 'tooltipIn 0.12s ease both',
+      borderRadius: '6px', padding: '5px 10px', fontSize: '11px', color: 'var(--text-0)',
+      whiteSpace: 'pre-wrap', maxWidth: '260px', wordBreak: 'break-word',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.4)', zIndex: 9999, pointerEvents: 'none',
+      animation: 'tooltipIn 0.1s ease both',
+      lineHeight: 1.4,
     }}>
       {text}
       {/* Arrow */}
@@ -692,15 +699,24 @@ function Tooltip({ text }: { text: string }) {
 
 function HabitBlock({ habit, onRemove }: { habit: HabitWithLogs; onRemove: () => void }) {
   const [hovered, setHovered] = useState(false)
+  const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null)
   const textRef = useRef<HTMLSpanElement>(null)
-  const isTruncated = hovered && textRef.current
-    ? textRef.current.scrollWidth > textRef.current.clientWidth
-    : false
+
+  function handleMouseEnter() {
+    setHovered(true)
+    if (textRef.current && textRef.current.scrollWidth > textRef.current.clientWidth) {
+      setTooltipRect(textRef.current.getBoundingClientRect())
+    }
+  }
+  function handleMouseLeave() {
+    setHovered(false)
+    setTooltipRect(null)
+  }
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onClick={e => { e.stopPropagation(); if (hovered) onRemove() }}
       style={{
         padding: '4px 6px',
@@ -715,7 +731,7 @@ function HabitBlock({ habit, onRemove }: { habit: HabitWithLogs; onRemove: () =>
         position: 'relative',
       }}
     >
-      {isTruncated && <Tooltip text={`${habit.emoji} ${habit.name}`} />}
+      {tooltipRect && <Tooltip text={`${habit.emoji} ${habit.name}`} anchorRect={tooltipRect} />}
       <span style={{ fontSize: '12px' }}>{habit.emoji}</span>
       <span ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
       {hovered && (
@@ -737,11 +753,20 @@ function PlanBlock({
   onDismiss: () => void
 }) {
   const [hovered, setHovered] = useState(false)
+  const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null)
   const textRef = useRef<HTMLDivElement>(null)
   const isGhost = !block.accepted
-  const isTruncated = hovered && textRef.current
-    ? textRef.current.scrollWidth > textRef.current.clientWidth
-    : false
+
+  function handleMouseEnter() {
+    setHovered(true)
+    if (textRef.current && textRef.current.scrollWidth > textRef.current.clientWidth) {
+      setTooltipRect(textRef.current.getBoundingClientRect())
+    }
+  }
+  function handleMouseLeave() {
+    setHovered(false)
+    setTooltipRect(null)
+  }
 
   const bgColor = block.type === 'goal'
     ? 'rgba(212,168,83,0.15)'
@@ -752,8 +777,8 @@ function PlanBlock({
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onClick={e => e.stopPropagation()}
       style={{
         padding: '4px 6px',
@@ -765,7 +790,7 @@ function PlanBlock({
         position: 'relative',
       }}
     >
-      {isTruncated && <Tooltip text={block.title} />}
+      {tooltipRect && <Tooltip text={block.title} anchorRect={tooltipRect} />}
       <div ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: isGhost ? '40px' : '16px' }}>
         {block.title}
       </div>
