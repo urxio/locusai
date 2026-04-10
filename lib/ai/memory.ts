@@ -102,7 +102,7 @@ export function formatSelfProfileForPrompt(memory: UserMemory | null): string {
     single: 'Single', in_relationship: 'In a relationship',
     married: 'Married', other: 'Other',
   }
-  if (p.relationship_status && p.relationship_status !== 'prefer_not_to_say' && p.relationship_status !== '') {
+  if (p.relationship_status && p.relationship_status !== 'prefer_not_to_say') {
     lines.push(`Relationship: ${relLabel[p.relationship_status] ?? p.relationship_status}`)
   }
   if (p.has_kids === true)  lines.push('Kids: Yes')
