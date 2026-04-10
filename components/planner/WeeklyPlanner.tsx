@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { HabitWithLogs, GoalWithSteps, WeeklyPlanBlock } from '@/lib/types'
 import {
   addPlanBlock,
@@ -667,10 +668,10 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 
 /* ── Tooltip ── */
 function Tooltip({ text, anchorRect }: { text: string; anchorRect: DOMRect }) {
-  // Use position:fixed so it escapes overflow:auto cells and is never clipped
+  // Render into document.body via portal — fully escapes any overflow/transform ancestor
   const top  = anchorRect.top - 8
   const left = anchorRect.left + anchorRect.width / 2
-  return (
+  const node = (
     <div style={{
       position: 'fixed',
       top,
@@ -693,6 +694,7 @@ function Tooltip({ text, anchorRect }: { text: string; anchorRect: DOMRect }) {
       }} />
     </div>
   )
+  return typeof document !== 'undefined' ? createPortal(node, document.body) : null
 }
 
 /* ── Sub-components ── */
