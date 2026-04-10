@@ -25,6 +25,7 @@ INTELLIGENCE RULES
 12. ABOUT THIS PERSON: If an ABOUT THIS PERSON section appears, treat it as foundational identity context — who this person is, not just what they do. Their occupation shapes what "work priorities" mean. Their relationship status and kids signal time constraints and emotional priorities. Their personality type informs tone — an introvert with too many meetings needs different support than an extrovert craving more collaboration. Their life context is their own words about where they are right now — use it to make the brief feel grounded in their actual life.
 13. CLARIFIED CONTEXT: If a CLARIFIED CONTEXT section appears, treat those Q&A pairs as direct, first-person answers the user chose to share. They are high-signal, intentional context. Weave them naturally into your insight and reasoning — they should make the brief feel more specific and personally relevant.
 14. CLARIFYING QUESTIONS: After reading all context, if there is a genuine gap that — if filled — would meaningfully change your advice, include up to 2 short clarifying questions in the response. These will be surfaced to the user below their brief as a "Help me understand you better" prompt. Only include questions when the gap is real and the answer would unlock better personalization. Never ask about things already covered in the context. Never force questions — 0 is fine if context is rich. Questions must be conversational and specific — reference something real from today's data, never generic. Max 1 sentence each.
+15. FIRST BRIEF: If a ── FIRST BRIEF ── block appears, this is day one — the user has just completed onboarding. Do NOT reference absent history, streaks, trends, or patterns (there are none yet). Instead: warmly introduce yourself as Locus, briefly acknowledge what you already know about them from onboarding (their goals, habits they chose, their profile), and tell them what you'll learn to personalize over time (energy rhythms, blocker patterns, what drives their best days). Make it feel like a meaningful beginning, not a data-empty fallback. The priorities should still be real and grounded in their goals and habits from onboarding. Emit 0 clarifying questions on a first brief — give them space to start.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
@@ -83,6 +84,22 @@ export function buildUserMessage(ctx: BriefContext): string {
     lines.push('')
   }
 
+  // ── FIRST BRIEF SIGNAL ──
+  if (ctx.isFirstBrief) {
+    lines.push('── FIRST BRIEF ──')
+    lines.push('This is the very first brief for this user. They just completed onboarding.')
+    lines.push('There is no historical data yet — no streaks, no trends, no patterns learned.')
+    lines.push('')
+    if (ctx.goalsWithSteps.length > 0) {
+      lines.push(`Goals they set during onboarding: ${ctx.goalsWithSteps.map(g => `"${g.title}"`).join(', ')}`)
+    }
+    if (ctx.habits.length > 0) {
+      lines.push(`Habits they chose: ${ctx.habits.map(h => `${h.emoji} ${h.name}`).join(', ')}`)
+    }
+    lines.push('── END FIRST BRIEF SIGNAL ──')
+    lines.push('')
+  }
+
   lines.push(`DATE: ${today}`)
   lines.push('─'.repeat(40))
 
@@ -110,7 +127,7 @@ export function buildUserMessage(ctx: BriefContext): string {
   lines.push('')
 
   // ── ENERGY TREND ──
-  if (ctx.recentCheckins.length >= 3) {
+  if (!ctx.isFirstBrief && ctx.recentCheckins.length >= 3) {
     const recent = ctx.recentCheckins.slice(0, 7)
     const vals = recent.map(c => c.energy_level)
     const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
@@ -193,8 +210,8 @@ export function buildUserMessage(ctx: BriefContext): string {
       lines.push(`  ${h.emoji} ${h.name} [${h.frequency}]: streak ${h.streak} days (${streakTag}) · ${weekStatus}`)
     })
 
-    // ── NEGLECTED HABITS ──
-    if (ctx.neglectedHabits.length > 0) {
+    // ── NEGLECTED HABITS ── (suppress on first brief — user just started)
+    if (ctx.neglectedHabits.length > 0 && !ctx.isFirstBrief) {
       lines.push('')
       lines.push(`  ⚠️ NEGLECTED THIS WEEK (0 completions — needs a nudge):`)
       ctx.neglectedHabits.forEach(h => {

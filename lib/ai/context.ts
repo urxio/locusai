@@ -23,6 +23,7 @@ export type BriefContext = {
   memory: UserMemory | null
   todayJournal: JournalEntry | null
   recentJournals: JournalEntry[]
+  isFirstBrief: boolean
 }
 
 export async function buildBriefContext(userId: string, date: string): Promise<BriefContext> {
@@ -51,6 +52,9 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     .filter(h => h.weekCompletions === 0)
     .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency }))
 
+  // First brief: user has at most 1 check-in (the one from onboarding)
+  const isFirstBrief = recentCheckins.length <= 1
+
   return {
     date,
     goalsWithSteps,
@@ -63,5 +67,6 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     memory,
     todayJournal,
     recentJournals,
+    isFirstBrief,
   }
 }
