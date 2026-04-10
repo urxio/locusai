@@ -5,6 +5,7 @@ import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import BriefLoader from './BriefLoader'
 import MemoryCard from './MemoryCard'
+import BriefHistory from './BriefHistory'
 
 type Props = {
   goals: Goal[]
@@ -14,6 +15,7 @@ type Props = {
   brief?: Brief | null
   needsGeneration?: boolean | null
   memory?: UserMemory | null
+  pastBriefs?: Brief[]
 }
 
 const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
@@ -24,7 +26,7 @@ const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
   learning: { tag: 'rgba(100,130,180,0.12)', border: '#6090c8' },
 }
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration, memory }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration, memory, pastBriefs = [] }: Props) {
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
   const [genError, setGenError] = useState<string | null>(null)
@@ -147,6 +149,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <StatCard value={`${Math.round(goals.filter(g => g.status === 'active').reduce((s, g) => s + g.progress_pct, 0) / (goals.length || 1))}%`} label="Avg progress" delta={null} />
         <StatCard value={`${completedHabits}/${habits.length}`} label="Habits this week" delta={null} />
       </div>
+
+      {/* Brief history */}
+      <BriefHistory briefs={pastBriefs} />
     </div>
   )
 }

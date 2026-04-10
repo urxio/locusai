@@ -30,6 +30,21 @@ export async function storeBrief(userId: string, brief: Omit<Brief, 'id' | 'user
   return data
 }
 
+export async function getRecentBriefs(userId: string, limit = 14): Promise<Brief[]> {
+  const supabase = await createClient()
+  const today = await getUserLocalDate(userId)
+  const { data, error } = await supabase
+    .from('briefs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('stale', false)
+    .lt('brief_date', today)           // exclude today
+    .order('brief_date', { ascending: false })
+    .limit(limit)
+  if (error) { console.error('getRecentBriefs:', error); return [] }
+  return data ?? []
+}
+
 export async function markBriefStale(userId: string): Promise<void> {
   const supabase = await createClient()
   const today = await getUserLocalDate(userId)
