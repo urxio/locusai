@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { href: '/checkin',  label: 'Check-in', icon: <CheckinIcon /> },
   { href: '/habits',   label: 'Habits',   icon: <HabitsIcon /> },
   { href: '/goals',    label: 'Goals',    icon: <GoalsIcon /> },
-  { href: '/patterns', label: 'Patterns', icon: <PatternsIcon /> },
+  { href: '/review',   label: 'Review',   icon: <ReviewIcon /> },
 ]
 
 export default function BottomNav() {
