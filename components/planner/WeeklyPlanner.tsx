@@ -535,9 +535,9 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 
             {/* Slot rows */}
             {SLOTS.map(slot => (
-              <div key={slot} style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
+              <div key={slot} style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', gap: '2px', marginBottom: '2px', alignItems: 'stretch' }}>
                 {/* Slot label */}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '8px 6px 8px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', padding: '10px 6px 8px 0', height: '140px', boxSizing: 'border-box' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{SLOT_LABELS[slot]}</span>
                 </div>
 
@@ -562,7 +562,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
                       key={col}
                       onClick={() => handleCellClick(col, slot)}
                       style={{
-                        minHeight: '80px',
+                        height: '140px',
                         padding: '6px',
                         border: `1px solid ${isDropTarget ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`,
                         borderRadius: '6px',
@@ -573,6 +573,8 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '4px',
+                        overflowY: 'auto',
+                        boxSizing: 'border-box',
                       }}
                       onMouseEnter={e => {
                         if (isDropTarget) {
