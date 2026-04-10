@@ -108,7 +108,7 @@ export function formatSelfProfileForPrompt(memory: UserMemory | null): string {
   if (p.has_kids === true)  lines.push('Kids: Yes')
   if (p.has_kids === false) lines.push('Kids: No')
 
-  if (p.work_arrangement && p.work_arrangement !== '' && p.work_arrangement !== 'other') {
+  if (p.work_arrangement && p.work_arrangement !== 'other') {
     const wLabel: Record<string, string> = { remote: 'Remote', office: 'Office', hybrid: 'Hybrid' }
     lines.push(`Work setup: ${wLabel[p.work_arrangement] ?? p.work_arrangement}`)
   }
