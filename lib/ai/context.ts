@@ -1,16 +1,23 @@
-import { getActiveGoals } from '@/lib/db/goals'
+import { getActiveGoalsWithSteps } from '@/lib/db/goals'
 import { getTodayCheckin, getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { readUserMemory, type UserMemory } from '@/lib/ai/memory'
 import { getTodayJournal, getRecentJournals } from '@/lib/db/journals'
-import type { Goal, CheckIn, HabitWithLogs, JournalEntry } from '@/lib/types'
+import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry } from '@/lib/types'
+
+export type NeglectedHabit = {
+  name: string
+  emoji: string
+  frequency: string
+}
 
 export type BriefContext = {
   date: string
-  goals: Goal[]
+  goalsWithSteps: GoalWithSteps[]
   todayCheckin: CheckIn | null
   recentCheckins: CheckIn[]
   habits: HabitWithLogs[]
+  neglectedHabits: NeglectedHabit[]  // habits with 0 completions this week
   avgEnergy: number | null
   weekHabitRate: number // 0-100
   memory: UserMemory | null
@@ -19,8 +26,8 @@ export type BriefContext = {
 }
 
 export async function buildBriefContext(userId: string, date: string): Promise<BriefContext> {
-  const [goals, todayCheckin, recentCheckins, habits, memory, todayJournal, recentJournals] = await Promise.all([
-    getActiveGoals(userId),
+  const [goalsWithSteps, todayCheckin, recentCheckins, habits, memory, todayJournal, recentJournals] = await Promise.all([
+    getActiveGoalsWithSteps(userId),
     getTodayCheckin(userId),
     getRecentCheckins(userId, 7),
     getUserHabitsWithLogs(userId),
@@ -39,12 +46,18 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     ? Math.round((totalActualCompletions / totalPossibleCompletions) * 100)
     : 0
 
+  // Habits with zero completions this week — consistently ignored
+  const neglectedHabits: NeglectedHabit[] = habits
+    .filter(h => h.weekCompletions === 0)
+    .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency }))
+
   return {
     date,
-    goals,
+    goalsWithSteps,
     todayCheckin,
     recentCheckins,
     habits,
+    neglectedHabits,
     avgEnergy,
     weekHabitRate,
     memory,

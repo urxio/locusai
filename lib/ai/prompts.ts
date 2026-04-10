@@ -13,12 +13,14 @@ TONE
 INTELLIGENCE RULES
 1. ENERGY-FIRST: Everything is calibrated to today's energy. Low energy (≤4) → protect focus, suggest shorter high-value tasks. High energy (≥7) → push on the most ambitious goal. Moderate (5-6) → balanced mix.
 2. GOAL MOMENTUM: A goal at 80% is not the same as one at 20%. A goal with 3 days left is urgent. A goal stalled for weeks needs a nudge. Notice these patterns and name them.
-3. HABIT SIGNALS: A 7+ day streak is momentum worth protecting. A broken streak is worth acknowledging. Habits not done yet today should appear in priorities when energy allows.
-4. BLOCKER ROUTING: Each blocker maps to an action type. "Unclear priorities" → clarify/plan task. "Low energy" → protect time, reduce friction. "Waiting on others" → async work or habit-focused day. "Too many meetings" → identify one deep work window.
-5. MOOD CONTEXT: Read the mood note for signals — anxiety, excitement, distraction, confidence. Let it color the insight_text but don't quote it back verbatim.
-6. PATTERN RECOGNITION: If energy has been declining for 3+ days, mention recovery. If habits have been consistently high, name the streak. If a goal deadline is close with low progress, flag it.
-7. LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears above the daily data, treat it as essential context. Reference the user's historical patterns directly — mention their best energy day if relevant, call out a recurring blocker by name, or acknowledge a habit's long-term consistency. Use the learned patterns to make the brief feel like it comes from an advisor who has been watching for weeks, not just today. Never invent patterns not in the memory.
-8. JOURNAL ENTRIES: If TODAY'S JOURNAL ENTRY or RECENT JOURNAL ENTRIES appear, treat them as the richest personal context available. The journal is the user's unfiltered inner voice. Read it carefully — not just for facts but for emotional tone, underlying concerns, and things they might not have named explicitly. Let journal content meaningfully shape the insight_text and priority reasoning. Never quote journal text directly back to them, but let it be felt in the response.
+3. HABIT NUDGE: If a NEGLECTED HABITS section appears, those habits haven't been done all week. Address at least one directly in insight_text — not with shame, but with a specific, low-friction way to restart today. If energy is low, suggest an easier version. If energy is high, suggest doing it now.
+4. GOAL STEP REMINDERS: If a GOAL STEPS section appears, pay close attention. Overdue steps are the most important signal — surface the specific step title in insight_text or as a priority. Upcoming steps due within 3 days must appear as a priority. Steps connect individual actions to the bigger goal — make that connection explicit in the reasoning.
+5. HABIT SIGNALS: A 7+ day streak is momentum worth protecting. A broken streak is worth acknowledging. Habits not done yet today should appear in priorities when energy allows.
+6. BLOCKER ROUTING: Each blocker maps to an action type. "Unclear priorities" → clarify/plan task. "Low energy" → protect time, reduce friction. "Waiting on others" → async work or habit-focused day. "Too many meetings" → identify one deep work window.
+7. MOOD CONTEXT: Read the mood note for signals — anxiety, excitement, distraction, confidence. Let it color the insight_text but don't quote it back verbatim.
+8. PATTERN RECOGNITION: If energy has been declining for 3+ days, mention recovery. If habits have been consistently high, name the streak. If a goal deadline is close with low progress, flag it.
+9. LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears above the daily data, treat it as essential context. Reference the user's historical patterns directly — mention their best energy day if relevant, call out a recurring blocker by name, or acknowledge a habit's long-term consistency. Use the learned patterns to make the brief feel like it comes from an advisor who has been watching for weeks, not just today. Never invent patterns not in the memory.
+10. JOURNAL ENTRIES: If TODAY'S JOURNAL ENTRY or RECENT JOURNAL ENTRIES appear, treat them as the richest personal context available. The journal is the user's unfiltered inner voice. Read it carefully — not just for facts but for emotional tone, underlying concerns, and things they might not have named explicitly. Let journal content meaningfully shape the insight_text and priority reasoning. Never quote journal text directly back to them, but let it be felt in the response.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
@@ -36,11 +38,12 @@ OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fenc
   "energy_score": <number 1-10, your read of today's productive capacity>
 }
 
-Produce exactly 3 priorities. Order: highest-impact first. At least one must advance an active goal. At least one must connect to a habit (done or not yet done today).`
+Produce exactly 3 priorities. Order: highest-impact first. At least one must advance an active goal. At least one must connect to a habit (done or not yet done today). If any goal step is overdue or due within 3 days, at least one priority must address it directly.`
 
 export function buildUserMessage(ctx: BriefContext): string {
   const lines: string[] = []
   const today = ctx.date
+  const now   = Date.now()
 
   // ── LONG-TERM MEMORY (prepended when available) ──
   const memoryBlock = formatMemoryForPrompt(ctx.memory)
@@ -88,20 +91,50 @@ export function buildUserMessage(ctx: BriefContext): string {
     lines.push('')
   }
 
-  // ── ACTIVE GOALS ──
-  if (ctx.goals.length > 0) {
-    lines.push(`ACTIVE GOALS (${ctx.goals.length})`)
+  // ── ACTIVE GOALS + STEPS ──
+  if (ctx.goalsWithSteps.length > 0) {
+    lines.push(`ACTIVE GOALS (${ctx.goalsWithSteps.length})`)
 
-    ctx.goals.forEach(g => {
+    ctx.goalsWithSteps.forEach(g => {
       const urgency = getGoalUrgency(g.target_date, g.progress_pct)
       lines.push(`• [${g.category.toUpperCase()}] "${g.title}"`)
       lines.push(`  Progress: ${g.progress_pct}% ${getProgressBar(g.progress_pct)} ${urgency}`)
       if (g.next_action) lines.push(`  Next action: ${g.next_action}`)
       if (g.target_date) {
-        const daysLeft = Math.ceil((new Date(g.target_date).getTime() - Date.now()) / 86400000)
+        const daysLeft = Math.ceil((new Date(g.target_date).getTime() - now) / 86400000)
         lines.push(`  Deadline: ${g.target_date} (${daysLeft > 0 ? `${daysLeft} days left` : daysLeft === 0 ? 'DUE TODAY' : `${Math.abs(daysLeft)} days overdue`})`)
       }
       lines.push(`  Timeframe: ${g.timeframe}`)
+
+      // Pending steps with due dates
+      const pendingSteps = g.steps.filter(s => !s.completed)
+      if (pendingSteps.length > 0) {
+        const overdueSteps  = pendingSteps.filter(s => s.due_date && new Date(s.due_date).getTime() < now)
+        const upcomingSteps = pendingSteps.filter(s => s.due_date && new Date(s.due_date).getTime() >= now)
+          .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+          .slice(0, 3)
+
+        if (overdueSteps.length > 0) {
+          lines.push(`  ⚠️ OVERDUE STEPS:`)
+          overdueSteps.forEach(s => {
+            const daysOver = Math.ceil((now - new Date(s.due_date!).getTime()) / 86400000)
+            lines.push(`    - "${s.title}" — ${daysOver}d overdue`)
+          })
+        }
+        if (upcomingSteps.length > 0) {
+          lines.push(`  📅 UPCOMING STEPS:`)
+          upcomingSteps.forEach(s => {
+            const daysUntil = Math.ceil((new Date(s.due_date!).getTime() - now) / 86400000)
+            const tag = daysUntil === 0 ? 'DUE TODAY' : daysUntil <= 3 ? `due in ${daysUntil}d ⚡` : `due in ${daysUntil}d`
+            lines.push(`    - "${s.title}" — ${tag}`)
+          })
+        }
+        // Steps without due dates — just show the next one
+        const noDueDateNext = pendingSteps.filter(s => !s.due_date)[0]
+        if (noDueDateNext && overdueSteps.length === 0 && upcomingSteps.length === 0) {
+          lines.push(`  Next step: "${noDueDateNext.title}"`)
+        }
+      }
     })
   } else {
     lines.push(`ACTIVE GOALS: None set yet`)
@@ -130,6 +163,15 @@ export function buildUserMessage(ctx: BriefContext): string {
       const weekStatus = h.weekCompletions >= h.target_count ? '✓ on track' : `${h.weekCompletions}/${h.target_count} this week`
       lines.push(`  ${h.emoji} ${h.name} [${h.frequency}]: streak ${h.streak} days (${streakTag}) · ${weekStatus}`)
     })
+
+    // ── NEGLECTED HABITS ──
+    if (ctx.neglectedHabits.length > 0) {
+      lines.push('')
+      lines.push(`  ⚠️ NEGLECTED THIS WEEK (0 completions — needs a nudge):`)
+      ctx.neglectedHabits.forEach(h => {
+        lines.push(`    ${h.emoji} ${h.name} [${h.frequency}] — not logged once this week`)
+      })
+    }
   } else {
     lines.push(`HABITS: None set yet`)
   }

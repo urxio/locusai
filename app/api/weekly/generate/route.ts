@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
-import { getActiveGoals } from '@/lib/db/goals'
+import { getActiveGoalsWithSteps } from '@/lib/db/goals'
 import { getRecentJournals } from '@/lib/db/journals'
 import { getAnthropicClient } from '@/lib/ai/client'
 import { readUserMemory } from '@/lib/ai/memory'
@@ -49,13 +49,17 @@ export async function POST() {
 
   const today = new Date()
 
-  const [checkins, habits, goals, memory, journals] = await Promise.all([
+  const [checkins, habits, goalsWithSteps, memory, journals] = await Promise.all([
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
-    getActiveGoals(user.id),
+    getActiveGoalsWithSteps(user.id),
     readUserMemory(user.id),
     getRecentJournals(user.id, 7),
   ])
+
+  const neglectedHabits = habits
+    .filter(h => h.weekCompletions === 0)
+    .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency }))
 
   const avgEnergy = checkins.length
     ? Math.round((checkins.reduce((s, c) => s + c.energy_level, 0) / checkins.length) * 10) / 10
@@ -71,7 +75,8 @@ export async function POST() {
     weekRange: getWeekRange(today),
     checkins,
     habits,
-    goals,
+    goalsWithSteps,
+    neglectedHabits,
     avgEnergy,
     energyTrend: getEnergyTrend(checkins),
     totalHabitCompletions: totalDone,

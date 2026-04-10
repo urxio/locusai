@@ -24,6 +24,21 @@ export async function getAllGoals(userId: string): Promise<Goal[]> {
   return data ?? []
 }
 
+export async function getActiveGoalsWithSteps(userId: string): Promise<GoalWithSteps[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*, goal_steps(*)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: true })
+  if (error) { console.error('getActiveGoalsWithSteps:', error); return [] }
+  return (data ?? []).map(g => ({
+    ...g,
+    steps: ((g.goal_steps ?? []) as GoalStep[]).sort((a, b) => a.position - b.position),
+  }))
+}
+
 export async function getAllGoalsWithSteps(userId: string): Promise<GoalWithSteps[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

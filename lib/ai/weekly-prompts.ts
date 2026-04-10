@@ -1,5 +1,6 @@
-import type { CheckIn, HabitWithLogs, Goal, JournalEntry } from '@/lib/types'
+import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry } from '@/lib/types'
 import { type UserMemory, formatMemoryForPrompt } from '@/lib/ai/memory'
+import type { NeglectedHabit } from '@/lib/ai/context'
 
 export type WeeklyContext = {
   weekNumber: number
@@ -7,7 +8,8 @@ export type WeeklyContext = {
   weekRange: string
   checkins: CheckIn[]
   habits: HabitWithLogs[]
-  goals: Goal[]
+  goalsWithSteps: GoalWithSteps[]
+  neglectedHabits: NeglectedHabit[]
   avgEnergy: number | null
   energyTrend: 'rising' | 'declining' | 'stable' | 'mixed'
   totalHabitCompletions: number
@@ -24,6 +26,11 @@ TONE
 - Substantive and specific. Reference actual numbers, habits, and goals by name.
 - Don't sugarcoat a hard week, but always end with care and forward energy.
 - Notice the person, not just the metrics. If energy was low all week, acknowledge what that might mean. If they showed up anyway, honor that.
+
+INTELLIGENCE RULES
+- NEGLECTED HABITS: If a NEGLECTED HABITS section appears, include at least one item in "what_to_adjust" naming the specific habit and suggesting a concrete restart strategy for next week. Don't shame — redirect.
+- OVERDUE GOAL STEPS: If overdue steps appear under a goal, name the specific step in the reflection or "what_to_adjust". These are the highest-priority gaps between intention and action.
+- UPCOMING STEPS: If steps are due soon (within the coming week), surface them in "what_to_adjust" as proactive reminders so the user starts next week prepared.
 
 HIGHLIGHT MARKERS
 Wrap 2-5 key phrases per paragraph in <<double angle brackets>>. These will be rendered as highlighted text. Use highlights for: week labels, specific stats, important patterns, actionable insights.
@@ -60,6 +67,7 @@ Rules:
 
 export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
   const lines: string[] = []
+  const now = Date.now()
 
   // ── LONG-TERM MEMORY (prepended when available) ──
   const memoryBlock = formatMemoryForPrompt(ctx.memory)
@@ -102,23 +110,45 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
     lines.push('')
   }
 
-  // Goals
-  if (ctx.goals.length > 0) {
-    lines.push(`ACTIVE GOALS (${ctx.goals.length})`)
-    ctx.goals.forEach(g => {
+  // ── ACTIVE GOALS + STEPS ──
+  if (ctx.goalsWithSteps.length > 0) {
+    lines.push(`ACTIVE GOALS (${ctx.goalsWithSteps.length})`)
+    ctx.goalsWithSteps.forEach(g => {
       const daysLeft = g.target_date
-        ? Math.ceil((new Date(g.target_date).getTime() - Date.now()) / 86400000)
+        ? Math.ceil((new Date(g.target_date).getTime() - now) / 86400000)
         : null
       const deadline = daysLeft !== null
         ? (daysLeft <= 0 ? ' ⚠️ OVERDUE' : daysLeft <= 7 ? ` 🔴 ${daysLeft}d left` : ` · ${daysLeft}d left`)
         : ''
       lines.push(`  • [${g.category}] "${g.title}" — ${g.progress_pct}%${deadline}`)
       if (g.next_action) lines.push(`    Next: ${g.next_action}`)
+
+      const pendingSteps = g.steps.filter(s => !s.completed)
+      const overdueSteps  = pendingSteps.filter(s => s.due_date && new Date(s.due_date).getTime() < now)
+      const upcomingSteps = pendingSteps
+        .filter(s => s.due_date && new Date(s.due_date).getTime() >= now)
+        .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+        .slice(0, 3)
+
+      if (overdueSteps.length > 0) {
+        lines.push(`    ⚠️ Overdue steps:`)
+        overdueSteps.forEach(s => {
+          const daysOver = Math.ceil((now - new Date(s.due_date!).getTime()) / 86400000)
+          lines.push(`      - "${s.title}" — ${daysOver}d overdue`)
+        })
+      }
+      if (upcomingSteps.length > 0) {
+        lines.push(`    📅 Upcoming steps (next week):`)
+        upcomingSteps.forEach(s => {
+          const daysUntil = Math.ceil((new Date(s.due_date!).getTime() - now) / 86400000)
+          lines.push(`      - "${s.title}" — due in ${daysUntil}d`)
+        })
+      }
     })
     lines.push('')
   }
 
-  // Habits
+  // ── HABITS ──
   if (ctx.habits.length > 0) {
     lines.push(`HABITS — ${ctx.totalHabitCompletions}/${ctx.totalHabitTarget} completions this week (${ctx.habitRate}%)`)
     ctx.habits.forEach(h => {
@@ -128,6 +158,15 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
       const streakTag = h.streak >= 14 ? '🔥 strong momentum' : h.streak >= 7 ? '⚡ building' : h.streak > 0 ? `${h.streak}d streak` : 'streak broken'
       lines.push(`  ${h.emoji} ${h.name}: ${h.weekCompletions}/${h.target_count} (${rate}%) · ${streakTag}`)
     })
+
+    // ── NEGLECTED HABITS ──
+    if (ctx.neglectedHabits.length > 0) {
+      lines.push('')
+      lines.push(`  ⚠️ NEGLECTED HABITS (0 completions all week):`)
+      ctx.neglectedHabits.forEach(h => {
+        lines.push(`    ${h.emoji} ${h.name} [${h.frequency}]`)
+      })
+    }
     lines.push('')
   }
 
