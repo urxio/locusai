@@ -94,6 +94,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
   const [customText, setCustomText] = useState('')
   const [suggesting, setSuggesting] = useState(false)
   const [suggestionSummary, setSuggestionSummary] = useState('')
+  const [suggestError, setSuggestError] = useState('')
   const [localHabits, setLocalHabits] = useState<HabitWithLogs[]>(habits)
   const [pendingCells, setPendingCells] = useState<Set<string>>(new Set())
 
@@ -238,29 +239,45 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
   async function handleAISuggest() {
     setSuggesting(true)
     setSuggestionSummary('')
+    setSuggestError('')
     try {
       const res = await fetch('/api/planner/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weekStart }),
       })
-      if (!res.ok) throw new Error(`suggest failed: ${res.status}`)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `Request failed (${res.status})`)
+      }
       const { blocks, summary } = await res.json() as { blocks: SuggestedRawBlock[]; summary: string }
 
-      const saveable = blocks.map(b => ({
+      // Sanitize: only accept valid types and slot values the DB allows
+      const VALID_SLOTS = new Set(['morning', 'afternoon', 'evening'])
+      const clean = blocks.filter(b =>
+        typeof b.title === 'string' &&
+        b.title.trim() &&
+        VALID_SLOTS.has(b.time_slot) &&
+        typeof b.day_of_week === 'number' &&
+        b.day_of_week >= 0 && b.day_of_week <= 6
+      ).map(b => ({
         weekStart,
         dayOfWeek: b.day_of_week,
         timeSlot: b.time_slot,
-        title: b.title,
-        type: b.type,
-        referenceId: b.reference_id ?? undefined,
+        title: b.title.trim(),
+        // AI sometimes returns 'habit' — remap to 'custom' since habits anchor via time_of_day
+        type: (b.type === 'goal' ? 'goal' : 'custom') as 'goal' | 'custom',
+        referenceId: b.type === 'goal' && b.reference_id ? b.reference_id : undefined,
       }))
 
-      const saved = await saveSuggestions(saveable)
+      if (clean.length === 0) throw new Error('No valid suggestions returned')
+
+      const saved = await saveSuggestions(clean)
       setPlanBlocks(prev => [...prev, ...saved])
-      setSuggestionSummary(summary)
+      setSuggestionSummary(summary ?? '')
     } catch (err) {
       console.error('handleAISuggest:', err)
+      setSuggestError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setSuggesting(false)
     }
@@ -326,6 +343,15 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
           </button>
         </div>
       </div>
+
+      {/* AI error banner */}
+      {suggestError && (
+        <div style={{ background: 'rgba(200,80,60,0.08)', border: '1px solid rgba(200,80,60,0.25)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#e07060', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ flexShrink: 0 }}>⚠</span>
+          <span>{suggestError}</span>
+          <button onClick={() => setSuggestError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#e07060', cursor: 'pointer', fontSize: '16px', lineHeight: 1, flexShrink: 0, padding: 0 }}>×</button>
+        </div>
+      )}
 
       {/* AI Summary Banner */}
       {suggestionSummary && (
