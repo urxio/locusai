@@ -5,10 +5,13 @@ import { markBriefStale } from '@/lib/db/briefs'
 import { updateMemoryStats } from '@/lib/memory/update-stats'
 import { revalidatePath } from 'next/cache'
 
+import { getUserLocalDate } from '@/lib/db/users'
+
 type CheckinInput = {
   energy_level: number
   mood_note: string | null
   blockers: string[]
+  localDate?: string  // YYYY-MM-DD from the client's browser
 }
 
 export async function submitCheckin(input: CheckinInput) {
@@ -16,7 +19,8 @@ export async function submitCheckin(input: CheckinInput) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const today = new Date().toISOString().split('T')[0]
+  // Use client-provided date if available; otherwise look up user's stored timezone
+  const today = input.localDate ?? await getUserLocalDate(user.id)
 
   const { error } = await supabase
     .from('check_ins')

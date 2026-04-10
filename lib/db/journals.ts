@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import type { JournalEntry } from '@/lib/types'
+import { getUserLocalDate } from '@/lib/db/users'
 
-export async function getTodayJournal(userId: string): Promise<JournalEntry | null> {
+export async function getTodayJournal(userId: string, localDate?: string): Promise<JournalEntry | null> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDate ?? await getUserLocalDate(userId)
   const { data, error } = await supabase
     .from('journal_entries')
     .select('*')

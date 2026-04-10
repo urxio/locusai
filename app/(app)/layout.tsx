@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import BottomNav from '@/components/layout/BottomNav'
+import TimezoneSync from '@/components/layout/TimezoneSync'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -29,6 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <BottomNav />
+      <TimezoneSync />
     </div>
   )
 }

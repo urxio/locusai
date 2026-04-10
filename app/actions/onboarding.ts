@@ -16,7 +16,7 @@ export type HabitInput = {
   frequency: string
 }
 
-export async function completeOnboarding(goals: GoalInput[], habits: HabitInput[]) {
+export async function completeOnboarding(goals: GoalInput[], habits: HabitInput[], timezone?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
@@ -52,7 +52,10 @@ export async function completeOnboarding(goals: GoalInput[], habits: HabitInput[
 
   await supabase
     .from('users')
-    .update({ onboarded_at: new Date().toISOString() })
+    .update({
+      onboarded_at: new Date().toISOString(),
+      ...(timezone ? { timezone } : {}),
+    })
     .eq('id', user.id)
 
   revalidatePath('/brief')

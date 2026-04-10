@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import type { CheckIn } from '@/lib/types'
+import { getUserLocalDate } from '@/lib/db/users'
 
-export async function getTodayCheckin(userId: string): Promise<CheckIn | null> {
+export async function getTodayCheckin(userId: string, localDate?: string): Promise<CheckIn | null> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDate ?? await getUserLocalDate(userId)
   const { data, error } = await supabase
     .from('check_ins')
     .select('*')

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { saveJournalAction } from '@/app/actions/journal'
+import { localDateStr } from '@/lib/utils/date'
 import type { JournalEntry } from '@/lib/types'
 
 export default function JournalSection({ existing }: { existing: JournalEntry | null }) {
@@ -16,7 +17,7 @@ export default function JournalSection({ existing }: { existing: JournalEntry | 
     if (!trimmed) return
     setStatus('saving')
     try {
-      await saveJournalAction(trimmed)
+      await saveJournalAction(trimmed, localDateStr())
       setStatus('saved')
       setTimeout(() => setStatus('idle'), 2500)
     } catch {

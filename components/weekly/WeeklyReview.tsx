@@ -93,9 +93,9 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
     const d = new Date(today)
     const dow = today.getDay() || 7
     d.setDate(today.getDate() - dow + 1 + i)
-    const dateStr = d.toISOString().split('T')[0]
+    const dateStr = d.toLocaleDateString('en-CA')  // YYYY-MM-DD in local time
     const checkin = checkins.find(c => c.date === dateStr)
-    const isToday = dateStr === today.toISOString().split('T')[0]
+    const isToday = dateStr === today.toLocaleDateString('en-CA')
     return { label, dateStr, energy: checkin?.energy_level ?? null, isToday }
   })
 

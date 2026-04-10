@@ -1,4 +1,5 @@
 import type { CheckIn, JournalEntry } from '@/lib/types'
+import { localDateStr } from '@/lib/utils/date'
 
 type DayEntry = {
   date: string
@@ -61,9 +62,10 @@ export default function CheckinHistory({
 
 function DayCard({ day }: { day: DayEntry }) {
   const dateObj  = new Date(day.date + 'T12:00:00')
-  const today    = new Date().toISOString().split('T')[0]
-  const isToday  = day.date === today
-  const isYday   = new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0] === day.date
+  const today     = localDateStr()
+  const yesterday = localDateStr(new Date(Date.now() - 86400000))
+  const isToday   = day.date === today
+  const isYday    = day.date === yesterday
 
   const formatted = dateObj.toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',

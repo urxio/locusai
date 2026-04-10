@@ -5,6 +5,7 @@ import { buildBriefContext } from '@/lib/ai/context'
 import { SYSTEM_PROMPT, buildUserMessage } from '@/lib/ai/prompts'
 import { parseBriefResponse } from '@/lib/ai/parse'
 import { getAnthropicClient } from '@/lib/ai/client'
+import { getUserLocalDate } from '@/lib/db/users'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = await getUserLocalDate(user.id)
 
   // 2. Check cache — return non-stale brief if exists
   const { force } = await request.json().catch(() => ({ force: false }))

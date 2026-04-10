@@ -94,7 +94,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
     setError(null)
     startTransition(async () => {
       try {
-        await completeOnboarding(goals, habits)
+        await completeOnboarding(goals, habits, Intl.DateTimeFormat().resolvedOptions().timeZone)
         router.push('/brief')
         router.refresh()
       } catch (err) {

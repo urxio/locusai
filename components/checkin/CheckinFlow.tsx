@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitCheckin } from '@/app/actions/checkin'
+import { localDateStr } from '@/lib/utils/date'
 import type { CheckIn } from '@/lib/types'
 
 const BLOCKERS = [
@@ -27,7 +28,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
 
   async function handleSubmit() {
     setLoading(true)
-    await submitCheckin({ energy_level: energy, mood_note: moodNote || null, blockers })
+    await submitCheckin({ energy_level: energy, mood_note: moodNote || null, blockers, localDate: localDateStr() })
     setStep('done')
     setLoading(false)
     router.refresh()
