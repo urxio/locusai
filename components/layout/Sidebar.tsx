@@ -29,7 +29,7 @@ const NAV = [
   }
 ]
 
-export default function Sidebar({ userName, avatarUrl }: { userName: string; avatarUrl: string | null }) {
+export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: { userName: string; avatarUrl: string | null; overdueStepCount?: number }) {
   const pathname = usePathname()
   const now = new Date()
   const day = now.toLocaleDateString('en-US', { weekday: 'long' })
@@ -76,6 +76,12 @@ export default function Sidebar({ userName, avatarUrl }: { userName: string; ava
                   <span style={{ color: active ? 'var(--gold)' : 'var(--text-2)', width: '18px', height: '18px', flexShrink: 0 }}>{item.icon}</span>
                   <span style={{ fontSize: '13.5px', color: active ? 'var(--text-0)' : 'var(--text-2)', fontWeight: 500 }}>{item.label}</span>
                   {item.badge && <span style={{ marginLeft: 'auto', fontSize: '10px', background: 'var(--gold-dim)', color: 'var(--gold)', borderRadius: '10px', padding: '1px 7px', fontWeight: 600 }}>{item.badge}</span>}
+                  {item.href === '/goals' && overdueStepCount > 0 && (
+                    <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#e05c4a', flexShrink: 0, animation: 'pulse 2s ease-in-out infinite' }} />
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#e05c4a', letterSpacing: '0.02em' }}>{overdueStepCount}</span>
+                    </span>
+                  )}
                 </Link>
               )
             })}

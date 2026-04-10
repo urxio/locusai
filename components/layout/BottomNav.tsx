@@ -11,21 +11,35 @@ const NAV_ITEMS = [
   { href: '/review',   label: 'Review',   icon: <ReviewIcon /> },
 ]
 
-export default function BottomNav() {
+export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?: number }) {
   const pathname = usePathname()
 
   return (
     <nav className="bottom-nav">
       {NAV_ITEMS.map(item => {
         const active = pathname === item.href
+        const showBadge = item.href === '/goals' && overdueStepCount > 0
         return (
           <Link
             key={item.href}
             href={item.href}
             className={`bottom-nav-item${active ? ' active' : ''}`}
           >
-            <span style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {item.icon}
+              {showBadge && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-1px',
+                  right: '-2px',
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#e05c4a',
+                  border: '1.5px solid var(--bg-0)',
+                  animation: 'pulse 2s ease-in-out infinite',
+                }} />
+              )}
             </span>
             <span className="bottom-nav-label">{item.label}</span>
           </Link>
