@@ -127,7 +127,7 @@ export function formatSelfProfileForPrompt(memory: UserMemory | null): string {
 /* ── FORMAT FOR PROMPT ───────────────────────────────── */
 
 export function formatMemoryForPrompt(memory: UserMemory | null): string {
-  if (!memory || memory.checkin_count < 5) return ''
+  if (!memory || !memory.checkin_count || memory.checkin_count < 5 || !memory.energy) return ''
 
   const lines: string[] = []
   lines.push('── LONG-TERM MEMORY ──')
