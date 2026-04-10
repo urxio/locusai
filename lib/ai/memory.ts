@@ -2,6 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 
 /* ── TYPES ───────────────────────────────────────────── */
 
+export type SelfProfile = {
+  occupation: string
+  relationship_status: 'single' | 'in_relationship' | 'married' | 'other' | 'prefer_not_to_say' | ''
+  has_kids: boolean | null
+  work_arrangement: 'remote' | 'office' | 'hybrid' | 'other' | ''
+  personality: string[]   // e.g. ['Introvert', 'Morning person', 'Analytical']
+  life_context: string    // 1-2 sentence free text written by user
+  saved_at: string
+}
+
 export type ClarifyingAnswer = {
   question: string
   answer: string
@@ -48,6 +58,8 @@ export type UserMemory = {
     people: PersonMemory[]
     last_updated: string
   }
+  // Self-reported profile — set during onboarding, editable later
+  self_profile?: SelfProfile
   // Clarifying Q&A — questions the AI asked, answers the user provided
   clarifying_qa?: ClarifyingAnswer[]
   // Pending questions to show after today's brief (cleared when answered/skipped)
@@ -71,6 +83,44 @@ export async function readUserMemory(userId: string): Promise<UserMemory | null>
   } catch {
     return null // table may not exist yet — always non-fatal
   }
+}
+
+/* ── FORMAT SELF PROFILE FOR PROMPT ─────────────────── */
+
+export function formatSelfProfileForPrompt(memory: UserMemory | null): string {
+  const p = memory?.self_profile
+  if (!p) return ''
+  // Only include if at least one field is set
+  if (!p.occupation && !p.relationship_status && p.personality.length === 0 && !p.life_context) return ''
+
+  const lines: string[] = []
+  lines.push('── ABOUT THIS PERSON ──')
+
+  if (p.occupation) lines.push(`Occupation: ${p.occupation}`)
+
+  const relLabel: Record<string, string> = {
+    single: 'Single', in_relationship: 'In a relationship',
+    married: 'Married', other: 'Other',
+  }
+  if (p.relationship_status && p.relationship_status !== 'prefer_not_to_say' && p.relationship_status !== '') {
+    lines.push(`Relationship: ${relLabel[p.relationship_status] ?? p.relationship_status}`)
+  }
+  if (p.has_kids === true)  lines.push('Kids: Yes')
+  if (p.has_kids === false) lines.push('Kids: No')
+
+  if (p.work_arrangement && p.work_arrangement !== '' && p.work_arrangement !== 'other') {
+    const wLabel: Record<string, string> = { remote: 'Remote', office: 'Office', hybrid: 'Hybrid' }
+    lines.push(`Work setup: ${wLabel[p.work_arrangement] ?? p.work_arrangement}`)
+  }
+  if (p.personality.length > 0) {
+    lines.push(`Personality: ${p.personality.join(' · ')}`)
+  }
+  if (p.life_context.trim()) {
+    lines.push(`Context: "${p.life_context.trim()}"`)
+  }
+
+  lines.push('── END ABOUT THIS PERSON ──')
+  return lines.join('\n')
 }
 
 /* ── FORMAT FOR PROMPT ───────────────────────────────── */

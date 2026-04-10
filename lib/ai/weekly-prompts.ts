@@ -1,5 +1,5 @@
 import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry } from '@/lib/types'
-import { type UserMemory, formatMemoryForPrompt, formatPeopleForPrompt } from '@/lib/ai/memory'
+import { type UserMemory, formatMemoryForPrompt, formatPeopleForPrompt, formatSelfProfileForPrompt } from '@/lib/ai/memory'
 import type { NeglectedHabit } from '@/lib/ai/context'
 
 export type WeeklyContext = {
@@ -70,6 +70,13 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
   const lines: string[] = []
   const now = Date.now()
 
+  // ── SELF PROFILE ──
+  const profileBlock = formatSelfProfileForPrompt(ctx.memory)
+  if (profileBlock) {
+    lines.push(profileBlock)
+    lines.push('')
+  }
+
   // ── LONG-TERM MEMORY (prepended when available) ──
   const memoryBlock = formatMemoryForPrompt(ctx.memory)
   if (memoryBlock) {
@@ -84,7 +91,7 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
     lines.push('')
   }
 
-  if (memoryBlock || peopleBlock) {
+  if (profileBlock || memoryBlock || peopleBlock) {
     lines.push('─'.repeat(50))
     lines.push('')
   }
