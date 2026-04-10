@@ -182,7 +182,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
       )}
 
       {generating && (
-        <div style={{ background: 'linear-gradient(135deg, #1e1c17 0%, #221e16 100%)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '40px', marginBottom: '16px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '40px', marginBottom: '16px', textAlign: 'center' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--bg-4)', borderTopColor: 'var(--gold)', animation: 'spin 0.9s linear infinite', margin: '0 auto 16px' }} />
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-1)' }}>
             Writing your week {weekNumber} reflection…
@@ -195,7 +195,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
       )}
 
       {reflection && !generating && (
-        <div style={{ background: 'linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: '16px' }}>
+        <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: '16px' }}>
           {/* Badge */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.22)', borderRadius: '20px', padding: '4px 12px 4px 8px', fontSize: '10.5px', color: 'var(--gold)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
@@ -213,7 +213,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
           {/* Paragraphs with highlights */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px' }}>
             {reflection.paragraphs.map((p, i) => (
-              <p key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.75, letterSpacing: '0.01em', margin: 0 }}>
+              <p key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--ai-card-text)', lineHeight: 1.75, letterSpacing: '0.01em', margin: 0 }}>
                 <HighlightedText text={p} />
               </p>
             ))}

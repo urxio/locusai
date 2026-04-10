@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { CheckIn } from '@/lib/types'
 import { getUserLocalDate } from '@/lib/db/users'
+import { daysAgoInTz, dateInTz } from '@/lib/utils/date'
 
 export async function getTodayCheckin(userId: string, localDate?: string): Promise<CheckIn | null> {
   const supabase = await createClient()
@@ -17,13 +18,14 @@ export async function getTodayCheckin(userId: string, localDate?: string): Promi
 
 export async function getRecentCheckins(userId: string, days: number): Promise<CheckIn[]> {
   const supabase = await createClient()
-  const since = new Date()
-  since.setDate(since.getDate() - days)
+  const { data: profile } = await supabase.from('users').select('timezone').eq('id', userId).single()
+  const tz = profile?.timezone ?? 'UTC'
+  const since = daysAgoInTz(days, tz)
   const { data, error } = await supabase
     .from('check_ins')
     .select('*')
     .eq('user_id', userId)
-    .gte('date', since.toISOString().split('T')[0])
+    .gte('date', since)
     .order('date', { ascending: false })
   if (error) { console.error('getRecentCheckins:', error); return [] }
   return data ?? []
@@ -36,7 +38,7 @@ export async function createCheckin(
   blockers: string[]
 ): Promise<CheckIn | null> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = await getUserLocalDate(userId)
   const { data, error } = await supabase
     .from('check_ins')
     .upsert(

@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { getUserLocalDate } from '@/lib/db/users'
 import type { Brief } from '@/lib/types'
 
-export async function getTodayBrief(userId: string): Promise<Brief | null> {
+export async function getTodayBrief(userId: string, localDate?: string): Promise<Brief | null> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDate ?? await getUserLocalDate(userId)
   const { data, error } = await supabase
     .from('briefs')
     .select('*')
@@ -31,7 +32,7 @@ export async function storeBrief(userId: string, brief: Omit<Brief, 'id' | 'user
 
 export async function markBriefStale(userId: string): Promise<void> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = await getUserLocalDate(userId)
   const { error } = await supabase
     .from('briefs')
     .update({ stale: true })
