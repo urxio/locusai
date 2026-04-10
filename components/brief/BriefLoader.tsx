@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import type { Brief } from '@/lib/types'
 
 type Props = {
-  onBriefReady: (brief: Brief) => void
+  onBriefReady: (brief: Brief, questions: string[]) => void
   onError: (detail: string) => void
 }
 
@@ -34,7 +34,7 @@ export default function BriefLoader({ onBriefReady, onError }: Props) {
           onError(detail)
           return
         }
-        if (!cancelled) onBriefReady(json.brief)
+        if (!cancelled) onBriefReady(json.brief, json.clarifying_questions ?? [])
       } catch (err) {
         if (!cancelled) onError(err instanceof Error ? err.message : 'Network error')
       }

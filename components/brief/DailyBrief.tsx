@@ -31,18 +31,22 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
   const [genError, setGenError] = useState<string | null>(null)
+  const [liveQuestions, setLiveQuestions] = useState<string[] | null>(null)
 
-  // Clarifying questions — only show if they were generated today
+  // Clarifying questions — prefer live questions from the current generation,
+  // fall back to persisted questions in memory (shown on re-navigation)
   const todayStr = new Date().toISOString().split('T')[0]
   const pendingClarifications = memory?.pending_clarifications
-  const clarifyingQuestions =
+  const persistedQuestions =
     pendingClarifications?.brief_date === todayStr && pendingClarifications.questions.length > 0
       ? pendingClarifications.questions
       : null
+  const clarifyingQuestions = liveQuestions ?? persistedQuestions
 
-  const handleBriefReady = useCallback((b: Brief) => {
+  const handleBriefReady = useCallback((b: Brief, questions: string[]) => {
     setBrief(b)
     setGenerating(false)
+    if (questions.length > 0) setLiveQuestions(questions)
   }, [])
 
   const handleGenError = useCallback((detail: string) => {
@@ -71,6 +75,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json?.detail ?? json?.error ?? `HTTP ${res.status}`)
       setBrief(json.brief)
+      if (Array.isArray(json.clarifying_questions) && json.clarifying_questions.length > 0) {
+        setLiveQuestions(json.clarifying_questions)
+      }
     } catch (err) {
       setGenError(err instanceof Error ? err.message : 'Unknown error')
     } finally {

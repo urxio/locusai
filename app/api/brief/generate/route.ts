@@ -116,8 +116,9 @@ export async function POST(request: NextRequest) {
         tokens_used: tokensUsed,
       },
       cached: false,
+      clarifying_questions: parsed.clarifying_questions,
     })
   }
 
-  return NextResponse.json({ brief: stored, cached: false })
+  return NextResponse.json({ brief: stored, cached: false, clarifying_questions: parsed.clarifying_questions })
 }
