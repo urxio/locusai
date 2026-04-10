@@ -31,6 +31,10 @@ function getFirstDayOfMonth(year: number, month: number) {
 function toDateStr(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
+function isHabitScheduledOnDate(habit: HabitWithLogs, dateStr: string): boolean {
+  if (!habit.days_of_week || habit.days_of_week.length === 0) return true
+  return habit.days_of_week.includes(new Date(dateStr + 'T12:00:00').getDay())
+}
 
 type LogMap = Map<string, Set<string>> // habitId → Set<dateStr>
 
@@ -186,10 +190,10 @@ export default function HabitCalendar({ habits, today }: {
             const isToday  = dateStr === today
             const isFuture = dateStr > today
 
-            const doneHabitIndices = habits
-              .map((h, i) => ({ h, i, done: (logMap.get(h.id) ?? new Set()).has(dateStr) }))
-
-            const allDone = !isFuture && habits.length > 0 && doneHabitIndices.every(x => x.done)
+            // Only habits scheduled for this day of week count toward "all done"
+            const scheduledHabits = habits.filter(h => isHabitScheduledOnDate(h, dateStr))
+            const allDone = !isFuture && scheduledHabits.length > 0 &&
+              scheduledHabits.every(h => (logMap.get(h.id) ?? new Set()).has(dateStr))
 
             return (
               <DayCell
@@ -280,10 +284,13 @@ function DayCell({ day, dateStr, isToday, isFuture, isLastCol, habits, habitColo
         )}
       </div>
 
-      {/* Per-habit dots (not shown for future days) */}
+      {/* Per-habit dots — only show scheduled habits, skip others */}
       {!isFuture && habits.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
           {habits.map((h, i) => {
+            const scheduled = isHabitScheduledOnDate(h, dateStr)
+            if (!scheduled) return null  // not scheduled this day — no dot
+
             const done    = (doneMap.get(h.id) ?? new Set()).has(dateStr)
             const color   = habitColors[i % habitColors.length]
             const isPend  = pendingSet.has(`${h.id}:${dateStr}`)
@@ -337,17 +344,20 @@ function CalendarSummary({ habits, logMap, year, month, today }: {
 
   if (pastDays.length === 0) return null
 
-  // Per-habit completion rate
+  // Per-habit completion rate — denominator is scheduled days only
   const habitStats = habits.map(h => {
-    const loggedDates = logMap.get(h.id) ?? new Set()
-    const doneCount = pastDays.filter(d => loggedDates.has(d)).length
-    return { h, doneCount, pct: Math.round((doneCount / pastDays.length) * 100) }
+    const loggedDates  = logMap.get(h.id) ?? new Set()
+    const scheduledDays = pastDays.filter(d => isHabitScheduledOnDate(h, d))
+    const doneCount    = scheduledDays.filter(d => loggedDates.has(d)).length
+    const total        = scheduledDays.length
+    return { h, doneCount, total, pct: total > 0 ? Math.round((doneCount / total) * 100) : 0 }
   })
 
-  // Perfect days (all habits done)
-  const perfectDays = pastDays.filter(d =>
-    habits.every(h => (logMap.get(h.id) ?? new Set()).has(d))
-  ).length
+  // Perfect days — all scheduled habits done for that day
+  const perfectDays = pastDays.filter(d => {
+    const scheduled = habits.filter(h => isHabitScheduledOnDate(h, d))
+    return scheduled.length > 0 && scheduled.every(h => (logMap.get(h.id) ?? new Set()).has(d))
+  }).length
 
   return (
     <div style={{ marginTop: '14px', background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px' }}>
@@ -355,14 +365,14 @@ function CalendarSummary({ habits, logMap, year, month, today }: {
         Month summary · {pastDays.length} days tracked
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {habitStats.map(({ h, doneCount, pct }, i) => (
+        {habitStats.map(({ h, doneCount, total, pct }, i) => (
           <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.emoji}</span>
             <span style={{ fontSize: '12px', color: 'var(--text-1)', minWidth: '0', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.name}</span>
             <div style={{ flex: 2, height: '4px', background: 'var(--bg-3)', borderRadius: '4px', overflow: 'hidden', minWidth: '60px' }}>
               <div style={{ height: '100%', width: `${pct}%`, borderRadius: '4px', background: HABIT_COLORS[i % HABIT_COLORS.length], transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
             </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-2)', flexShrink: 0, minWidth: '44px', textAlign: 'right' }}>{doneCount}/{pastDays.length}</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-2)', flexShrink: 0, minWidth: '44px', textAlign: 'right' }}>{doneCount}/{total}</span>
             <span style={{ fontSize: '11px', color: 'var(--text-3)', flexShrink: 0, minWidth: '30px', textAlign: 'right' }}>{pct}%</span>
           </div>
         ))}
