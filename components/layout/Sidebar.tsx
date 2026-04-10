@@ -16,7 +16,8 @@ const NAV = [
   {
     section: 'System',
     items: [
-      { href: '/goals',    label: 'Goals',         badge: null, icon: <GoalsIcon /> },
+      { href: '/goals',    label: 'Goals',          badge: null, icon: <GoalsIcon /> },
+      { href: '/planner',  label: 'Weekly Planner', badge: null, icon: <PlannerIcon /> },
       { href: '/review',   label: 'Weekly Review',  badge: null, icon: <ReviewIcon /> },
       { href: '/patterns', label: 'Patterns',       badge: null, icon: <PatternsIcon /> },
     ]
@@ -128,4 +129,10 @@ function SetupIcon() {
 }
 function PatternsIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18"><path d="M3 14l4-5 3 3 3-4 4 5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1" fill="currentColor" stroke="none"/></svg>
+}
+function PlannerIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+    <rect x="2" y="3" width="16" height="15" rx="2"/>
+    <path d="M2 8h16M7 3v5M13 3v5M6 12h2M9 12h2M12 12h2M6 15h2M9 15h2M12 15h2" strokeLinecap="round"/>
+  </svg>
 }

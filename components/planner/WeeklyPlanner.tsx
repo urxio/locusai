@@ -1,0 +1,733 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import type { HabitWithLogs, GoalWithSteps, WeeklyPlanBlock } from '@/lib/types'
+import {
+  addPlanBlock,
+  removePlanBlock,
+  acceptSuggestion,
+  dismissSuggestion,
+  saveSuggestions,
+  setHabitTimeOfDay,
+} from '@/app/actions/planner'
+
+/* ── Constants ── */
+
+const SLOTS = ['morning', 'afternoon', 'evening'] as const
+type Slot = typeof SLOTS[number]
+
+const SLOT_LABELS: Record<Slot, string> = {
+  morning: '🌅 Morning',
+  afternoon: '☀️ Afternoon',
+  evening: '🌙 Evening',
+}
+
+const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/* ── Helpers ── */
+
+function getWeekStart(offset: number): string {
+  const d = new Date()
+  const day = d.getDay()
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day) + offset * 7)
+  return d.toISOString().split('T')[0]
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+function isHabitOnDay(habit: HabitWithLogs, dow: number): boolean {
+  if (!habit.days_of_week || habit.days_of_week.length === 0) return true
+  return habit.days_of_week.includes(dow)
+}
+
+function getMondayDow(weekStartStr: string): number {
+  // weekStart is always Monday, so day offset 0 = Mon = DOW 1
+  // We display DOW 1..7 (Mon..Sun) for the 7 columns
+  // Column index 0 → Monday (DOW 1), ... 6 → Sunday (DOW 0)
+  return 0 // unused — we compute by column index
+}
+
+// Column index (0-6) to day of week number (0=Sun…6=Sat)
+// Week starts Monday, so col 0 = Monday (1), col 6 = Sunday (0)
+function colToDow(col: number): number {
+  return col === 6 ? 0 : col + 1
+}
+
+/* ── Types ── */
+
+type SelectedItem =
+  | { kind: 'habit'; habit: HabitWithLogs }
+  | { kind: 'goal'; goalId: string; title: string }
+  | { kind: 'custom' }
+  | null
+
+type SuggestedRawBlock = {
+  day_of_week: number
+  time_slot: Slot
+  title: string
+  type: 'goal' | 'custom'
+  reference_id: string | null
+  reason: string
+}
+
+/* ── Props ── */
+
+type Props = {
+  habits: HabitWithLogs[]
+  goals: GoalWithSteps[]
+  initialPlan: WeeklyPlanBlock[]
+  weekStart: string
+  today: string
+}
+
+/* ── Main Component ── */
+
+export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: initialWeekStart, today }: Props) {
+  const [planBlocks, setPlanBlocks] = useState<WeeklyPlanBlock[]>(initialPlan)
+  const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [weekStart, setWeekStart] = useState(initialWeekStart)
+  const [customText, setCustomText] = useState('')
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestionSummary, setSuggestionSummary] = useState('')
+  const [localHabits, setLocalHabits] = useState<HabitWithLogs[]>(habits)
+  const [pendingCells, setPendingCells] = useState<Set<string>>(new Set())
+
+  // Sync localHabits when props change (e.g. server rerender)
+  useEffect(() => { setLocalHabits(habits) }, [habits])
+
+  // When weekOffset changes, fetch plan for that week
+  useEffect(() => {
+    const ws = getWeekStart(weekOffset)
+    setWeekStart(ws)
+    fetch(`/api/planner/week?weekStart=${ws}`)
+      .then(r => r.json())
+      .then((data: WeeklyPlanBlock[]) => setPlanBlocks(data))
+      .catch(err => console.error('fetch week plan:', err))
+  }, [weekOffset])
+
+  /* ── Handlers ── */
+
+  async function handleCellClick(col: number, slot: Slot) {
+    if (!selectedItem) return
+    const dow = colToDow(col)
+    const cellKey = `${col}-${slot}`
+
+    if (selectedItem.kind === 'habit') {
+      const habit = selectedItem.habit
+      setPendingCells(prev => new Set(prev).add(cellKey))
+      setLocalHabits(prev =>
+        prev.map(h => h.id === habit.id ? { ...h, time_of_day: slot } : h)
+      )
+      setSelectedItem(null)
+      try {
+        await setHabitTimeOfDay(habit.id, slot)
+      } catch (err) {
+        console.error('setHabitTimeOfDay:', err)
+        setLocalHabits(prev =>
+          prev.map(h => h.id === habit.id ? { ...h, time_of_day: habit.time_of_day } : h)
+        )
+      } finally {
+        setPendingCells(prev => { const s = new Set(prev); s.delete(cellKey); return s })
+      }
+      return
+    }
+
+    if (selectedItem.kind === 'goal') {
+      const title = selectedItem.title
+      const goalId = selectedItem.goalId
+      const optimistic: WeeklyPlanBlock = {
+        id: `optimistic-${Date.now()}`,
+        user_id: '',
+        week_start: weekStart,
+        day_of_week: dow,
+        time_slot: slot,
+        title,
+        type: 'goal',
+        reference_id: goalId,
+        accepted: true,
+        position: 0,
+        created_at: new Date().toISOString(),
+      }
+      setPlanBlocks(prev => [...prev, optimistic])
+      setSelectedItem(null)
+      try {
+        const saved = await addPlanBlock(weekStart, dow, slot, title, 'goal', goalId)
+        setPlanBlocks(prev => prev.map(b => b.id === optimistic.id ? saved : b))
+      } catch (err) {
+        console.error('addPlanBlock goal:', err)
+        setPlanBlocks(prev => prev.filter(b => b.id !== optimistic.id))
+      }
+      return
+    }
+
+    if (selectedItem.kind === 'custom') {
+      const title = customText.trim()
+      if (!title) return
+      const optimistic: WeeklyPlanBlock = {
+        id: `optimistic-${Date.now()}`,
+        user_id: '',
+        week_start: weekStart,
+        day_of_week: dow,
+        time_slot: slot,
+        title,
+        type: 'custom',
+        reference_id: null,
+        accepted: true,
+        position: 0,
+        created_at: new Date().toISOString(),
+      }
+      setPlanBlocks(prev => [...prev, optimistic])
+      setSelectedItem(null)
+      setCustomText('')
+      try {
+        const saved = await addPlanBlock(weekStart, dow, slot, title, 'custom')
+        setPlanBlocks(prev => prev.map(b => b.id === optimistic.id ? saved : b))
+      } catch (err) {
+        console.error('addPlanBlock custom:', err)
+        setPlanBlocks(prev => prev.filter(b => b.id !== optimistic.id))
+      }
+    }
+  }
+
+  async function handleRemoveBlock(block: WeeklyPlanBlock) {
+    setPlanBlocks(prev => prev.filter(b => b.id !== block.id))
+    try {
+      await removePlanBlock(block.id)
+    } catch (err) {
+      console.error('removePlanBlock:', err)
+      setPlanBlocks(prev => [...prev, block])
+    }
+  }
+
+  async function handleRemoveHabitSlot(habit: HabitWithLogs) {
+    const prev = habit.time_of_day
+    setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: null } : h))
+    try {
+      await setHabitTimeOfDay(habit.id, null)
+    } catch (err) {
+      console.error('removeHabitSlot:', err)
+      setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prev } : h))
+    }
+  }
+
+  async function handleAccept(block: WeeklyPlanBlock) {
+    setPlanBlocks(prev => prev.map(b => b.id === block.id ? { ...b, accepted: true } : b))
+    try {
+      await acceptSuggestion(block.id)
+    } catch (err) {
+      console.error('acceptSuggestion:', err)
+      setPlanBlocks(prev => prev.map(b => b.id === block.id ? { ...b, accepted: false } : b))
+    }
+  }
+
+  async function handleDismiss(block: WeeklyPlanBlock) {
+    setPlanBlocks(prev => prev.filter(b => b.id !== block.id))
+    try {
+      await dismissSuggestion(block.id)
+    } catch (err) {
+      console.error('dismissSuggestion:', err)
+      setPlanBlocks(prev => [...prev, block])
+    }
+  }
+
+  async function handleAISuggest() {
+    setSuggesting(true)
+    setSuggestionSummary('')
+    try {
+      const res = await fetch('/api/planner/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekStart }),
+      })
+      if (!res.ok) throw new Error(`suggest failed: ${res.status}`)
+      const { blocks, summary } = await res.json() as { blocks: SuggestedRawBlock[]; summary: string }
+
+      const saveable = blocks.map(b => ({
+        weekStart,
+        dayOfWeek: b.day_of_week,
+        timeSlot: b.time_slot,
+        title: b.title,
+        type: b.type,
+        referenceId: b.reference_id ?? undefined,
+      }))
+
+      const saved = await saveSuggestions(saveable)
+      setPlanBlocks(prev => [...prev, ...saved])
+      setSuggestionSummary(summary)
+    } catch (err) {
+      console.error('handleAISuggest:', err)
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  async function handleQuickSlot(habit: HabitWithLogs, slot: Slot) {
+    const prev = habit.time_of_day
+    setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: slot } : h))
+    try {
+      await setHabitTimeOfDay(habit.id, slot)
+    } catch (err) {
+      console.error('handleQuickSlot:', err)
+      setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prev } : h))
+    }
+  }
+
+  /* ── Computed ── */
+
+  const isSelecting = selectedItem !== null
+  const todayDow = new Date(today + 'T12:00:00').getDay()
+
+  // Build column date strings (col 0 = Monday)
+  const colDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+
+  // Format week label
+  const weekEndDate = addDays(weekStart, 6)
+  function fmtDate(d: string) {
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+  const weekLabel = `${fmtDate(weekStart)} – ${fmtDate(weekEndDate)}`
+
+  /* ── Render ── */
+
+  return (
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400, color: 'var(--text-0)', margin: 0 }}>
+            Weekly Rhythm
+          </h1>
+          <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '3px' }}>{weekLabel}</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={() => setWeekOffset(w => w - 1)}
+            style={{ padding: '6px 12px', border: '1px solid var(--border)', background: 'var(--bg-1)', color: 'var(--text-1)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
+          >← Prev</button>
+          <button
+            onClick={() => setWeekOffset(0)}
+            style={{ padding: '6px 12px', border: '1px solid var(--border)', background: weekOffset === 0 ? 'var(--gold-dim)' : 'var(--bg-1)', color: weekOffset === 0 ? 'var(--gold)' : 'var(--text-1)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: weekOffset === 0 ? 600 : 400 }}
+          >This Week</button>
+          <button
+            onClick={() => setWeekOffset(w => w + 1)}
+            style={{ padding: '6px 12px', border: '1px solid var(--border)', background: 'var(--bg-1)', color: 'var(--text-1)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
+          >Next →</button>
+          <button
+            onClick={handleAISuggest}
+            disabled={suggesting}
+            style={{ padding: '6px 14px', border: 'none', background: suggesting ? 'var(--bg-2)' : 'var(--gold)', color: suggesting ? 'var(--text-3)' : '#131110', borderRadius: '6px', cursor: suggesting ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600, transition: 'opacity 0.15s' }}
+          >
+            {suggesting ? 'Thinking…' : '✦ AI Suggest'}
+          </button>
+        </div>
+      </div>
+
+      {/* AI Summary Banner */}
+      {suggestionSummary && (
+        <div style={{ background: 'rgba(212,168,83,0.1)', border: '1px solid rgba(212,168,83,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: 'var(--text-1)', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+          <span style={{ color: 'var(--gold)', flexShrink: 0, marginTop: '1px' }}>✦</span>
+          <span>{suggestionSummary}</span>
+          <button onClick={() => setSuggestionSummary('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, flexShrink: 0, padding: 0 }}>×</button>
+        </div>
+      )}
+
+      {/* Selected item banner */}
+      {selectedItem && (
+        <div style={{ background: 'rgba(212,168,83,0.12)', border: '1px solid var(--gold)', borderRadius: '8px', padding: '8px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>
+            {selectedItem.kind === 'habit' && `Placing: ${selectedItem.habit.emoji} ${selectedItem.habit.name}`}
+            {selectedItem.kind === 'goal' && `Placing: "${selectedItem.title}"`}
+            {selectedItem.kind === 'custom' && `Placing: "${customText}"`}
+          </span>
+          <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>— click a cell to place</span>
+          <button onClick={() => setSelectedItem(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0 }}>×</button>
+        </div>
+      )}
+
+      {/* Main layout */}
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+
+        {/* Sidebar */}
+        <aside style={{ width: '220px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Habits section */}
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>Habits</div>
+            </div>
+            <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {localHabits.length === 0 && (
+                <div style={{ fontSize: '12px', color: 'var(--text-3)', padding: '6px 4px' }}>No habits yet</div>
+              )}
+              {localHabits.map(habit => {
+                const isSelected = selectedItem?.kind === 'habit' && selectedItem.habit.id === habit.id
+                return (
+                  <div
+                    key={habit.id}
+                    style={{
+                      padding: '7px 8px',
+                      borderRadius: '6px',
+                      border: `1px solid ${isSelected ? 'var(--gold)' : 'transparent'}`,
+                      background: isSelected ? 'rgba(212,168,83,0.1)' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'background 0.12s',
+                    }}
+                    onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)' }}
+                    onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  >
+                    {/* Name row */}
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}
+                      onClick={() => setSelectedItem(isSelected ? null : { kind: 'habit', habit })}
+                    >
+                      <span style={{ fontSize: '14px' }}>{habit.emoji}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+                    </div>
+                    {/* Slot pills */}
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {SLOTS.map(slot => {
+                        const active = habit.time_of_day === slot
+                        return (
+                          <button
+                            key={slot}
+                            onClick={e => { e.stopPropagation(); handleQuickSlot(habit, slot) }}
+                            style={{
+                              flex: 1,
+                              padding: '2px 0',
+                              border: `1px solid ${active ? 'var(--gold)' : 'var(--border)'}`,
+                              background: active ? 'rgba(212,168,83,0.2)' : 'transparent',
+                              color: active ? 'var(--gold)' : 'var(--text-3)',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '9px',
+                              fontWeight: active ? 700 : 400,
+                              letterSpacing: '0.03em',
+                              transition: 'all 0.12s',
+                            }}
+                          >
+                            {slot === 'morning' ? 'M' : slot === 'afternoon' ? 'A' : 'E'}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Goals section */}
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>Goals</div>
+            </div>
+            <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {goals.length === 0 && (
+                <div style={{ fontSize: '12px', color: 'var(--text-3)', padding: '6px 4px' }}>No active goals</div>
+              )}
+              {goals.map(goal => {
+                const isSelected = selectedItem?.kind === 'goal' && selectedItem.goalId === goal.id
+                return (
+                  <div
+                    key={goal.id}
+                    onClick={() => setSelectedItem(isSelected ? null : { kind: 'goal', goalId: goal.id, title: goal.next_action || goal.title })}
+                    style={{
+                      padding: '7px 8px',
+                      borderRadius: '6px',
+                      border: `1px solid ${isSelected ? 'var(--gold)' : 'transparent'}`,
+                      background: isSelected ? 'rgba(212,168,83,0.1)' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'background 0.12s',
+                    }}
+                    onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)' }}
+                    onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  >
+                    <div style={{ fontSize: '12px', color: 'var(--text-0)', fontWeight: 500, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.title}</div>
+                    {goal.next_action && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>→ {goal.next_action}</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Custom block input */}
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>Custom Block</div>
+            </div>
+            <div style={{ padding: '10px' }}>
+              <input
+                type="text"
+                placeholder="Block title…"
+                value={customText}
+                onChange={e => setCustomText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && customText.trim()) setSelectedItem({ kind: 'custom' }) }}
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-0)',
+                  color: 'var(--text-0)',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                disabled={!customText.trim()}
+                onClick={() => { if (customText.trim()) setSelectedItem({ kind: 'custom' }) }}
+                style={{
+                  marginTop: '8px',
+                  width: '100%',
+                  padding: '7px',
+                  border: 'none',
+                  background: customText.trim() ? 'var(--gold)' : 'var(--bg-2)',
+                  color: customText.trim() ? '#131110' : 'var(--text-3)',
+                  borderRadius: '6px',
+                  cursor: customText.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  transition: 'all 0.12s',
+                }}
+              >
+                Place →
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Grid */}
+        <div style={{ flex: 1, overflowX: 'auto' }}>
+          <div style={{ minWidth: '560px' }}>
+            {/* Day headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
+              <div /> {/* Empty slot label header */}
+              {Array.from({ length: 7 }, (_, col) => {
+                const dow = colToDow(col)
+                const dateStr = colDates[col]
+                const isToday = dateStr === today
+                return (
+                  <div
+                    key={col}
+                    style={{
+                      textAlign: 'center',
+                      padding: '8px 4px 6px',
+                      borderRadius: '6px 6px 0 0',
+                      background: isToday ? 'rgba(212,168,83,0.12)' : 'transparent',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: isToday ? 'var(--gold)' : 'var(--text-1)' }}>{DOW_SHORT[dow]}</div>
+                    <div style={{ fontSize: '10px', color: isToday ? 'var(--gold)' : 'var(--text-3)', marginTop: '1px' }}>
+                      {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Slot rows */}
+            {SLOTS.map(slot => (
+              <div key={slot} style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
+                {/* Slot label */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '8px 6px 8px 0' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{SLOT_LABELS[slot]}</span>
+                </div>
+
+                {/* 7 day cells */}
+                {Array.from({ length: 7 }, (_, col) => {
+                  const dow = colToDow(col)
+                  const dateStr = colDates[col]
+                  const isToday = dateStr === today
+                  const isDropTarget = isSelecting
+                  const cellKey = `${col}-${slot}`
+                  const isPending = pendingCells.has(cellKey)
+
+                  const habitBlocks = localHabits.filter(h =>
+                    isHabitOnDay(h, dow) && h.time_of_day === slot
+                  )
+                  const dayPlanBlocks = planBlocks.filter(b =>
+                    b.day_of_week === dow && b.time_slot === slot && b.week_start === weekStart
+                  )
+
+                  return (
+                    <div
+                      key={col}
+                      onClick={() => handleCellClick(col, slot)}
+                      style={{
+                        minHeight: '80px',
+                        padding: '6px',
+                        border: `1px solid ${isDropTarget ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`,
+                        borderRadius: '6px',
+                        background: isToday ? 'rgba(212,168,83,0.04)' : 'var(--bg-0)',
+                        cursor: isDropTarget ? 'crosshair' : 'default',
+                        transition: 'border-color 0.12s, background 0.12s',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                      }}
+                      onMouseEnter={e => {
+                        if (isDropTarget) {
+                          (e.currentTarget as HTMLElement).style.background = 'rgba(212,168,83,0.1)'
+                          ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--gold)'
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (isDropTarget) {
+                          (e.currentTarget as HTMLElement).style.background = isToday ? 'rgba(212,168,83,0.04)' : 'var(--bg-0)'
+                          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,168,83,0.4)'
+                        }
+                      }}
+                    >
+                      {isPending && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.04)', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: '14px', height: '14px', border: '2px solid var(--gold)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                        </div>
+                      )}
+
+                      {/* Habit blocks */}
+                      {habitBlocks.map(habit => (
+                        <HabitBlock
+                          key={habit.id}
+                          habit={habit}
+                          onRemove={() => handleRemoveHabitSlot(habit)}
+                        />
+                      ))}
+
+                      {/* Plan blocks */}
+                      {dayPlanBlocks.map(block => (
+                        <PlanBlock
+                          key={block.id}
+                          block={block}
+                          onRemove={() => handleRemoveBlock(block)}
+                          onAccept={() => handleAccept(block)}
+                          onDismiss={() => handleDismiss(block)}
+                        />
+                      ))}
+
+                      {/* Drop hint when selecting and cell is empty */}
+                      {isDropTarget && habitBlocks.length === 0 && dayPlanBlocks.length === 0 && (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.4 }}>
+                          <span style={{ fontSize: '18px', color: 'var(--gold)' }}>+</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Spin keyframe */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
+/* ── Sub-components ── */
+
+function HabitBlock({ habit, onRemove }: { habit: HabitWithLogs; onRemove: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={e => { e.stopPropagation(); if (hovered) onRemove() }}
+      style={{
+        padding: '4px 6px',
+        borderRadius: '5px',
+        background: 'rgba(122,158,138,0.2)',
+        border: '1px solid rgba(122,158,138,0.35)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        cursor: 'pointer',
+        transition: 'background 0.12s',
+        position: 'relative',
+      }}
+    >
+      <span style={{ fontSize: '12px' }}>{habit.emoji}</span>
+      <span style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+      {hovered && (
+        <span style={{ fontSize: '13px', color: 'var(--text-2)', flexShrink: 0, lineHeight: 1 }}>×</span>
+      )}
+    </div>
+  )
+}
+
+function PlanBlock({
+  block,
+  onRemove,
+  onAccept,
+  onDismiss,
+}: {
+  block: WeeklyPlanBlock
+  onRemove: () => void
+  onAccept: () => void
+  onDismiss: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const isGhost = !block.accepted
+
+  const bgColor = block.type === 'goal'
+    ? 'rgba(212,168,83,0.15)'
+    : 'rgba(96,144,200,0.15)'
+  const borderColor = block.type === 'goal'
+    ? 'rgba(212,168,83,0.4)'
+    : 'rgba(96,144,200,0.4)'
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={e => e.stopPropagation()}
+      style={{
+        padding: '4px 6px',
+        borderRadius: '5px',
+        background: bgColor,
+        border: `1px ${isGhost ? 'dashed' : 'solid'} ${borderColor}`,
+        opacity: isGhost ? 0.75 : 1,
+        transition: 'opacity 0.12s',
+        position: 'relative',
+      }}
+    >
+      <div style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: isGhost ? '40px' : '16px' }}>
+        {block.title}
+      </div>
+
+      {/* Ghost: accept / dismiss buttons */}
+      {isGhost && hovered && (
+        <div style={{ position: 'absolute', top: '50%', right: '4px', transform: 'translateY(-50%)', display: 'flex', gap: '2px' }}>
+          <button
+            onClick={e => { e.stopPropagation(); onAccept() }}
+            title="Accept"
+            style={{ width: '18px', height: '18px', border: 'none', background: 'rgba(122,158,138,0.4)', color: 'var(--text-0)', borderRadius: '3px', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+          >✓</button>
+          <button
+            onClick={e => { e.stopPropagation(); onDismiss() }}
+            title="Dismiss"
+            style={{ width: '18px', height: '18px', border: 'none', background: 'rgba(220,80,60,0.25)', color: 'var(--text-0)', borderRadius: '3px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+          >✕</button>
+        </div>
+      )}
+
+      {/* Accepted: remove button */}
+      {!isGhost && hovered && (
+        <button
+          onClick={e => { e.stopPropagation(); onRemove() }}
+          style={{ position: 'absolute', top: '50%', right: '4px', transform: 'translateY(-50%)', width: '14px', height: '14px', border: 'none', background: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1 }}
+        >×</button>
+      )}
+    </div>
+  )
+}

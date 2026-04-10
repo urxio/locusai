@@ -30,6 +30,21 @@ export type Habit = {
   days_of_week: number[] | null  // 0=Sun … 6=Sat; null or [] = every day
   target_count: number        // expected completions per week
   ends_at: string | null      // ISO date — optional end date
+  time_of_day: 'morning' | 'afternoon' | 'evening' | null
+  created_at: string
+}
+
+export type WeeklyPlanBlock = {
+  id: string
+  user_id: string
+  week_start: string
+  day_of_week: number
+  time_slot: 'morning' | 'afternoon' | 'evening'
+  title: string
+  type: 'goal' | 'custom'
+  reference_id: string | null
+  accepted: boolean
+  position: number
   created_at: string
 }
 
