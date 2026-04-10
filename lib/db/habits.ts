@@ -47,16 +47,19 @@ function computeStreak(logs: HabitLog[]): number {
   const dates = new Set(logs.map(l => l.logged_date))
   const today = new Date().toISOString().split('T')[0]
 
-  // Grace period: if today isn't logged yet, start counting from yesterday
-  let current: string
-  if (dates.has(today)) {
-    current = today
-  } else {
-    const d = new Date(today + 'T12:00:00')
+  // Find the most recent logged date within the last 7 days
+  let startDate: string | null = null
+  let scan = today
+  for (let i = 0; i < 7; i++) {
+    if (dates.has(scan)) { startDate = scan; break }
+    const d = new Date(scan + 'T12:00:00')
     d.setDate(d.getDate() - 1)
-    current = d.toISOString().split('T')[0]
+    scan = d.toISOString().split('T')[0]
   }
+  if (!startDate) return 0
 
+  // Count consecutive days going backwards from startDate
+  let current = startDate
   let streak = 0
   while (dates.has(current)) {
     streak++

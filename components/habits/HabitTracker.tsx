@@ -47,15 +47,19 @@ function dayLabel(dateStr: string) {
 }
 
 function computeStreak(loggedDates: Set<string>, today: string): number {
-  // Grace period: if today isn't logged, start counting from yesterday
-  let cur: string
-  if (loggedDates.has(today)) {
-    cur = today
-  } else {
-    const d = new Date(today + 'T12:00:00')
+  if (loggedDates.size === 0) return 0
+  // Find the most recent logged date within the last 7 days
+  let startDate: string | null = null
+  let scan = today
+  for (let i = 0; i < 7; i++) {
+    if (loggedDates.has(scan)) { startDate = scan; break }
+    const d = new Date(scan + 'T12:00:00')
     d.setDate(d.getDate() - 1)
-    cur = d.toISOString().split('T')[0]
+    scan = d.toISOString().split('T')[0]
   }
+  if (!startDate) return 0
+  // Count consecutive days going backwards from startDate
+  let cur = startDate
   let streak = 0
   while (loggedDates.has(cur)) {
     streak++
