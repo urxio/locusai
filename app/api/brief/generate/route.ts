@@ -39,8 +39,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to load user context' }, { status: 500 })
   }
 
-  // 4. Call Claude
-  const userMessage = buildUserMessage(context)
+  // 4. Build prompt
+  let userMessage: string
+  try {
+    userMessage = buildUserMessage(context)
+  } catch (err) {
+    console.error('buildUserMessage failed:', err)
+    return NextResponse.json({ error: 'Failed to build prompt', detail: String(err) }, { status: 500 })
+  }
+
   const client = getAnthropicClient()
 
   let rawText = ''

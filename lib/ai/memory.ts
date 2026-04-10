@@ -90,8 +90,9 @@ export async function readUserMemory(userId: string): Promise<UserMemory | null>
 export function formatSelfProfileForPrompt(memory: UserMemory | null): string {
   const p = memory?.self_profile
   if (!p) return ''
+  const tags = Array.isArray(p.personality) ? p.personality : []
   // Only include if at least one field is set
-  if (!p.occupation && !p.relationship_status && p.personality.length === 0 && !p.life_context) return ''
+  if (!p.occupation && !p.relationship_status && tags.length === 0 && !p.life_context) return ''
 
   const lines: string[] = []
   lines.push('── ABOUT THIS PERSON ──')
@@ -112,10 +113,10 @@ export function formatSelfProfileForPrompt(memory: UserMemory | null): string {
     const wLabel: Record<string, string> = { remote: 'Remote', office: 'Office', hybrid: 'Hybrid' }
     lines.push(`Work setup: ${wLabel[p.work_arrangement] ?? p.work_arrangement}`)
   }
-  if (p.personality.length > 0) {
-    lines.push(`Personality: ${p.personality.join(' · ')}`)
+  if (tags.length > 0) {
+    lines.push(`Personality: ${tags.join(' · ')}`)
   }
-  if (p.life_context.trim()) {
+  if (p.life_context?.trim()) {
     lines.push(`Context: "${p.life_context.trim()}"`)
   }
 
