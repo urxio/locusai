@@ -44,17 +44,25 @@ export async function logHabit(userId: string, habitId: string, date?: string): 
 
 function computeStreak(logs: HabitLog[]): number {
   if (!logs.length) return 0
-  const dates = logs.map(l => l.logged_date).sort().reverse()
-  let streak = 0
+  const dates = new Set(logs.map(l => l.logged_date))
   const today = new Date().toISOString().split('T')[0]
-  let current = today
-  for (const date of dates) {
-    if (date === current) {
-      streak++
-      const d = new Date(current)
-      d.setDate(d.getDate() - 1)
-      current = d.toISOString().split('T')[0]
-    } else break
+
+  // Grace period: if today isn't logged yet, start counting from yesterday
+  let current: string
+  if (dates.has(today)) {
+    current = today
+  } else {
+    const d = new Date(today + 'T12:00:00')
+    d.setDate(d.getDate() - 1)
+    current = d.toISOString().split('T')[0]
+  }
+
+  let streak = 0
+  while (dates.has(current)) {
+    streak++
+    const d = new Date(current + 'T12:00:00')
+    d.setDate(d.getDate() - 1)
+    current = d.toISOString().split('T')[0]
   }
   return streak
 }

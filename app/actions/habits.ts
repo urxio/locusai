@@ -58,17 +58,19 @@ export async function createHabitAction(data: HabitFormData) {
 
   const target_count = data.frequency === 'daily' ? 7 : data.frequency === '3x_week' ? 3 : 5
 
-  const { error } = await supabase.from('habits').insert({
+  const { data: created, error } = await supabase.from('habits').insert({
     user_id: user.id,
     name: data.name.trim(),
     emoji: data.emoji,
     frequency: data.frequency,
     target_count,
-  })
+  }).select().single()
   if (error) throw new Error(error.message)
 
   revalidatePath('/habits')
   revalidatePath('/brief')
+
+  return created
 }
 
 export async function updateHabitAction(habitId: string, data: HabitFormData) {

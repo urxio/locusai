@@ -47,8 +47,16 @@ function dayLabel(dateStr: string) {
 }
 
 function computeStreak(loggedDates: Set<string>, today: string): number {
+  // Grace period: if today isn't logged, start counting from yesterday
+  let cur: string
+  if (loggedDates.has(today)) {
+    cur = today
+  } else {
+    const d = new Date(today + 'T12:00:00')
+    d.setDate(d.getDate() - 1)
+    cur = d.toISOString().split('T')[0]
+  }
   let streak = 0
-  let cur = today
   while (loggedDates.has(cur)) {
     streak++
     const d = new Date(cur + 'T12:00:00')
@@ -354,20 +362,21 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
 
         {/* Streak + actions */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-          {/* Edit / delete — visible on hover */}
-          {hovered && !confirmDelete && (
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <SmallBtn title="Edit" onClick={onEdit}><PencilIcon /></SmallBtn>
-              <SmallBtn title="Delete" danger onClick={() => setConfirmDelete(true)}><TrashIcon /></SmallBtn>
-            </div>
-          )}
-          {confirmDelete && (
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Delete?</span>
-              <button onClick={handleDelete} disabled={isPending} style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Yes</button>
-              <button onClick={() => setConfirmDelete(false)} style={{ background: 'var(--bg-3)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}>No</button>
-            </div>
-          )}
+          {/* Edit / delete — always rendered to prevent layout shift, visibility toggled via opacity */}
+          <div style={{ height: '28px', display: 'flex', alignItems: 'center' }}>
+            {confirmDelete ? (
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Delete?</span>
+                <button onClick={handleDelete} disabled={isPending} style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Yes</button>
+                <button onClick={() => setConfirmDelete(false)} style={{ background: 'var(--bg-3)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}>No</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '4px', opacity: hovered ? 1 : 0, pointerEvents: hovered ? 'auto' : 'none', transition: 'opacity 0.15s' }}>
+                <SmallBtn title="Edit" onClick={onEdit}><PencilIcon /></SmallBtn>
+                <SmallBtn title="Delete" danger onClick={() => setConfirmDelete(true)}><TrashIcon /></SmallBtn>
+              </div>
+            )}
+          </div>
           {/* Streak */}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 300, color: streak > 0 ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1 }}>{streak}</div>
@@ -404,9 +413,9 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
     startTransition(async () => {
       try {
         if (mode === 'add') {
-          await createHabitAction(data)
+          const created = await createHabitAction(data)
           const target = freq === 'daily' ? 7 : freq === '3x_week' ? 3 : 5
-          onSaved({ id: crypto.randomUUID(), user_id: '', created_at: new Date().toISOString(), ...data, target_count: target, logs: [], streak: 0, weekCompletions: 0 } as HabitWithLogs)
+          onSaved({ ...created, target_count: target, logs: [], streak: 0, weekCompletions: 0 } as HabitWithLogs)
         } else if (habit) {
           await updateHabitAction(habit.id, data)
           const target = freq === 'daily' ? 7 : freq === '3x_week' ? 3 : 5
