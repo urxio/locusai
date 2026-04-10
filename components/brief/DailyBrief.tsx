@@ -6,6 +6,7 @@ import type { UserMemory } from '@/lib/ai/memory'
 import BriefLoader from './BriefLoader'
 import MemoryCard from './MemoryCard'
 import BriefHistory from './BriefHistory'
+import ClarifyingQuestions from './ClarifyingQuestions'
 
 type Props = {
   goals: Goal[]
@@ -30,6 +31,14 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
   const [genError, setGenError] = useState<string | null>(null)
+
+  // Clarifying questions — only show if they were generated today
+  const todayStr = new Date().toISOString().split('T')[0]
+  const pendingClarifications = memory?.pending_clarifications
+  const clarifyingQuestions =
+    pendingClarifications?.brief_date === todayStr && pendingClarifications.questions.length > 0
+      ? pendingClarifications.questions
+      : null
 
   const handleBriefReady = useCallback((b: Brief) => {
     setBrief(b)
@@ -95,6 +104,14 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} />
       ) : (
         <NoBriefCard hasCheckin={!!checkin} />
+      )}
+
+      {/* Clarifying questions — shown when AI needs more context */}
+      {clarifyingQuestions && !generating && (
+        <ClarifyingQuestions
+          questions={clarifyingQuestions}
+          briefDate={todayStr}
+        />
       )}
 
       {/* Memory card — what Locus has learned about this user */}

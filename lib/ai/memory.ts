@@ -2,6 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 
 /* ── TYPES ───────────────────────────────────────────── */
 
+export type ClarifyingAnswer = {
+  question: string
+  answer: string
+  answered_at: string   // ISO timestamp
+  brief_date: string    // YYYY-MM-DD
+}
+
 export type PersonMemory = {
   name: string              // "Sarah" | "mom" | "my boss"
   relationship: string      // "friend" | "family" | "partner" | "colleague" | "manager" | "other"
@@ -40,6 +47,13 @@ export type UserMemory = {
   people_memory?: {
     people: PersonMemory[]
     last_updated: string
+  }
+  // Clarifying Q&A — questions the AI asked, answers the user provided
+  clarifying_qa?: ClarifyingAnswer[]
+  // Pending questions to show after today's brief (cleared when answered/skipped)
+  pending_clarifications?: {
+    brief_date: string
+    questions: string[]
   }
 }
 
@@ -117,6 +131,52 @@ export function formatMemoryForPrompt(memory: UserMemory | null): string {
   }
 
   lines.push('── END MEMORY ──')
+  return lines.join('\n')
+}
+
+/* ── SAVE PENDING CLARIFICATIONS ────────────────────── */
+
+export async function savePendingClarifications(
+  userId: string,
+  briefDate: string,
+  questions: string[]
+): Promise<void> {
+  if (!questions.length) return
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('user_memory')
+      .select('data')
+      .eq('user_id', userId)
+      .single()
+    const current = (data?.data ?? {}) as UserMemory
+    const updated: UserMemory = {
+      ...current,
+      pending_clarifications: { brief_date: briefDate, questions },
+    }
+    await supabase
+      .from('user_memory')
+      .upsert({ user_id: userId, data: updated }, { onConflict: 'user_id' })
+  } catch (err) {
+    console.error('savePendingClarifications:', err)
+  }
+}
+
+/* ── FORMAT CLARIFYING Q&A FOR PROMPT ───────────────── */
+
+export function formatClarifyingQAForPrompt(memory: UserMemory | null): string {
+  const qa = memory?.clarifying_qa?.slice(-12)
+  if (!qa?.length) return ''
+  const lines: string[] = []
+  lines.push('── CLARIFIED CONTEXT ──')
+  lines.push('The user has directly answered these questions to help Locus understand them better:')
+  lines.push('')
+  qa.forEach(item => {
+    lines.push(`Q: ${item.question}`)
+    lines.push(`A: ${item.answer}`)
+    lines.push('')
+  })
+  lines.push('── END CLARIFIED CONTEXT ──')
   return lines.join('\n')
 }
 

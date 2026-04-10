@@ -6,6 +6,7 @@ import { SYSTEM_PROMPT, buildUserMessage } from '@/lib/ai/prompts'
 import { parseBriefResponse } from '@/lib/ai/parse'
 import { getAnthropicClient } from '@/lib/ai/client'
 import { getUserLocalDate } from '@/lib/db/users'
+import { savePendingClarifications } from '@/lib/ai/memory'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -74,6 +75,13 @@ export async function POST(request: NextRequest) {
 
   // 5. Parse response
   const parsed = parseBriefResponse(rawText)
+
+  // 5b. Save clarifying questions to memory (fire-and-forget)
+  if (parsed.clarifying_questions.length > 0) {
+    void savePendingClarifications(user.id, today, parsed.clarifying_questions).catch(
+      err => console.error('savePendingClarifications failed:', err)
+    )
+  }
 
   // 6. Store in DB
   const stored = await storeBrief(user.id, {

@@ -4,10 +4,12 @@ export type ParsedBrief = {
   insight_text: string
   priorities: BriefPriority[]
   energy_score: number | null
+  clarifying_questions: string[]
 }
 
 const FALLBACK: ParsedBrief = {
   insight_text: "Focus on what moves the needle most today. One deliberate step forward is enough.",
+  clarifying_questions: [],
   priorities: [
     {
       title: "Review your top goal and take one concrete action",
@@ -74,10 +76,17 @@ export function parseBriefResponse(raw: string): ParsedBrief {
       ? obj.energy_score
       : null
 
+  const clarifying_questions: string[] = Array.isArray(obj.clarifying_questions)
+    ? (obj.clarifying_questions as unknown[])
+        .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+        .slice(0, 2)
+    : []
+
   return {
     insight_text,
     priorities: priorities.length > 0 ? priorities : FALLBACK.priorities,
     energy_score,
+    clarifying_questions,
   }
 }
 
