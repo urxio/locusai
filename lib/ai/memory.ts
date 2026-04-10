@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 
 /* ── TYPES ───────────────────────────────────────────── */
 
+export type PersonMemory = {
+  name: string              // "Sarah" | "mom" | "my boss"
+  relationship: string      // "friend" | "family" | "partner" | "colleague" | "manager" | "other"
+  mentions: number
+  last_mentioned: string    // YYYY-MM-DD
+  sentiment: 'positive' | 'negative' | 'mixed' | 'neutral'
+  context: string           // 1 sentence — how they appear in the user's life
+}
+
 export type UserMemory = {
   energy: {
     overall_avg: number          // all-time average
@@ -27,6 +36,11 @@ export type UserMemory = {
   // Patterns page cache
   pattern_narratives?: string[]
   pattern_generated_at?: string | null
+  // People / relationship memory
+  people_memory?: {
+    people: PersonMemory[]
+    last_updated: string
+  }
 }
 
 /* ── READ ────────────────────────────────────────────── */
@@ -103,5 +117,33 @@ export function formatMemoryForPrompt(memory: UserMemory | null): string {
   }
 
   lines.push('── END MEMORY ──')
+  return lines.join('\n')
+}
+
+/* ── FORMAT PEOPLE FOR PROMPT ────────────────────────── */
+
+export function formatPeopleForPrompt(memory: UserMemory | null): string {
+  const people = memory?.people_memory?.people
+  if (!people || people.length === 0) return ''
+
+  const lines: string[] = []
+  lines.push('── RELATIONSHIPS ──')
+  lines.push('People this user mentions often (learned from journals & mood notes):')
+
+  people.slice(0, 6).forEach(p => {
+    const now = Date.now()
+    const lastMs = new Date(p.last_mentioned).getTime()
+    const daysAgo = Math.floor((now - lastMs) / 86400000)
+    const recency = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo}d ago`
+
+    const sentimentIcon = p.sentiment === 'positive' ? '✦'
+      : p.sentiment === 'negative' ? '↓'
+      : p.sentiment === 'mixed' ? '~'
+      : '·'
+
+    lines.push(`• ${p.name} [${p.relationship}] — ${p.mentions}× mentions, last ${recency} — ${sentimentIcon} ${p.context}`)
+  })
+
+  lines.push('── END RELATIONSHIPS ──')
   return lines.join('\n')
 }

@@ -1,5 +1,5 @@
 import type { BriefContext } from './context'
-import { formatMemoryForPrompt } from './memory'
+import { formatMemoryForPrompt, formatPeopleForPrompt } from './memory'
 
 export const SYSTEM_PROMPT = `You are Locus — an AI companion and life operating system. You are not a productivity tool. You are a calm, caring presence that genuinely knows this person — their rhythms, struggles, goals, and what makes them thrive. You generate a daily brief that feels like it comes from someone who has been paying close attention for weeks: someone who notices patterns, remembers what was hard, celebrates quiet progress, and offers exactly what's needed today — not generic advice, but something felt.
 
@@ -21,6 +21,7 @@ INTELLIGENCE RULES
 8. PATTERN RECOGNITION: If energy has been declining for 3+ days, mention recovery. If habits have been consistently high, name the streak. If a goal deadline is close with low progress, flag it.
 9. LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears above the daily data, treat it as essential context. Reference the user's historical patterns directly — mention their best energy day if relevant, call out a recurring blocker by name, or acknowledge a habit's long-term consistency. Use the learned patterns to make the brief feel like it comes from an advisor who has been watching for weeks, not just today. Never invent patterns not in the memory.
 10. JOURNAL ENTRIES: If TODAY'S JOURNAL ENTRY or RECENT JOURNAL ENTRIES appear, treat them as the richest personal context available. The journal is the user's unfiltered inner voice. Read it carefully — not just for facts but for emotional tone, underlying concerns, and things they might not have named explicitly. Let journal content meaningfully shape the insight_text and priority reasoning. Never quote journal text directly back to them, but let it be felt in the response.
+11. RELATIONSHIPS: If a RELATIONSHIPS section appears, treat it as the user's social world — real people who matter to them, learned from what they write. Use this to make the brief feel human: if a key person appears in today's mood or journal, acknowledge the context around that relationship. If someone who's been a positive presence hasn't come up recently, a gentle nudge to reach out may fit naturally into a priority. If someone is associated with stress or conflict, acknowledge it with care rather than ignoring it. Never fabricate relationship dynamics — only use what's provided. Never suggest talking to specific people unless their name or context is already present today.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
@@ -50,6 +51,16 @@ export function buildUserMessage(ctx: BriefContext): string {
   if (memoryBlock) {
     lines.push(memoryBlock)
     lines.push('')
+  }
+
+  // ── RELATIONSHIPS (people learned from journals) ──
+  const peopleBlock = formatPeopleForPrompt(ctx.memory)
+  if (peopleBlock) {
+    lines.push(peopleBlock)
+    lines.push('')
+  }
+
+  if (memoryBlock || peopleBlock) {
     lines.push('─'.repeat(40))
     lines.push('')
   }

@@ -1,5 +1,5 @@
 import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry } from '@/lib/types'
-import { type UserMemory, formatMemoryForPrompt } from '@/lib/ai/memory'
+import { type UserMemory, formatMemoryForPrompt, formatPeopleForPrompt } from '@/lib/ai/memory'
 import type { NeglectedHabit } from '@/lib/ai/context'
 
 export type WeeklyContext = {
@@ -63,7 +63,8 @@ Rules:
 - paragraphs must total 3 exactly.
 - Each paragraph must stand alone and add something new.
 - LONG-TERM MEMORY: If a LONG-TERM MEMORY section appears in the user message, use it to contextualize this week against the user's historical baseline. Did this week outperform their average? Are their recurring blockers reappearing? Are habits improving or regressing against their 30-day rate? Reference learned patterns explicitly when relevant.
-- JOURNAL ENTRIES: If JOURNAL ENTRIES THIS WEEK appears, treat them as the most direct window into the user's inner experience. They reveal what the numbers don't — emotional texture, context behind the energy dips, what they were genuinely wrestling with. Let journal themes meaningfully shape the weekly reflection paragraphs. Do not quote journal text directly, but let the emotional content inform the tone and insights you offer.`
+- JOURNAL ENTRIES: If JOURNAL ENTRIES THIS WEEK appears, treat them as the most direct window into the user's inner experience. They reveal what the numbers don't — emotional texture, context behind the energy dips, what they were genuinely wrestling with. Let journal themes meaningfully shape the weekly reflection paragraphs. Do not quote journal text directly, but let the emotional content inform the tone and insights you offer.
+- RELATIONSHIPS: If a RELATIONSHIPS section appears, notice whether people the user cares about featured prominently this week — positively or negatively. If a meaningful relationship is associated with stress or tension this week, acknowledge it with care in the paragraphs. If someone positive hasn't come up recently, a "what_to_adjust" item like "Reconnect with [name] — they've been a source of energy for you" is appropriate. Ground every relationship reference in the data provided.`
 
 export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
   const lines: string[] = []
@@ -74,6 +75,16 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
   if (memoryBlock) {
     lines.push(memoryBlock)
     lines.push('')
+  }
+
+  // ── RELATIONSHIPS ──
+  const peopleBlock = formatPeopleForPrompt(ctx.memory)
+  if (peopleBlock) {
+    lines.push(peopleBlock)
+    lines.push('')
+  }
+
+  if (memoryBlock || peopleBlock) {
     lines.push('─'.repeat(50))
     lines.push('')
   }

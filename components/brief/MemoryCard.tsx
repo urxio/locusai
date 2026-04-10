@@ -9,7 +9,8 @@ export default function MemoryCard({ memory }: { memory: UserMemory }) {
   // Don't render until there's enough data to be meaningful
   if (memory.checkin_count < 5) return null
 
-  const { energy, habits, blockers, insights, checkin_count } = memory
+  const { energy, habits, blockers, insights, checkin_count, people_memory } = memory
+  const topPeople = (people_memory?.people ?? []).slice(0, 4)
 
   /* ── Energy summary string ── */
   const arrow = energy.trend === 'improving' ? '↑' : energy.trend === 'declining' ? '↓' : '→'
@@ -123,6 +124,44 @@ export default function MemoryCard({ memory }: { memory: UserMemory }) {
               />
             )}
           </div>
+
+          {/* People / relationships */}
+          {topPeople.length > 0 && (
+            <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+              <div style={{
+                fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px',
+              }}>
+                People in your life
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                {topPeople.map((p, i) => {
+                  const sentimentColor = p.sentiment === 'positive' ? 'var(--sage)'
+                    : p.sentiment === 'negative' ? '#c07060'
+                    : 'var(--text-3)'
+                  const sentimentDot = p.sentiment === 'positive' ? '✦'
+                    : p.sentiment === 'negative' ? '↓'
+                    : p.sentiment === 'mixed' ? '~' : '·'
+                  const now = Date.now()
+                  const daysAgo = Math.floor((now - new Date(p.last_mentioned).getTime()) / 86400000)
+                  const recency = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo}d ago`
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '13px', color: sentimentColor, flexShrink: 0, width: '14px', textAlign: 'center', marginTop: '1px' }}>{sentimentDot}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '1px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)' }}>{p.name}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.relationship}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-3)', marginLeft: 'auto', flexShrink: 0 }}>{recency}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.45 }}>{p.context}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* AI-generated insights */}
           {hasInsights && (

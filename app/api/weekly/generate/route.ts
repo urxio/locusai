@@ -7,6 +7,7 @@ import { getRecentJournals } from '@/lib/db/journals'
 import { getAnthropicClient } from '@/lib/ai/client'
 import { readUserMemory } from '@/lib/ai/memory'
 import { updateMemoryInsights } from '@/lib/memory/update-insights'
+import { updatePeopleMemory } from '@/lib/memory/update-people'
 import { upsertWeeklyReflection } from '@/lib/db/weekly-reflections'
 import {
   WEEKLY_SYSTEM_PROMPT,
@@ -106,6 +107,7 @@ export async function POST() {
 
     // Fire-and-forget: update AI insights from accumulated data (throttled to once per 6 days)
     updateMemoryInsights(user.id).catch(err => console.error('[weekly] insight update failed:', err))
+    updatePeopleMemory(user.id).catch(err => console.error('[weekly] people memory failed:', err))
 
     return NextResponse.json({
       reflection,
