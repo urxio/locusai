@@ -248,7 +248,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
+        throw new Error(body.detail ? `${body.error}: ${body.detail}` : (body.error ?? `Request failed (${res.status})`))
       }
       const { blocks, summary } = await res.json() as { blocks: SuggestedRawBlock[]; summary: string }
 

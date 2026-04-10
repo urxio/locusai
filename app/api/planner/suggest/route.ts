@@ -91,7 +91,8 @@ Return ONLY valid JSON with no markdown fences:
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 800,
+      max_tokens: 1200,
+      system: 'You are a JSON API. Respond with a single valid JSON object only. No markdown, no prose, no code fences. Just the raw JSON.',
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -109,13 +110,17 @@ Return ONLY valid JSON with no markdown fences:
 
   let parsed: SuggestResponse
   try {
-    // Strip markdown fences if the model adds them despite instructions
-    const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
-    parsed = JSON.parse(cleaned) as SuggestResponse
-    if (!Array.isArray(parsed.blocks)) throw new Error('No blocks array')
+    // Extract the first {...} block — handles prose wrappers and markdown fences
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('No JSON object found in response')
+    parsed = JSON.parse(jsonMatch[0]) as SuggestResponse
+    if (!Array.isArray(parsed.blocks)) throw new Error('No blocks array in response')
+    // Ensure summary exists
+    if (typeof parsed.summary !== 'string') parsed.summary = ''
   } catch (err) {
-    console.error('Failed to parse planner suggestion:', err, rawText)
-    return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 })
+    console.error('Failed to parse planner suggestion:', err)
+    console.error('Raw AI response:', rawText)
+    return NextResponse.json({ error: 'Failed to parse AI response', detail: rawText.slice(0, 300) }, { status: 500 })
   }
 
   return NextResponse.json(parsed)
