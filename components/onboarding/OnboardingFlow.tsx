@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { completeOnboarding, type GoalInput, type HabitInput, type ProfileInput } from '@/app/actions/onboarding'
 
 type GoalDraft  = GoalInput  & { id: string }
-type HabitDraft = HabitInput & { id: string }
+type HabitDraft = HabitInput & { id: string }  // HabitInput now has days_of_week: number[]
 
 /* ── CONSTANTS ── */
 const GOAL_CATEGORIES = [
@@ -21,18 +21,19 @@ const TIMEFRAMES = [
   { value: 'year',    label: 'This Year' },
   { value: 'ongoing', label: 'Ongoing' },
 ]
-const FREQUENCIES = [
-  { value: 'daily',    label: 'Daily' },
-  { value: '3x_week',  label: '3× per week' },
-  { value: 'weekdays', label: 'Weekdays' },
+// Simple frequency presets for onboarding — maps to days_of_week
+const FREQ_PRESETS = [
+  { label: 'Daily',      days: [] as number[] },
+  { label: '3× / week', days: [1, 3, 5] },
+  { label: 'Weekdays',  days: [1, 2, 3, 4, 5] },
 ]
 const HABIT_SUGGESTIONS: HabitDraft[] = [
-  { id: 's1', emoji: '🏃', name: 'Morning run',    frequency: 'daily' },
-  { id: 's2', emoji: '📚', name: 'Read 30 min',    frequency: 'daily' },
-  { id: 's3', emoji: '🧘', name: 'Meditate',       frequency: 'daily' },
-  { id: 's4', emoji: '💪', name: 'Workout',        frequency: '3x_week' },
-  { id: 's5', emoji: '✍️', name: 'Journal',        frequency: 'daily' },
-  { id: 's6', emoji: '💧', name: 'Drink 2L water', frequency: 'daily' },
+  { id: 's1', emoji: '🏃', name: 'Morning run',    days_of_week: [] },
+  { id: 's2', emoji: '📚', name: 'Read 30 min',    days_of_week: [] },
+  { id: 's3', emoji: '🧘', name: 'Meditate',       days_of_week: [] },
+  { id: 's4', emoji: '💪', name: 'Workout',        days_of_week: [1, 3, 5] },
+  { id: 's5', emoji: '✍️', name: 'Journal',        days_of_week: [] },
+  { id: 's6', emoji: '💧', name: 'Drink 2L water', days_of_week: [] },
 ]
 
 const REL_OPTIONS = [
@@ -97,9 +98,9 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
   /* ── HABITS STATE ── */
   const [habits, setHabits]   = useState<HabitDraft[]>([])
   const [hEmoji, setHEmoji]   = useState('✨')
-  const [hName, setHName]     = useState('')
-  const [hFreq, setHFreq]     = useState('daily')
-  const [hError, setHError]   = useState('')
+  const [hName,  setHName]  = useState('')
+  const [hDays,  setHDays]  = useState<number[]>([])  // empty = daily
+  const [hError, setHError] = useState('')
 
   /* ── CHECK-IN STATE ── */
   const [energy, setEnergy]   = useState(7)
@@ -115,8 +116,8 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
   const addHabit = () => {
     if (!hName.trim()) { setHError('Give your habit a name.'); return }
     setHError('')
-    setHabits(h => [...h, { id: crypto.randomUUID(), emoji: hEmoji, name: hName.trim(), frequency: hFreq }])
-    setHName(''); setHEmoji('✨')
+    setHabits(h => [...h, { id: crypto.randomUUID(), emoji: hEmoji, name: hName.trim(), days_of_week: hDays }])
+    setHName(''); setHEmoji('✨'); setHDays([])
   }
   const togglePersonality = (tag: string) => {
     setPersonality(p => p.includes(tag) ? p.filter(t => t !== tag) : p.length < 4 ? [...p, tag] : p)
@@ -415,7 +416,9 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
                     <span style={{ fontSize: '20px', flexShrink: 0 }}>{h.emoji}</span>
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)' }}>{h.name}</span>
-                      <span style={{ fontSize: '12px', color: 'var(--text-3)', marginLeft: '8px' }}>{FREQUENCIES.find(f => f.value === h.frequency)?.label}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-3)', marginLeft: '8px' }}>
+                        {FREQ_PRESETS.find(p => JSON.stringify([...p.days].sort()) === JSON.stringify([...h.days_of_week].sort()))?.label ?? 'Custom'}
+                      </span>
                     </div>
                     <button onClick={() => setHabits(hs => hs.filter(x => x.id !== h.id))} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '18px', cursor: 'pointer', lineHeight: 1 }}>×</button>
                   </div>
@@ -425,7 +428,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
 
             {habits.length < 5 && (
               <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px', marginBottom: '8px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: '10px', marginBottom: '10px' }}>
                   <div>
                     <label style={labelStyle}>Emoji</label>
                     <input value={hEmoji} onChange={e => setHEmoji(e.target.value)} maxLength={4} style={{ ...inputStyle, textAlign: 'center', fontSize: '18px', padding: '8px 6px' }} />
@@ -434,11 +437,19 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
                     <label style={labelStyle}>Habit name</label>
                     <input value={hName} onChange={e => setHName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addHabit()} placeholder="e.g. Morning walk" style={inputStyle} />
                   </div>
-                  <div>
-                    <label style={labelStyle}>Frequency</label>
-                    <select value={hFreq} onChange={e => setHFreq(e.target.value)} style={selectStyle}>
-                      {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={labelStyle}>Frequency</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {FREQ_PRESETS.map(p => {
+                      const active = JSON.stringify([...p.days].sort()) === JSON.stringify([...hDays].sort())
+                      return (
+                        <button key={p.label} onClick={() => setHDays(p.days)}
+                          style={{ flex: 1, padding: '7px 6px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`, background: active ? 'var(--gold-dim)' : 'var(--bg-3)', color: active ? 'var(--gold)' : 'var(--text-2)', transition: 'all 0.15s' }}>
+                          {p.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 {hError && <div style={{ fontSize: '12px', color: '#e07060', marginBottom: '10px' }}>{hError}</div>}

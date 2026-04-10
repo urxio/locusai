@@ -6,22 +6,15 @@ import type { HabitWithLogs, Habit } from '@/lib/types'
 import {
   logHabitAction, unlogHabitAction,
   createHabitAction, updateHabitAction, deleteHabitAction,
+  deriveFrequencyMeta,
   type HabitFormData,
 } from '@/app/actions/habits'
 import HabitCalendar from './HabitCalendar'
 
 /* ── CONSTANTS ── */
-const FREQ_OPTIONS = [
-  { value: 'daily',    label: 'Daily',         sub: '7× per week' },
-  { value: '3x_week',  label: '3× per week',   sub: 'Mon / Wed / Fri' },
-  { value: 'weekdays', label: 'Weekdays',       sub: '5× per week' },
-] as const
-
-const FREQ_LABEL: Record<string, string> = {
-  daily: 'Daily', '3x_week': '3× / week', weekdays: 'Weekdays',
-}
-
-const EMOJI_SUGGESTIONS = ['🏃','📚','🧘','💪','✍️','💧','🥗','😴','🎸','🧹','🌿','🏊']
+const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] // Sun=0 … Sat=6
+const DOW_NAMES  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const EMOJI_SUGGESTIONS = ['🏃', '📚', '🧘', '💪', '✍️', '💧', '🥗', '😴', '🎸', '🧹', '🌿', '🏊']
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)',
@@ -46,28 +39,66 @@ function dayLabel(dateStr: string) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })
 }
 
-function computeStreak(loggedDates: Set<string>, today: string): number {
+function isScheduledOn(date: string, daysOfWeek: number[] | null): boolean {
+  if (!daysOfWeek || daysOfWeek.length === 0) return true
+  return daysOfWeek.includes(new Date(date + 'T12:00:00').getDay())
+}
+
+function computeStreak(loggedDates: Set<string>, today: string, daysOfWeek: number[] | null): number {
   if (loggedDates.size === 0) return 0
-  // Find the most recent logged date within the last 7 days
+
+  // Find the most recent scheduled+logged date within last 14 days
   let startDate: string | null = null
   let scan = today
-  for (let i = 0; i < 7; i++) {
-    if (loggedDates.has(scan)) { startDate = scan; break }
+  for (let i = 0; i < 14; i++) {
+    if (isScheduledOn(scan, daysOfWeek) && loggedDates.has(scan)) {
+      startDate = scan; break
+    }
     const d = new Date(scan + 'T12:00:00')
     d.setDate(d.getDate() - 1)
     scan = d.toISOString().split('T')[0]
   }
   if (!startDate) return 0
-  // Count consecutive days going backwards from startDate
+
+  // Count consecutive scheduled days with logs, skipping non-scheduled days
   let cur = startDate
   let streak = 0
-  while (loggedDates.has(cur)) {
-    streak++
-    const d = new Date(cur + 'T12:00:00')
-    d.setDate(d.getDate() - 1)
-    cur = d.toISOString().split('T')[0]
+  for (let i = 0; i < 200; i++) {
+    if (!isScheduledOn(cur, daysOfWeek)) {
+      const d = new Date(cur + 'T12:00:00')
+      d.setDate(d.getDate() - 1)
+      cur = d.toISOString().split('T')[0]
+      continue
+    }
+    if (loggedDates.has(cur)) {
+      streak++
+      const d = new Date(cur + 'T12:00:00')
+      d.setDate(d.getDate() - 1)
+      cur = d.toISOString().split('T')[0]
+    } else {
+      break
+    }
   }
   return streak
+}
+
+/** Returns a human-readable frequency string, handles both old enum values and new labels */
+function freqDisplay(habit: Habit): string {
+  if (habit.days_of_week && habit.days_of_week.length > 0 && habit.days_of_week.length < 7) {
+    const sorted = [...habit.days_of_week].sort((a, b) => a - b)
+    if (JSON.stringify(sorted) === JSON.stringify([1, 2, 3, 4, 5])) return 'Weekdays'
+    if (JSON.stringify(sorted) === JSON.stringify([0, 6])) return 'Weekends'
+    return sorted.map(d => DOW_NAMES[d]).join(' · ')
+  }
+  // Legacy enum values or already-display labels
+  const legacy: Record<string, string> = { daily: 'Daily', '3x_week': '3× / week', weekdays: 'Weekdays' }
+  return legacy[habit.frequency] ?? habit.frequency
+}
+
+/** Days until end date, or null */
+function daysUntilEnd(endsAt: string | null): number | null {
+  if (!endsAt) return null
+  return Math.ceil((new Date(endsAt + 'T12:00:00').getTime() - Date.now()) / 86400000)
 }
 
 type LogMap = Map<string, Set<string>> // habitId → Set<dateString>
@@ -79,16 +110,15 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
   const [habits, setHabits] = useState<HabitWithLogs[]>(initial)
   const [modal, setModal]   = useState<ModalState>(null)
   const [view,  setView]    = useState<ViewMode>('list')
+  const [showAll, setShowAll] = useState(false)
   const router = useRouter()
 
-  // logMap: per-habit logged dates (last 7 days)
   const [logMap, setLogMap] = useState<LogMap>(() => {
     const m = new Map<string, Set<string>>()
     initial.forEach(h => m.set(h.id, new Set(h.logs.map(l => l.logged_date))))
     return m
   })
 
-  // pendingSet: `${habitId}:${date}` keys currently in-flight
   const [pendingSet, setPendingSet] = useState<Set<string>>(new Set())
 
   const last7 = getLast7Days(today)
@@ -100,7 +130,7 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
     const dates = logMap.get(habitId) ?? new Set<string>()
     const wasDone = dates.has(date)
 
-    // Optimistic
+    // Optimistic update
     setLogMap(prev => {
       const next = new Map(prev)
       const d = new Set(next.get(habitId) ?? [])
@@ -114,7 +144,7 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
       if (wasDone) await unlogHabitAction(habitId, date)
       else await logHabitAction(habitId, date)
     } catch {
-      // Revert
+      // Revert on error
       setLogMap(prev => {
         const next = new Map(prev)
         const d = new Set(next.get(habitId) ?? [])
@@ -147,10 +177,16 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
     router.refresh()
   }
 
-  // Progress: today's completion
-  const doneToday = habits.filter(h => (logMap.get(h.id) ?? new Set()).has(today)).length
-  const totalCount = habits.length
-  const progressPct = totalCount > 0 ? (doneToday / totalCount) * 100 : 0
+  // Separate today's habits from rest
+  const scheduledToday   = habits.filter(h => h.isScheduledToday)
+  const unscheduledToday = habits.filter(h => !h.isScheduledToday)
+
+  // Progress bar based on today's scheduled habits only
+  const doneToday    = scheduledToday.filter(h => (logMap.get(h.id) ?? new Set()).has(today)).length
+  const totalToday   = scheduledToday.length
+  const progressPct  = totalToday > 0 ? (doneToday / totalToday) * 100 : 0
+
+  const displayedHabits = showAll ? habits : scheduledToday
   const now = new Date()
 
   return (
@@ -178,43 +214,35 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0, marginTop: '6px' }}>
             {/* View toggle */}
             <div style={{ display: 'flex', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '9px', padding: '3px', gap: '2px' }}>
-              <button
-                onClick={() => setView('list')}
-                className="icon-btn"
-                style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', background: view === 'list' ? 'var(--bg-0)' : 'transparent', color: view === 'list' ? 'var(--text-0)' : 'var(--text-3)', boxShadow: view === 'list' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none' }}
-              >
+              <button onClick={() => setView('list')} className="icon-btn"
+                style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', background: view === 'list' ? 'var(--bg-0)' : 'transparent', color: view === 'list' ? 'var(--text-0)' : 'var(--text-3)', boxShadow: view === 'list' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none' }}>
                 List
               </button>
-              <button
-                onClick={() => setView('calendar')}
-                className="icon-btn"
-                style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', background: view === 'calendar' ? 'var(--bg-0)' : 'transparent', color: view === 'calendar' ? 'var(--text-0)' : 'var(--text-3)', boxShadow: view === 'calendar' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none' }}
-              >
+              <button onClick={() => setView('calendar')} className="icon-btn"
+                style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', background: view === 'calendar' ? 'var(--bg-0)' : 'transparent', color: view === 'calendar' ? 'var(--text-0)' : 'var(--text-3)', boxShadow: view === 'calendar' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none' }}>
                 Calendar
               </button>
             </div>
-            <button
-              onClick={() => setModal({ mode: 'add' })}
-              style={{ background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '10px', padding: '11px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-            >
+            <button onClick={() => setModal({ mode: 'add' })}
+              style={{ background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '10px', padding: '11px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
               + Add habit
             </button>
           </div>
         </div>
 
         {/* Progress bar — list view only */}
-        {view === 'list' && habits.length > 0 && (
+        {view === 'list' && totalToday > 0 && (
           <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '18px 22px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Today's progress</span>
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: doneToday === totalCount ? 'var(--sage)' : 'var(--text-0)' }}>
-                {doneToday}<span style={{ fontSize: '14px', color: 'var(--text-2)' }}>/{totalCount}</span>
+              <span style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: doneToday === totalToday ? 'var(--sage)' : 'var(--text-0)' }}>
+                {doneToday}<span style={{ fontSize: '14px', color: 'var(--text-2)' }}>/{totalToday}</span>
               </span>
             </div>
             <div style={{ height: '5px', background: 'var(--bg-4)', borderRadius: '5px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: '5px', width: `${progressPct}%`, transition: 'width 0.5s cubic-bezier(0.22,1,0.36,1)', background: doneToday === totalCount ? 'linear-gradient(90deg, var(--sage), #a0c8a8)' : 'linear-gradient(90deg, var(--gold), #e8b86d)' }} />
+              <div style={{ height: '100%', borderRadius: '5px', width: `${progressPct}%`, transition: 'width 0.5s cubic-bezier(0.22,1,0.36,1)', background: doneToday === totalToday ? 'linear-gradient(90deg, var(--sage), #a0c8a8)' : 'linear-gradient(90deg, var(--gold), #e8b86d)' }} />
             </div>
-            {doneToday === totalCount && totalCount > 0 && (
+            {doneToday === totalToday && totalToday > 0 && (
               <div style={{ fontSize: '12px', color: 'var(--sage)', marginTop: '8px', fontWeight: 600 }}>✓ All habits complete for today</div>
             )}
           </div>
@@ -240,9 +268,19 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
         {/* List view */}
         {view === 'list' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {habits.map(habit => {
+
+            {/* Nothing scheduled today */}
+            {scheduledToday.length === 0 && habits.length > 0 && !showAll && (
+              <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '28px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>✌️</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-1)', marginBottom: '4px' }}>No habits scheduled for today.</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Enjoy the break — you've earned it.</div>
+              </div>
+            )}
+
+            {displayedHabits.map(habit => {
               const loggedDates = logMap.get(habit.id) ?? new Set<string>()
-              const streak = computeStreak(loggedDates, today)
+              const streak = computeStreak(loggedDates, today, habit.days_of_week ?? null)
               return (
                 <HabitCard
                   key={habit.id}
@@ -258,6 +296,19 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
                 />
               )
             })}
+
+            {/* Show all toggle */}
+            {view === 'list' && habits.length > 0 && (
+              <button onClick={() => setShowAll(v => !v)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer', padding: '8px 0', textAlign: 'center', letterSpacing: '0.04em' }}>
+                {showAll
+                  ? '↑ Show today only'
+                  : unscheduledToday.length > 0
+                    ? `↓ Show all habits (${unscheduledToday.length} not scheduled today)`
+                    : null
+                }
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -293,6 +344,7 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
   const [isPending, startTransition] = useTransition()
 
   const todayDone = loggedDates.has(today)
+  const endDays   = daysUntilEnd(habit.ends_at ?? null)
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -303,7 +355,16 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
 
   return (
     <div
-      style={{ background: todayDone ? 'linear-gradient(135deg, rgba(122,158,138,0.14) 0%, rgba(122,158,138,0.05) 100%)' : 'var(--bg-1)', border: `1px solid ${todayDone ? 'rgba(122,158,138,0.3)' : hovered ? 'var(--border-md)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', padding: '16px 20px', transition: 'all 0.2s var(--ease)' }}
+      style={{
+        background: todayDone
+          ? 'linear-gradient(135deg, rgba(122,158,138,0.14) 0%, rgba(122,158,138,0.05) 100%)'
+          : 'var(--bg-1)',
+        border: `1px solid ${todayDone ? 'rgba(122,158,138,0.3)' : hovered ? 'var(--border-md)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px 20px',
+        transition: 'all 0.2s var(--ease)',
+        opacity: habit.isScheduledToday ? 1 : 0.55,
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setConfirmDelete(false) }}
     >
@@ -323,14 +384,23 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
 
         {/* Name + dots */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
             {todayDone && <span style={{ fontSize: '14px' }}>{habit.emoji}</span>}
             <span style={{ fontSize: '15px', fontWeight: 600, color: todayDone ? 'var(--sage)' : 'var(--text-0)', transition: 'color 0.2s' }}>
               {habit.name}
             </span>
             <span style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-              {FREQ_LABEL[habit.frequency]}
+              {freqDisplay(habit)}
             </span>
+            {/* Until date badge */}
+            {endDays !== null && (
+              <span style={{ fontSize: '10px', fontWeight: 600, color: endDays <= 3 ? '#e07060' : 'var(--text-3)', background: endDays <= 3 ? 'rgba(200,80,60,0.08)' : 'var(--bg-3)', border: `1px solid ${endDays <= 3 ? 'rgba(200,80,60,0.2)' : 'var(--border)'}`, borderRadius: '5px', padding: '1px 6px', letterSpacing: '0.04em' }}>
+                {endDays <= 0 ? 'Ended' : endDays === 1 ? 'Ends tomorrow' : endDays <= 7 ? `${endDays}d left` : `Until ${habit.ends_at}`}
+              </span>
+            )}
+            {!habit.isScheduledToday && (
+              <span style={{ fontSize: '10px', color: 'var(--text-3)', fontStyle: 'italic' }}>not today</span>
+            )}
           </div>
 
           {/* 7-day dots — each individually clickable */}
@@ -339,21 +409,21 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
               const done = loggedDates.has(date)
               const isToday = date === today
               const isPendingDot = pendingSet.has(`${habit.id}:${date}`)
+              const scheduled = isScheduledOn(date, habit.days_of_week ?? null)
               return (
                 <button
                   key={date}
                   onClick={() => onToggle(date)}
                   title={`${date} — ${done ? 'click to unlog' : 'click to log'}`}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', padding: '2px', cursor: isPendingDot ? 'wait' : 'pointer', opacity: isPendingDot ? 0.5 : 1, borderRadius: '4px', transition: 'opacity 0.15s' }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', padding: '2px', cursor: isPendingDot ? 'wait' : 'pointer', opacity: isPendingDot ? 0.5 : scheduled ? 1 : 0.35, borderRadius: '4px', transition: 'opacity 0.15s' }}
                 >
                   <div style={{
                     width: isToday ? '12px' : '9px',
                     height: isToday ? '12px' : '9px',
                     borderRadius: '50%',
-                    background: done ? 'var(--sage)' : isToday ? 'rgba(212,168,83,0.25)' : 'var(--bg-4)',
-                    border: isToday ? `2px solid ${done ? 'var(--sage)' : 'var(--gold)'}` : done ? 'none' : '1px solid var(--bg-4)',
-                    transition: 'background 0.15s, transform 0.15s',
-                    transform: isToday ? 'scale(1)' : 'scale(1)',
+                    background: done ? 'var(--sage)' : isToday ? 'rgba(212,168,83,0.25)' : scheduled ? 'var(--bg-4)' : 'transparent',
+                    border: isToday ? `2px solid ${done ? 'var(--sage)' : 'var(--gold)'}` : done ? 'none' : scheduled ? '1px solid var(--bg-4)' : '1px dashed var(--bg-4)',
+                    transition: 'background 0.15s',
                   }} />
                   <span style={{ fontSize: '8px', color: isToday ? 'var(--gold)' : 'var(--text-3)', fontWeight: isToday ? 700 : 400, lineHeight: 1 }}>
                     {dayLabel(date)}
@@ -366,7 +436,6 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
 
         {/* Streak + actions */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-          {/* Edit / delete — always rendered to prevent layout shift, visibility toggled via opacity */}
           <div style={{ height: '28px', display: 'flex', alignItems: 'center' }}>
             {confirmDelete ? (
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -381,7 +450,6 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
               </div>
             )}
           </div>
-          {/* Streak */}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 300, color: streak > 0 ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1 }}>{streak}</div>
             <div style={{ fontSize: '9px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
@@ -404,32 +472,89 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
   onClose: () => void
   onSaved: (h: HabitWithLogs) => void
 }) {
-  const [name, setName]       = useState(habit?.name ?? '')
-  const [emoji, setEmoji]     = useState(habit?.emoji ?? '✨')
-  const [freq, setFreq]       = useState<HabitFormData['frequency']>(habit?.frequency ?? 'daily')
-  const [error, setError]     = useState('')
-  const [isPending, startTransition] = useTransition()
+  const [name,       setName]       = useState(habit?.name ?? '')
+  const [emoji,      setEmoji]      = useState(habit?.emoji ?? '✨')
+  // days_of_week: empty = every day
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
+    habit?.days_of_week && habit.days_of_week.length > 0 ? habit.days_of_week : []
+  )
+  const [endsAt,     setEndsAt]     = useState<string>(habit?.ends_at ?? '')
+  const [error,      setError]      = useState('')
+  const [isPending,  startTransition] = useTransition()
+
+  const toggleDay = (d: number) => {
+    setDaysOfWeek(prev =>
+      prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
+    )
+  }
+
+  const applyPreset = (preset: 'all' | 'weekdays' | 'weekends') => {
+    if (preset === 'all')      setDaysOfWeek([])
+    if (preset === 'weekdays') setDaysOfWeek([1, 2, 3, 4, 5])
+    if (preset === 'weekends') setDaysOfWeek([0, 6])
+  }
+
+  const isPreset = (preset: 'all' | 'weekdays' | 'weekends') => {
+    const sorted = [...daysOfWeek].sort((a, b) => a - b)
+    if (preset === 'all')      return daysOfWeek.length === 0 || daysOfWeek.length === 7
+    if (preset === 'weekdays') return JSON.stringify(sorted) === JSON.stringify([1, 2, 3, 4, 5])
+    if (preset === 'weekends') return JSON.stringify(sorted) === JSON.stringify([0, 6])
+    return false
+  }
 
   const handleSubmit = () => {
     if (!name.trim()) { setError('Give your habit a name.'); return }
     setError('')
-    const data: HabitFormData = { name: name.trim(), emoji, frequency: freq }
+    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null }
+    const { target_count } = deriveFrequencyMeta(daysOfWeek)
+    const todayDow = new Date(today + 'T12:00:00').getDay()
+    const isScheduledToday = daysOfWeek.length === 0 || daysOfWeek.includes(todayDow)
+
     startTransition(async () => {
       try {
         if (mode === 'add') {
           const created = await createHabitAction(data)
-          const target = freq === 'daily' ? 7 : freq === '3x_week' ? 3 : 5
-          onSaved({ ...created, target_count: target, logs: [], streak: 0, weekCompletions: 0 } as HabitWithLogs)
+          onSaved({
+            ...created,
+            days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
+            ends_at: endsAt || null,
+            target_count,
+            logs: [],
+            streak: 0,
+            weekCompletions: 0,
+            isScheduledToday,
+          } as HabitWithLogs)
         } else if (habit) {
           await updateHabitAction(habit.id, data)
-          const target = freq === 'daily' ? 7 : freq === '3x_week' ? 3 : 5
-          onSaved({ ...habit, ...data, target_count: target })
+          onSaved({
+            ...habit,
+            name: name.trim(),
+            emoji,
+            days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
+            ends_at: endsAt || null,
+            target_count,
+            isScheduledToday,
+          })
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
   }
+
+  const presetBtn = (label: string, preset: 'all' | 'weekdays' | 'weekends') => (
+    <button
+      key={preset}
+      onClick={() => applyPreset(preset)}
+      style={{
+        padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+        border: `1px solid ${isPreset(preset) ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`,
+        background: isPreset(preset) ? 'var(--gold-dim)' : 'var(--bg-3)',
+        color: isPreset(preset) ? 'var(--gold)' : 'var(--text-2)',
+        transition: 'all 0.15s',
+      }}
+    >{label}</button>
+  )
 
   return (
     <div
@@ -445,7 +570,7 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '22px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Emoji + name row */}
           <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: '10px' }}>
@@ -459,33 +584,89 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
             </div>
           </div>
 
-          {/* Emoji suggestions */}
+          {/* Emoji quick pick */}
           <div>
             <label style={labelStyle}>Quick pick</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {EMOJI_SUGGESTIONS.map(e => (
-                <button key={e} onClick={() => setEmoji(e)} style={{ width: '36px', height: '36px', borderRadius: '8px', background: emoji === e ? 'var(--gold-dim)' : 'var(--bg-3)', border: `1px solid ${emoji === e ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`, fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                <button key={e} onClick={() => setEmoji(e)}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: emoji === e ? 'var(--gold-dim)' : 'var(--bg-3)', border: `1px solid ${emoji === e ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`, fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                   {e}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Frequency */}
+          {/* Schedule — day picker */}
           <div>
-            <label style={labelStyle}>Frequency</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-              {FREQ_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setFreq(opt.value)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: freq === opt.value ? 'var(--gold-dim)' : 'var(--bg-3)', border: `1px solid ${freq === opt.value ? 'rgba(212,168,83,0.35)' : 'var(--border)'}`, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
-                >
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: freq === opt.value ? 'var(--gold)' : 'var(--text-0)' }}>{opt.label}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>{opt.sub}</span>
-                </button>
-              ))}
+            <label style={labelStyle}>Schedule</label>
+            {/* Day pills */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+              {DOW_LABELS.map((lbl, d) => {
+                const active = daysOfWeek.includes(d)
+                const isAll  = daysOfWeek.length === 0
+                return (
+                  <button
+                    key={d}
+                    onClick={() => toggleDay(d)}
+                    title={DOW_NAMES[d]}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%', border: 'none',
+                      background: active ? 'var(--gold)' : isAll ? 'rgba(212,168,83,0.12)' : 'var(--bg-3)',
+                      color: active ? '#131110' : isAll ? 'var(--gold)' : 'var(--text-2)',
+                      fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      outline: isAll && !active ? '1px dashed rgba(212,168,83,0.3)' : 'none',
+                    }}
+                  >{lbl}</button>
+                )
+              })}
             </div>
+            {/* Presets */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {presetBtn('Every day', 'all')}
+              {presetBtn('Weekdays', 'weekdays')}
+              {presetBtn('Weekends', 'weekends')}
+            </div>
+            {/* Summary */}
+            <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '8px' }}>
+              {daysOfWeek.length === 0
+                ? 'Repeats every day'
+                : `Repeats on: ${[...daysOfWeek].sort((a, b) => a - b).map(d => DOW_NAMES[d]).join(', ')}`
+              }
+              {' · '}
+              <span style={{ color: 'var(--text-2)' }}>
+                {daysOfWeek.length === 0 ? '7' : daysOfWeek.length}× per week
+              </span>
+            </div>
+          </div>
+
+          {/* Until date */}
+          <div>
+            <label style={labelStyle}>Until <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)', fontSize: '10px' }}>(optional — leave blank for ongoing)</span></label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={endsAt}
+                min={today}
+                onChange={e => setEndsAt(e.target.value)}
+                style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }}
+              />
+              {endsAt && (
+                <button onClick={() => setEndsAt('')}
+                  style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}>
+                  Clear
+                </button>
+              )}
+            </div>
+            {endsAt && (
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '6px' }}>
+                {(() => {
+                  const d = daysUntilEnd(endsAt)
+                  return d !== null && d > 0 ? `${d} day${d === 1 ? '' : 's'} from today` : d === 0 ? 'Ends today' : 'Date is in the past'
+                })()}
+              </div>
+            )}
           </div>
 
           {error && (

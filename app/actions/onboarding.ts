@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getUserLocalDate } from '@/lib/db/users'
 import type { UserMemory, SelfProfile } from '@/lib/ai/memory'
+import { deriveFrequencyMeta } from '@/app/actions/habits'
 
 export type GoalInput = {
   title: string
@@ -15,7 +16,7 @@ export type GoalInput = {
 export type HabitInput = {
   name: string
   emoji: string
-  frequency: string
+  days_of_week: number[]  // empty = every day
 }
 
 export type ProfileInput = {
@@ -60,13 +61,18 @@ export async function completeOnboarding(
   // 2. Save habits
   if (habits.length > 0) {
     const { error } = await supabase.from('habits').insert(
-      habits.map(h => ({
-        user_id: user.id,
-        name: h.name,
-        emoji: h.emoji,
-        frequency: h.frequency,
-        target_count: h.frequency === 'daily' ? 7 : h.frequency === '3x_week' ? 3 : 5,
-      }))
+      habits.map(h => {
+        const { frequency, target_count } = deriveFrequencyMeta(h.days_of_week)
+        return {
+          user_id: user.id,
+          name: h.name,
+          emoji: h.emoji,
+          frequency,
+          target_count,
+          days_of_week: h.days_of_week.length > 0 ? h.days_of_week : null,
+          ends_at: null,
+        }
+      })
     )
     if (error) throw new Error('Failed to save habits: ' + error.message)
   }

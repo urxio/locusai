@@ -26,8 +26,10 @@ export type Habit = {
   user_id: string
   name: string
   emoji: string
-  frequency: 'daily' | '3x_week' | 'weekdays'
-  target_count: number
+  frequency: string           // display label: "Daily", "Weekdays", "Mon · Wed · Fri", etc.
+  days_of_week: number[] | null  // 0=Sun … 6=Sat; null or [] = every day
+  target_count: number        // expected completions per week
+  ends_at: string | null      // ISO date — optional end date
   created_at: string
 }
 
@@ -88,6 +90,7 @@ export type HabitWithLogs = Habit & {
   logs: HabitLog[]
   streak: number
   weekCompletions: number
+  isScheduledToday: boolean   // true if habit is due today based on days_of_week
 }
 
 export type GoalStep = {
