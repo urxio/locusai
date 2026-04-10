@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { markBriefStale } from '@/lib/db/briefs'
 import { updateMemoryStats } from '@/lib/memory/update-stats'
+import { updateMemoryInsights } from '@/lib/memory/update-insights'
 import { revalidatePath } from 'next/cache'
 
 import { getUserLocalDate } from '@/lib/db/users'
@@ -41,8 +42,12 @@ export async function submitCheckin(input: CheckinInput) {
   // Mark today's brief as stale so it regenerates with new check-in data
   await markBriefStale(user.id)
 
-  // Update memory stats in background (non-blocking, non-fatal)
-  await updateMemoryStats(user.id)
+  // Fire-and-forget: update memory stats (pure computation — no Claude call)
+  void updateMemoryStats(user.id).catch(err => console.error('[checkin] memory stats:', err))
+
+  // Fire-and-forget: update AI insights if enough data and throttle allows
+  // (throttled internally to once per 6 days — safe to call every check-in)
+  void updateMemoryInsights(user.id).catch(err => console.error('[checkin] memory insights:', err))
 
   revalidatePath('/brief')
   revalidatePath('/checkin')

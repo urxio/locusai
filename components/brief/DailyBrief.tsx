@@ -2,7 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
+import type { UserMemory } from '@/lib/ai/memory'
 import BriefLoader from './BriefLoader'
+import MemoryCard from './MemoryCard'
 
 type Props = {
   goals: Goal[]
@@ -11,6 +13,7 @@ type Props = {
   habits: HabitWithLogs[]
   brief?: Brief | null
   needsGeneration?: boolean | null
+  memory?: UserMemory | null
 }
 
 const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
@@ -21,7 +24,7 @@ const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
   learning: { tag: 'rgba(100,130,180,0.12)', border: '#6090c8' },
 }
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration, memory }: Props) {
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
   const [genError, setGenError] = useState<string | null>(null)
@@ -90,6 +93,11 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} />
       ) : (
         <NoBriefCard hasCheckin={!!checkin} />
+      )}
+
+      {/* Memory card — what Locus has learned about this user */}
+      {memory && memory.checkin_count >= 5 && (
+        <MemoryCard memory={memory} />
       )}
 
       {/* Energy */}
