@@ -19,7 +19,6 @@ const NAV = [
       { href: '/goals',    label: 'Goals',          badge: null, icon: <GoalsIcon /> },
       { href: '/planner',  label: 'Weekly Planner', badge: null, icon: <PlannerIcon /> },
       { href: '/review',   label: 'Weekly Review',  badge: null, icon: <ReviewIcon /> },
-      { href: '/patterns', label: 'Patterns',       badge: null, icon: <PatternsIcon /> },
     ]
   },
   {
