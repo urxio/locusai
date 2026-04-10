@@ -8,6 +8,7 @@ import {
   createHabitAction, updateHabitAction, deleteHabitAction,
   type HabitFormData,
 } from '@/app/actions/habits'
+import HabitCalendar from './HabitCalendar'
 
 /* ── CONSTANTS ── */
 const FREQ_OPTIONS = [
@@ -59,11 +60,13 @@ function computeStreak(loggedDates: Set<string>, today: string): number {
 
 type LogMap = Map<string, Set<string>> // habitId → Set<dateString>
 type ModalState = null | { mode: 'add' } | { mode: 'edit'; habit: HabitWithLogs }
+type ViewMode = 'list' | 'calendar'
 
 /* ── MAIN COMPONENT ── */
 export default function HabitTracker({ habits: initial, today }: { habits: HabitWithLogs[]; today: string }) {
   const [habits, setHabits] = useState<HabitWithLogs[]>(initial)
-  const [modal, setModal] = useState<ModalState>(null)
+  const [modal, setModal]   = useState<ModalState>(null)
+  const [view,  setView]    = useState<ViewMode>('list')
   const router = useRouter()
 
   // logMap: per-habit logged dates (last 7 days)
@@ -149,22 +152,46 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
               {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </div>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.15 }}>
-              Today's <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>habits.</em>
+              {view === 'list'
+                ? <>Today's <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>habits.</em></>
+                : <>Monthly <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>progress.</em></>
+              }
             </div>
             <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px' }}>
-              Tap today's dot to log. Tap any past dot to edit history.
+              {view === 'list'
+                ? 'Tap today\'s dot to log. Tap any past dot to edit history.'
+                : 'Click any past dot to toggle a habit log for that day.'}
             </div>
           </div>
-          <button
-            onClick={() => setModal({ mode: 'add' })}
-            style={{ background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '10px', padding: '11px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', flexShrink: 0, marginTop: '6px', whiteSpace: 'nowrap' }}
-          >
-            + Add habit
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0, marginTop: '6px' }}>
+            {/* View toggle */}
+            <div style={{ display: 'flex', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '9px', padding: '3px', gap: '2px' }}>
+              <button
+                onClick={() => setView('list')}
+                className="icon-btn"
+                style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', background: view === 'list' ? 'var(--bg-0)' : 'transparent', color: view === 'list' ? 'var(--text-0)' : 'var(--text-3)', boxShadow: view === 'list' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none' }}
+              >
+                List
+              </button>
+              <button
+                onClick={() => setView('calendar')}
+                className="icon-btn"
+                style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', background: view === 'calendar' ? 'var(--bg-0)' : 'transparent', color: view === 'calendar' ? 'var(--text-0)' : 'var(--text-3)', boxShadow: view === 'calendar' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none' }}
+              >
+                Calendar
+              </button>
+            </div>
+            <button
+              onClick={() => setModal({ mode: 'add' })}
+              style={{ background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '10px', padding: '11px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              + Add habit
+            </button>
+          </div>
         </div>
 
-        {/* Progress bar */}
-        {habits.length > 0 && (
+        {/* Progress bar — list view only */}
+        {view === 'list' && habits.length > 0 && (
           <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '18px 22px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Today's progress</span>
@@ -193,28 +220,34 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
           </div>
         )}
 
-        {/* Habit list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {habits.map(habit => {
-            const loggedDates = logMap.get(habit.id) ?? new Set<string>()
-            const streak = computeStreak(loggedDates, today)
-            const isPendingToday = pendingSet.has(`${habit.id}:${today}`)
-            return (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                loggedDates={loggedDates}
-                streak={streak}
-                last7={last7}
-                today={today}
-                pendingSet={pendingSet}
-                onToggle={(date) => toggleLog(habit.id, date)}
-                onEdit={() => setModal({ mode: 'edit', habit })}
-                onDelete={() => handleDeleted(habit.id)}
-              />
-            )
-          })}
-        </div>
+        {/* Calendar view */}
+        {view === 'calendar' && (
+          <HabitCalendar habits={habits} today={today} />
+        )}
+
+        {/* List view */}
+        {view === 'list' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {habits.map(habit => {
+              const loggedDates = logMap.get(habit.id) ?? new Set<string>()
+              const streak = computeStreak(loggedDates, today)
+              return (
+                <HabitCard
+                  key={habit.id}
+                  habit={habit}
+                  loggedDates={loggedDates}
+                  streak={streak}
+                  last7={last7}
+                  today={today}
+                  pendingSet={pendingSet}
+                  onToggle={(date) => toggleLog(habit.id, date)}
+                  onEdit={() => setModal({ mode: 'edit', habit })}
+                  onDelete={() => handleDeleted(habit.id)}
+                />
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modal */}
