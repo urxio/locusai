@@ -4,11 +4,17 @@ import { useState, useRef, useCallback } from 'react'
 import { saveJournalAction } from '@/app/actions/journal'
 import { localDateStr } from '@/lib/utils/date'
 import type { JournalEntry } from '@/lib/types'
+import FollowupQuestion from './FollowupQuestion'
 
 export default function JournalSection({ existing }: { existing: JournalEntry | null }) {
   const [content, setContent]   = useState(existing?.content ?? '')
   const [status, setStatus]     = useState<'idle' | 'saving' | 'saved'>('idle')
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Follow-up question after first journal save
+  const [followupQ, setFollowupQ]       = useState<string | null>(null)
+  const [followupDone, setFollowupDone] = useState(false)
+  const followupFetchedRef = useRef(!!existing) // skip if already has an existing entry
 
   const wordCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0
 
@@ -20,9 +26,26 @@ export default function JournalSection({ existing }: { existing: JournalEntry | 
       await saveJournalAction(trimmed, localDateStr())
       setStatus('saved')
       setTimeout(() => setStatus('idle'), 2500)
+
+      // Fetch follow-up once per session on first save (skip if already fetched or entry too long)
+      if (!followupFetchedRef.current) {
+        followupFetchedRef.current = true
+        const words = trimmed.split(/\s+/).filter(Boolean).length
+        if (words <= 60) {
+          fetch('/api/followup/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: trimmed, type: 'journal' }),
+          })
+            .then(r => r.json())
+            .then(({ question }) => { if (question) setFollowupQ(question) })
+            .catch(() => {})
+        }
+      }
     } catch {
       setStatus('idle')
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleChange = (val: string) => {
@@ -110,6 +133,15 @@ export default function JournalSection({ existing }: { existing: JournalEntry | 
           </button>
         )}
       </div>
+
+      {/* Follow-up question — appears after first save if entry is vague */}
+      {followupQ && !followupDone && (
+        <FollowupQuestion
+          question={followupQ}
+          context={content}
+          onDone={() => setFollowupDone(true)}
+        />
+      )}
     </div>
   )
 }

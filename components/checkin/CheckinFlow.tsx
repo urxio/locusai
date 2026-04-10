@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitCheckin } from '@/app/actions/checkin'
 import { localDateStr } from '@/lib/utils/date'
 import type { CheckIn } from '@/lib/types'
+import FollowupQuestion from './FollowupQuestion'
 
 const BLOCKERS = [
   'Unclear priorities', 'Low energy', 'Too many meetings',
@@ -20,6 +21,26 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
   const [loading, setLoading] = useState(false)
   const [isRedo, setIsRedo] = useState(false)
   const router = useRouter()
+
+  // Follow-up question after check-in completes
+  const [followupQ, setFollowupQ]     = useState<string | null>(null)
+  const [followupDone, setFollowupDone] = useState(false)
+  const followupFetchedRef = useRef(false)
+
+  useEffect(() => {
+    if (step !== 'done' || followupFetchedRef.current || !moodNote.trim()) return
+    const words = moodNote.trim().split(/\s+/).filter(Boolean).length
+    if (words > 50) return  // long entries are already detailed
+    followupFetchedRef.current = true
+    fetch('/api/followup/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: moodNote, type: 'checkin' }),
+    })
+      .then(r => r.json())
+      .then(({ question }) => { if (question) setFollowupQ(question) })
+      .catch(() => {})
+  }, [step, moodNote])
 
   const handleRedo = () => {
     setIsRedo(true)
@@ -163,6 +184,15 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
                 View Daily Brief →
               </a>
             </div>
+
+            {/* Follow-up question — only shown when mood note is vague */}
+            {followupQ && !followupDone && (
+              <FollowupQuestion
+                question={followupQ}
+                context={moodNote}
+                onDone={() => setFollowupDone(true)}
+              />
+            )}
           </div>
         )}
 
