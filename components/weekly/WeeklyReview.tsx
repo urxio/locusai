@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import type { CheckIn, HabitWithLogs, Goal } from '@/lib/types'
-import type { WeeklyReflection } from '@/lib/ai/weekly-prompts'
+import type { WeeklyReflection, WeeklyGrade } from '@/lib/ai/weekly-prompts'
+import type { StoredWeeklyReflection } from '@/lib/db/weekly-reflections'
+import WeeklyHistory, { GradePicker, GradeBadge } from '@/components/review/WeeklyHistory'
 
 type Props = {
   checkins: CheckIn[]
   habits: HabitWithLogs[]
   goals: Goal[]
   initialReflection: WeeklyReflection | null
+  pastReflections?: StoredWeeklyReflection[]
 }
 
 function getWeekNumber(d: Date) {
@@ -44,7 +47,7 @@ function HighlightedText({ text }: { text: string }) {
   )
 }
 
-export default function WeeklyReview({ checkins, habits, goals, initialReflection }: Props) {
+export default function WeeklyReview({ checkins, habits, goals, initialReflection, pastReflections = [] }: Props) {
   const today = new Date()
   const weekNumber = getWeekNumber(today)
   const weekRange  = getWeekRange(today)
@@ -54,6 +57,9 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
   const [reflection, setReflection] = useState<WeeklyReflection | null>(initialReflection ?? null)
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
+  const [currentGrade, setCurrentGrade] = useState<WeeklyGrade['letter'] | null>(
+    initialReflection?.grade?.letter ?? null
+  )
 
   // Sync localStorage with DB value on mount (also catches stale local cache)
   useEffect(() => {
@@ -303,6 +309,39 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
           <div style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '6px' }}>Check in daily to unlock your weekly AI reflection.</div>
         </div>
       )}
+
+      {/* ── Grade this week ── */}
+      {reflection && !generating && (
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '18px 22px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: currentGrade ? '0' : '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)' }}>
+                {currentGrade ? 'Week grade' : 'How was this week?'}
+              </span>
+              {currentGrade && <GradeBadge letter={currentGrade} size="md" />}
+            </div>
+            {currentGrade && (
+              <button
+                onClick={() => setCurrentGrade(null)}
+                style={{ background: 'none', border: 'none', fontSize: '11px', color: 'var(--text-3)', cursor: 'pointer', padding: '2px 6px' }}
+              >
+                change
+              </button>
+            )}
+          </div>
+          {!currentGrade && (
+            <GradePicker
+              weekNumber={weekNumber}
+              year={today.getFullYear()}
+              initial={currentGrade ?? undefined}
+              onSaved={setCurrentGrade}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── Past weeks history ── */}
+      <WeeklyHistory rows={pastReflections} />
     </div>
   )
 }

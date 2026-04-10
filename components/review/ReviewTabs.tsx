@@ -6,19 +6,21 @@ import PatternsView from '@/components/patterns/PatternsView'
 import type { CheckIn, HabitWithLogs, Goal } from '@/lib/types'
 import type { WeeklyReflection } from '@/lib/ai/weekly-prompts'
 import type { PatternsContext } from '@/lib/ai/patterns-context'
+import type { StoredWeeklyReflection } from '@/lib/db/weekly-reflections'
 
 type Tab = 'reflection' | 'patterns'
 
 type Props = {
   /* weekly review */
-  checkins:          CheckIn[]
-  habits:            HabitWithLogs[]
-  goals:             Goal[]
-  initialReflection: WeeklyReflection | null
+  checkins:           CheckIn[]
+  habits:             HabitWithLogs[]
+  goals:              Goal[]
+  initialReflection:  WeeklyReflection | null
+  pastReflections:    StoredWeeklyReflection[]
   /* patterns */
-  ctx:               PatternsContext
-  cachedNarratives:  string[] | null
-  cachedGeneratedAt: string | null
+  ctx:                PatternsContext
+  cachedNarratives:   string[] | null
+  cachedGeneratedAt:  string | null
 }
 
 export default function ReviewTabs(props: Props) {
@@ -92,6 +94,7 @@ export default function ReviewTabs(props: Props) {
             habits={props.habits}
             goals={props.goals}
             initialReflection={props.initialReflection}
+            pastReflections={props.pastReflections}
           />
         ) : (
           <PatternsView

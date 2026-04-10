@@ -203,10 +203,16 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
   return lines.join('\n')
 }
 
+export type WeeklyGrade = {
+  letter: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F'
+  submitted_at: string
+}
+
 export type WeeklyReflection = {
   paragraphs: string[]
   what_worked: string[]
   what_to_adjust: string[]
+  grade?: WeeklyGrade
 }
 
 const FALLBACK_REFLECTION: WeeklyReflection = {

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getActiveGoals } from '@/lib/db/goals'
-import { getWeeklyReflection } from '@/lib/db/weekly-reflections'
+import { getWeeklyReflection, getPastWeeklyReflections } from '@/lib/db/weekly-reflections'
 import { buildPatternsContext } from '@/lib/ai/patterns-context'
 import { readUserMemory } from '@/lib/ai/memory'
 import ReviewTabs from '@/components/review/ReviewTabs'
@@ -25,13 +25,14 @@ export default async function ReviewPage() {
   const weekNumber = getWeekNumber(today)
   const year       = today.getFullYear()
 
-  const [checkins, habits, goals, savedReflection, patternsCtx, memory] = await Promise.all([
+  const [checkins, habits, goals, savedReflection, patternsCtx, memory, pastReflections] = await Promise.all([
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
     getWeeklyReflection(user.id, weekNumber, year),
     buildPatternsContext(user.id),
     readUserMemory(user.id),
+    getPastWeeklyReflections(user.id, weekNumber, year, 12),
   ])
 
   return (
@@ -40,6 +41,7 @@ export default async function ReviewPage() {
       habits={habits}
       goals={goals}
       initialReflection={savedReflection}
+      pastReflections={pastReflections}
       ctx={patternsCtx}
       cachedNarratives={memory?.pattern_narratives ?? null}
       cachedGeneratedAt={memory?.pattern_generated_at ?? null}
