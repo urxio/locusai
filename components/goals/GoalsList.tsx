@@ -833,11 +833,9 @@ function GoalModal({ mode, goal, hasSteps, onClose, onSaved }: {
     startTransition(async () => {
       try {
         if (mode === 'add') {
-          await createGoalAction(form)
+          const created = await createGoalAction(form)
           const stub: GoalWithSteps = {
-            id: crypto.randomUUID(), user_id: '', created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(), ...form,
-            title: form.title.trim(), next_action: form.next_action.trim(), steps: [],
+            ...created, steps: [],
           } as unknown as GoalWithSteps
           onSaved(stub, true)
         } else if (goal) {

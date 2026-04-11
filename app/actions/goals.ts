@@ -18,7 +18,7 @@ export async function createGoalAction(data: GoalFormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { error } = await supabase.from('goals').insert({
+  const { data: created, error } = await supabase.from('goals').insert({
     user_id: user.id,
     title: data.title,
     category: data.category,
@@ -27,10 +27,11 @@ export async function createGoalAction(data: GoalFormData) {
     next_action: data.next_action,
     target_date: data.target_date || null,
     status: data.status,
-  })
+  }).select().single()
   if (error) throw new Error(error.message)
   revalidatePath('/goals')
   revalidatePath('/brief')
+  return created
 }
 
 export async function updateGoalAction(goalId: string, data: Partial<GoalFormData>) {
