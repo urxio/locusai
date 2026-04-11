@@ -106,7 +106,7 @@ type ModalState = null | { mode: 'add' } | { mode: 'edit'; habit: HabitWithLogs 
 type ViewMode = 'list' | 'calendar'
 
 /* ── MAIN COMPONENT ── */
-export default function HabitTracker({ habits: initial, today }: { habits: HabitWithLogs[]; today: string }) {
+export default function HabitTracker({ habits: initial, today, activeGoals = [] }: { habits: HabitWithLogs[]; today: string; activeGoals?: import('@/lib/types').Goal[] }) {
   const [habits, setHabits] = useState<HabitWithLogs[]>(initial)
   const [modal, setModal]   = useState<ModalState>(null)
   const [view,  setView]    = useState<ViewMode>('list')
@@ -319,6 +319,7 @@ export default function HabitTracker({ habits: initial, today }: { habits: Habit
           mode={modal.mode}
           habit={modal.mode === 'edit' ? modal.habit : undefined}
           today={today}
+          activeGoals={activeGoals}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
         />
@@ -401,6 +402,12 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
             {!habit.isScheduledToday && (
               <span style={{ fontSize: '10px', color: 'var(--text-3)', fontStyle: 'italic' }}>not today</span>
             )}
+            {habit.linkedGoal && (
+              <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.04em', background: 'var(--bg-3)', color: 'var(--text-3)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span>↗</span>
+                <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.linkedGoal.title}</span>
+              </span>
+            )}
           </div>
 
           {/* 7-day dots — each individually clickable */}
@@ -465,10 +472,11 @@ function HabitCard({ habit, loggedDates, streak, last7, today, pendingSet, onTog
 }
 
 /* ── HABIT MODAL ── */
-function HabitModal({ mode, habit, today, onClose, onSaved }: {
+function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
   mode: 'add' | 'edit'
   habit?: HabitWithLogs
   today: string
+  activeGoals: import('@/lib/types').Goal[]
   onClose: () => void
   onSaved: (h: HabitWithLogs) => void
 }) {
@@ -479,6 +487,7 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
     habit?.days_of_week && habit.days_of_week.length > 0 ? habit.days_of_week : []
   )
   const [endsAt,     setEndsAt]     = useState<string>(habit?.ends_at ?? '')
+  const [goalId,     setGoalId]     = useState<string>(habit?.goal_id ?? '')
   const [error,      setError]      = useState('')
   const [isPending,  startTransition] = useTransition()
 
@@ -505,7 +514,8 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
   const handleSubmit = () => {
     if (!name.trim()) { setError('Give your habit a name.'); return }
     setError('')
-    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null }
+    const linkedGoalObj = activeGoals.find(g => g.id === goalId) ?? null
+    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null, goal_id: goalId || null }
     const { target_count } = deriveFrequencyMeta(daysOfWeek)
     const todayDow = new Date(today + 'T12:00:00').getDay()
     const isScheduledToday = daysOfWeek.length === 0 || daysOfWeek.includes(todayDow)
@@ -518,11 +528,13 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
             ...created,
             days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
             ends_at: endsAt || null,
+            goal_id: goalId || null,
             target_count,
             logs: [],
             streak: 0,
             weekCompletions: 0,
             isScheduledToday,
+            linkedGoal: linkedGoalObj ? { id: linkedGoalObj.id, title: linkedGoalObj.title, category: linkedGoalObj.category } : null,
           } as HabitWithLogs)
         } else if (habit) {
           await updateHabitAction(habit.id, data)
@@ -532,8 +544,10 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
             emoji,
             days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
             ends_at: endsAt || null,
+            goal_id: goalId || null,
             target_count,
             isScheduledToday,
+            linkedGoal: linkedGoalObj ? { id: linkedGoalObj.id, title: linkedGoalObj.title, category: linkedGoalObj.category } : null,
           })
         }
       } catch (err) {
@@ -668,6 +682,23 @@ function HabitModal({ mode, habit, today, onClose, onSaved }: {
               </div>
             )}
           </div>
+
+          {/* Linked goal */}
+          {activeGoals.length > 0 && (
+            <div>
+              <label style={labelStyle}>Linked goal <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)', fontSize: '10px' }}>(optional)</span></label>
+              <select
+                value={goalId}
+                onChange={e => setGoalId(e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer' }}
+              >
+                <option value="">— No linked goal —</option>
+                {activeGoals.map(g => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {error && (
             <div style={{ fontSize: '13px', color: '#e07060', background: 'rgba(200,80,60,0.08)', padding: '10px 14px', borderRadius: '8px' }}>{error}</div>

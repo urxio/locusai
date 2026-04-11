@@ -31,6 +31,7 @@ export type Habit = {
   target_count: number        // expected completions per week
   ends_at: string | null      // ISO date — optional end date
   time_of_day: 'morning' | 'afternoon' | 'evening' | null
+  goal_id: string | null      // optional link to a goal
   created_at: string
 }
 
@@ -106,6 +107,7 @@ export type HabitWithLogs = Habit & {
   streak: number
   weekCompletions: number
   isScheduledToday: boolean   // true if habit is due today based on days_of_week
+  linkedGoal: { id: string; title: string; category: Goal['category'] } | null
 }
 
 export type GoalStep = {

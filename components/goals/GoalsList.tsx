@@ -16,6 +16,7 @@ import {
   VITALITY_STRIPE, VITALITY_BADGE, VITALITY_PROGRESS,
   type GoalVitality,
 } from '@/lib/utils/goal-vitality'
+import HabitSuggestionPanel from './HabitSuggestionPanel'
 
 /* ── STYLE CONSTANTS ── */
 const CATEGORY_COLORS: Record<string, string> = {
@@ -57,7 +58,7 @@ type ModalState = null | { mode: 'add' } | { mode: 'edit'; goal: GoalWithSteps }
 type CelebrationState = null | { goalTitle: string; milestone: 25 | 50 | 75 | 100 }
 
 /* ── ROOT ── */
-export default function GoalsList({ goals: initial }: { goals: GoalWithSteps[] }) {
+export default function GoalsList({ goals: initial, existingHabitNames: initialHabitNames = [] }: { goals: GoalWithSteps[]; existingHabitNames?: string[] }) {
   const [goals, setGoals]         = useState<GoalWithSteps[]>(initial)
   const [modal, setModal]         = useState<ModalState>(null)
   const [celebration, setCelebration] = useState<CelebrationState>(null)
@@ -69,6 +70,10 @@ export default function GoalsList({ goals: initial }: { goals: GoalWithSteps[] }
   })
   // which goal cards are currently generating AI steps
   const [generatingFor, setGeneratingFor] = useState<Set<string>>(new Set())
+  // which goal cards are showing the habit suggestion panel
+  const [suggestingFor, setSuggestingFor] = useState<Set<string>>(new Set())
+  // tracked habit names for deduplication in suggestions
+  const [habitNames, setHabitNames] = useState<string[]>(initialHabitNames)
   // which goal cards have the steps panel expanded
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const router = useRouter()
@@ -99,6 +104,8 @@ export default function GoalsList({ goals: initial }: { goals: GoalWithSteps[] }
         console.error('Step generation failed:', err)
       } finally {
         setGeneratingFor(s => { const n = new Set(s); n.delete(goal.id); return n })
+        // Show habit suggestions after steps are generated
+        setSuggestingFor(s => new Set([...s, goal.id]))
       }
     } else {
       setGoals(gs => gs.map(g => g.id === goal.id ? { ...goal, steps: stepsMap.get(goal.id) ?? [] } : g))
@@ -235,11 +242,29 @@ export default function GoalsList({ goals: initial }: { goals: GoalWithSteps[] }
           </button>
         </div>
 
-        {quarter.length > 0 && <GoalSection title={`This Quarter · Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`} goals={quarter} stepsMap={stepsMap} generatingFor={generatingFor} expanded={expanded} onToggleExpand={toggleExpand} onEdit={g => setModal({ mode: 'edit', goal: g })} onDelete={handleDeleted} onUpdate={g => setGoals(gs => gs.map(x => x.id === g.id ? g : x))} onToggleStep={handleToggleStep} onAddStep={handleAddStep} onUpdateStep={handleUpdateStep} onDeleteStep={handleDeleteStep} onRegenerate={handleRegenerateSteps} />}
-        {yearly.length > 0  && <GoalSection title={`This Year · ${new Date().getFullYear()}`}    goals={yearly}   stepsMap={stepsMap} generatingFor={generatingFor} expanded={expanded} onToggleExpand={toggleExpand} onEdit={g => setModal({ mode: 'edit', goal: g })} onDelete={handleDeleted} onUpdate={g => setGoals(gs => gs.map(x => x.id === g.id ? g : x))} onToggleStep={handleToggleStep} onAddStep={handleAddStep} onUpdateStep={handleUpdateStep} onDeleteStep={handleDeleteStep} onRegenerate={handleRegenerateSteps} />}
-        {ongoing.length > 0 && <GoalSection title="Ongoing"                                         goals={ongoing}  stepsMap={stepsMap} generatingFor={generatingFor} expanded={expanded} onToggleExpand={toggleExpand} onEdit={g => setModal({ mode: 'edit', goal: g })} onDelete={handleDeleted} onUpdate={g => setGoals(gs => gs.map(x => x.id === g.id ? g : x))} onToggleStep={handleToggleStep} onAddStep={handleAddStep} onUpdateStep={handleUpdateStep} onDeleteStep={handleDeleteStep} onRegenerate={handleRegenerateSteps} />}
-        {paused.length > 0  && <GoalSection title="Paused"     goals={paused}    stepsMap={stepsMap} generatingFor={generatingFor} expanded={expanded} onToggleExpand={toggleExpand} onEdit={g => setModal({ mode: 'edit', goal: g })} onDelete={handleDeleted} onUpdate={g => setGoals(gs => gs.map(x => x.id === g.id ? g : x))} onToggleStep={handleToggleStep} onAddStep={handleAddStep} onUpdateStep={handleUpdateStep} onDeleteStep={handleDeleteStep} onRegenerate={handleRegenerateSteps} dim />}
-        {completed.length > 0 && <GoalSection title="Completed" goals={completed} stepsMap={stepsMap} generatingFor={generatingFor} expanded={expanded} onToggleExpand={toggleExpand} onEdit={g => setModal({ mode: 'edit', goal: g })} onDelete={handleDeleted} onUpdate={g => setGoals(gs => gs.map(x => x.id === g.id ? g : x))} onToggleStep={handleToggleStep} onAddStep={handleAddStep} onUpdateStep={handleUpdateStep} onDeleteStep={handleDeleteStep} onRegenerate={handleRegenerateSteps} dim />}
+        {(() => {
+          const sharedHandlers = {
+            stepsMap, generatingFor, suggestingFor, habitNames,
+            expanded, onToggleExpand: toggleExpand,
+            onEdit: (g: GoalWithSteps) => setModal({ mode: 'edit', goal: g }),
+            onDelete: handleDeleted,
+            onUpdate: (g: GoalWithSteps) => setGoals(gs => gs.map(x => x.id === g.id ? g : x)),
+            onToggleStep: handleToggleStep, onAddStep: handleAddStep,
+            onUpdateStep: handleUpdateStep, onDeleteStep: handleDeleteStep,
+            onRegenerate: handleRegenerateSteps,
+            onHabitAdded: (name: string) => setHabitNames(prev => [...prev, name]),
+            onDismissSuggestion: (goalId: string) => setSuggestingFor(s => { const n = new Set(s); n.delete(goalId); return n }),
+          }
+          return (
+            <>
+              {quarter.length > 0  && <GoalSection title={`This Quarter · Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`} goals={quarter}   {...sharedHandlers} />}
+              {yearly.length > 0   && <GoalSection title={`This Year · ${new Date().getFullYear()}`}                                                    goals={yearly}    {...sharedHandlers} />}
+              {ongoing.length > 0  && <GoalSection title="Ongoing"                                                                                      goals={ongoing}   {...sharedHandlers} />}
+              {paused.length > 0   && <GoalSection title="Paused"     goals={paused}    {...sharedHandlers} dim />}
+              {completed.length > 0 && <GoalSection title="Completed" goals={completed} {...sharedHandlers} dim />}
+            </>
+          )
+        })()}
 
         {goals.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)' }}>
@@ -278,6 +303,7 @@ export default function GoalsList({ goals: initial }: { goals: GoalWithSteps[] }
 type SectionProps = {
   title: string; goals: GoalWithSteps[]; dim?: boolean
   stepsMap: Map<string, GoalStep[]>; generatingFor: Set<string>
+  suggestingFor: Set<string>; habitNames: string[]
   expanded: Set<string>; onToggleExpand: (id: string) => void
   onEdit: (g: GoalWithSteps) => void; onDelete: (id: string) => void
   onUpdate: (g: GoalWithSteps) => void
@@ -286,6 +312,8 @@ type SectionProps = {
   onUpdateStep: (goalId: string, stepId: string, updates: { title?: string; due_date?: string | null }) => void
   onDeleteStep: (goalId: string, stepId: string) => void
   onRegenerate: (goalId: string) => void
+  onHabitAdded: (name: string) => void
+  onDismissSuggestion: (goalId: string) => void
 }
 function GoalSection({ title, goals, dim, ...handlers }: SectionProps) {
   return (
@@ -301,16 +329,17 @@ function GoalSection({ title, goals, dim, ...handlers }: SectionProps) {
 
 /* ── GOAL CARD ── */
 type CardProps = Omit<SectionProps, 'title' | 'goals' | 'dim'> & { goal: GoalWithSteps }
-function GoalCard({ goal, stepsMap, generatingFor, expanded, onToggleExpand, onEdit, onDelete, onUpdate, onToggleStep, onAddStep, onUpdateStep, onDeleteStep, onRegenerate }: CardProps) {
+function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, expanded, onToggleExpand, onEdit, onDelete, onUpdate, onToggleStep, onAddStep, onUpdateStep, onDeleteStep, onRegenerate, onHabitAdded, onDismissSuggestion }: CardProps) {
   const [hovered,       setHovered]       = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingProgress, setEditingProgress] = useState(false)
   const [progressVal, setProgressVal]     = useState(goal.progress_pct)
   const [isPending, startTransition]      = useTransition()
 
-  const steps      = stepsMap.get(goal.id) ?? []
+  const steps        = stepsMap.get(goal.id) ?? []
   const isGenerating = generatingFor.has(goal.id)
-  const isExpanded = expanded.has(goal.id)
+  const isSuggesting = suggestingFor.has(goal.id)
+  const isExpanded   = expanded.has(goal.id)
   const hasSteps   = steps.length > 0
   const doneCount  = steps.filter(s => s.completed).length
 
@@ -518,6 +547,16 @@ function GoalCard({ goal, stepsMap, generatingFor, expanded, onToggleExpand, onE
                 </button>
               )}
             </div>
+          )}
+
+          {/* Habit suggestions — shown after new goal creation */}
+          {isSuggesting && (
+            <HabitSuggestionPanel
+              goalId={goal.id}
+              existingHabitNames={habitNames}
+              onHabitAdded={onHabitAdded}
+              onDismiss={() => onDismissSuggestion(goal.id)}
+            />
           )}
         </div>
       )}

@@ -5,11 +5,11 @@ export async function getUserHabits(userId: string): Promise<Habit[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('habits')
-    .select('*')
+    .select('*, goals(id, title, category)')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
   if (error) { console.error('getUserHabits:', error); return [] }
-  return data ?? []
+  return (data ?? []).map(({ goals: linkedGoal, ...h }) => ({ ...h, linkedGoal: linkedGoal ?? null })) as Habit[]
 }
 
 export async function getUserHabitsWithLogs(userId: string): Promise<HabitWithLogs[]> {
@@ -20,17 +20,20 @@ export async function getUserHabitsWithLogs(userId: string): Promise<HabitWithLo
   const since = new Date()
   since.setDate(since.getDate() - 60)
 
-  const [{ data: habits }, { data: logs }] = await Promise.all([
-    supabase.from('habits').select('*').eq('user_id', userId).order('created_at'),
+  type HabitRow = Habit & { goals: { id: string; title: string; category: string } | null }
+
+  const [{ data: habitsRaw }, { data: logs }] = await Promise.all([
+    supabase.from('habits').select('*, goals(id, title, category)').eq('user_id', userId).order('created_at'),
     supabase.from('habit_logs').select('*').eq('user_id', userId).gte('logged_date', since.toISOString().split('T')[0])
   ])
 
   const todayDow = new Date(today + 'T12:00:00').getDay()
 
-  return (habits ?? [])
+  return ((habitsRaw ?? []) as HabitRow[])
     // Filter out habits whose end date has passed
     .filter(habit => !habit.ends_at || habit.ends_at >= today)
     .map(habit => {
+      const { goals: linkedGoal, ...habitFields } = habit
       const habitLogs = (logs ?? []).filter(l => l.habit_id === habit.id)
       const streak = computeStreak(habitLogs, habit.days_of_week ?? null)
       const weekCompletions = habitLogs.filter(l => {
@@ -40,7 +43,7 @@ export async function getUserHabitsWithLogs(userId: string): Promise<HabitWithLo
       }).length
       const dow = habit.days_of_week
       const isScheduledToday = !dow || dow.length === 0 || dow.includes(todayDow)
-      return { ...habit, logs: habitLogs, streak, weekCompletions, isScheduledToday }
+      return { ...habitFields, logs: habitLogs, streak, weekCompletions, isScheduledToday, linkedGoal: linkedGoal ?? null }
     })
 }
 

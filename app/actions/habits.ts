@@ -51,6 +51,7 @@ export type HabitFormData = {
   emoji: string
   days_of_week: number[]   // empty [] = every day; [1,3,5] = Mon/Wed/Fri
   ends_at: string | null   // ISO date or null
+  goal_id: string | null   // optional link to a goal
 }
 
 
@@ -70,6 +71,7 @@ export async function createHabitAction(data: HabitFormData) {
     days_of_week,
     target_count,
     ends_at: data.ends_at || null,
+    goal_id: data.goal_id || null,
   }).select().single()
   if (error) throw new Error(error.message)
 
@@ -96,6 +98,7 @@ export async function updateHabitAction(habitId: string, data: HabitFormData) {
       days_of_week,
       target_count,
       ends_at: data.ends_at || null,
+      goal_id: data.goal_id || null,
     })
     .eq('id', habitId)
     .eq('user_id', user.id)
