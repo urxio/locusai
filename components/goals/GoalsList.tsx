@@ -484,13 +484,16 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
           const linked = habits.filter(h => h.goal_id === goal.id)
           if (linked.length === 0) return null
           return (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-              {linked.map(h => (
-                <span key={h.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 9px', borderRadius: '20px', background: 'var(--bg-2)', border: '1px solid var(--border)', fontSize: '11.5px', color: 'var(--text-2)' }}>
-                  <span>{h.emoji}</span>
-                  <span>{h.name}</span>
-                </span>
-              ))}
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>Habits linked</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {linked.map(h => (
+                  <span key={h.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 9px', borderRadius: '20px', background: 'var(--bg-2)', border: '1px solid var(--border)', fontSize: '11.5px', color: 'var(--text-2)' }}>
+                    <span>{h.emoji}</span>
+                    <span>{h.name}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           )
         })()}
