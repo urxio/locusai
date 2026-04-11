@@ -116,8 +116,9 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 
   async function handleCellClick(col: number, slot: Slot) {
     if (!selectedItem) return
-    // Cannot place anything in a past week
-    if (weekOffset < 0) return
+    const cellDate = colDates[col]
+    // Cannot place anything in the past (past weeks or past days within current week)
+    if (cellDate < today) return
     // Habits set a persistent time_of_day — only meaningful for the current week
     if (selectedItem.kind === 'habit' && weekOffset !== 0) return
     const dow = colToDow(col)
@@ -302,8 +303,9 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
   /* ── Computed ── */
 
   const isPastWeek = weekOffset < 0
-  const isHabitOnFutureWeek = selectedItem?.kind === 'habit' && weekOffset !== 0
-  const isSelecting = selectedItem !== null && !isPastWeek && !isHabitOnFutureWeek
+  // isSelecting: whether the user has an item ready to place at all
+  // Per-cell isDropTarget is computed inside the cell loop (must also check date ≥ today)
+  const isSelecting = selectedItem !== null && !isPastWeek
   const todayDow = new Date(today + 'T12:00:00').getDay()
 
   // Build column date strings (col 0 = Monday)
@@ -579,12 +581,17 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
                   const dow = colToDow(col)
                   const dateStr = colDates[col]
                   const isToday = dateStr === today
-                  const isDropTarget = isSelecting
+                  const isPastDate = dateStr < today
+                  const habitSelected = selectedItem?.kind === 'habit'
+                  // Habits set a persistent time_of_day — only droppable on the current week; nothing droppable on past dates
+                  const isDropTarget = isSelecting && !isPastDate && !(habitSelected && weekOffset !== 0)
                   const cellKey = `${col}-${slot}`
                   const isPending = pendingCells.has(cellKey)
 
+                  // Habit blocks: only show on days the habit is scheduled AND not past its due date
                   const habitBlocks = localHabits.filter(h =>
-                    isHabitOnDay(h, dow) && h.time_of_day === slot
+                    isHabitOnDay(h, dow) && h.time_of_day === slot &&
+                    (!h.ends_at || dateStr <= h.ends_at)
                   )
                   const dayPlanBlocks = planBlocks.filter(b =>
                     b.day_of_week === dow && b.time_slot === slot && b.week_start === weekStart
