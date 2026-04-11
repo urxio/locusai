@@ -112,6 +112,9 @@ export function buildUserMessage(ctx: BriefContext): string {
     if (ctx.todayCheckin.mood_note) {
       lines.push(`Mood: "${ctx.todayCheckin.mood_note}"`)
     }
+    if (ctx.todayCheckin.highlight) {
+      lines.push(`Today's highlight: "${ctx.todayCheckin.highlight}"`)
+    }
     const realBlockers = ctx.todayCheckin.blockers.filter(b => b !== 'No blockers today')
     if (realBlockers.length > 0) {
       lines.push(`Blockers: ${realBlockers.join(' · ')}`)

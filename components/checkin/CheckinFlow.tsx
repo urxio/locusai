@@ -18,6 +18,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
   const [energy, setEnergy] = useState(existingCheckin?.energy_level ?? 7)
   const [moodNote, setMoodNote] = useState(existingCheckin?.mood_note ?? '')
   const [blockers, setBlockers] = useState<string[]>(existingCheckin?.blockers ?? [])
+  const [highlight, setHighlight] = useState(existingCheckin?.highlight ?? '')
   const [loading, setLoading] = useState(false)
   const [isRedo, setIsRedo] = useState(false)
   const router = useRouter()
@@ -49,7 +50,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
 
   async function handleSubmit() {
     setLoading(true)
-    await submitCheckin({ energy_level: energy, mood_note: moodNote || null, blockers, localDate: localDateStr() })
+    await submitCheckin({ energy_level: energy, mood_note: moodNote || null, blockers, highlight: highlight.trim() || null, localDate: localDateStr() })
     setStep('done')
     setLoading(false)
     router.refresh()
@@ -122,14 +123,33 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
           </div>
         )}
 
-        {/* ── STEP 3: BLOCKERS ── */}
+        {/* ── STEP 3: HIGHLIGHT + BLOCKERS ── */}
         {step === 3 && (
           <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 300, color: 'var(--text-0)', marginBottom: '8px', lineHeight: 1.3 }}>
-              Any blockers today?
+              Wins &amp; blockers
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '28px', lineHeight: 1.5 }}>
-              Select all that apply. Helps Locus surface the right support.
+              Share a win to keep the brief balanced — then flag anything in your way.
+            </div>
+
+            {/* Today's highlight */}
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
+                Today&apos;s highlight <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)' }}>— optional</span>
+              </div>
+              <input
+                type="text"
+                value={highlight}
+                onChange={e => setHighlight(e.target.value)}
+                placeholder="e.g. Shipped the new feature, great 1:1 with my manager…"
+                style={{ width: '100%', background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--text-0)', outline: 'none', lineHeight: 1.5, boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Blockers */}
+            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
+              Blockers <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)' }}>— select all that apply</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '28px' }}>
               {BLOCKERS.map(b => (
@@ -167,6 +187,12 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
                 <SummaryTile label="Mood note" value={moodNote ? '✓ logged' : '—'} sub={moodNote ? moodNote.slice(0, 24) + (moodNote.length > 24 ? '…' : '') : 'skipped'} />
                 <SummaryTile label="Blockers" value={`${blockers.filter(b => b !== 'No blockers today').length}`} sub={blockers.length === 0 || blockers.includes('No blockers today') ? 'none today' : blockers[0]} />
               </div>
+              {highlight.trim() && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(122,158,138,0.08)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-1)', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ color: 'var(--sage)', flexShrink: 0 }}>★</span>
+                  <span>{highlight.trim()}</span>
+                </div>
+              )}
             </div>
 
             {/* Actions */}

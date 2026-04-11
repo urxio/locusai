@@ -13,6 +13,7 @@ type CheckinInput = {
   energy_level: number
   mood_note: string | null
   blockers: string[]
+  highlight: string | null
   localDate?: string  // YYYY-MM-DD from the client's browser
 }
 
@@ -32,6 +33,7 @@ export async function submitCheckin(input: CheckinInput) {
         energy_level: input.energy_level,
         mood_note: input.mood_note,
         blockers: input.blockers,
+        highlight: input.highlight,
         date: today,
         checked_in_at: new Date().toISOString(),
       },

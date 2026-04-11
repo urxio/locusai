@@ -64,6 +64,7 @@ export type CheckIn = {
   energy_level: number
   mood_note: string | null
   blockers: string[]
+  highlight: string | null
   date: string
 }
 
