@@ -55,7 +55,17 @@ export default function HabitSuggestionPanel({ goalId, existingHabitNames, onHab
   // Auto-dismiss once all suggestions are added
   const allAdded = suggestions.length > 0 && addedIds.size >= suggestions.length
 
-  if (!loading && suggestions.length === 0) return null
+  if (!loading && suggestions.length === 0) return (
+    <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>No habit suggestions available.</span>
+        <button
+          onClick={onDismiss}
+          style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: '0 2px' }}
+        >×</button>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{

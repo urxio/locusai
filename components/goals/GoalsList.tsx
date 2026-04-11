@@ -486,6 +486,16 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ex
           <svg width="12" height="12" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
           {isGenerating ? 'Locus is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
         </button>
+
+        {/* Habit suggestions — always visible after goal creation, regardless of steps expanded state */}
+        {isSuggesting && (
+          <HabitSuggestionPanel
+            goalId={goal.id}
+            existingHabitNames={habitNames}
+            onHabitAdded={onHabitAdded}
+            onDismiss={() => onDismissSuggestion(goal.id)}
+          />
+        )}
       </div>
 
       {/* Steps panel */}
@@ -547,16 +557,6 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ex
                 </button>
               )}
             </div>
-          )}
-
-          {/* Habit suggestions — shown after new goal creation */}
-          {isSuggesting && (
-            <HabitSuggestionPanel
-              goalId={goal.id}
-              existingHabitNames={habitNames}
-              onHabitAdded={onHabitAdded}
-              onDismiss={() => onDismissSuggestion(goal.id)}
-            />
           )}
         </div>
       )}
