@@ -6,9 +6,10 @@ import { saveClarifyingAnswer, skipClarifyingQuestion } from '@/app/actions/clar
 type Props = {
   questions: string[]
   briefDate: string
+  onComplete?: () => void
 }
 
-export default function ClarifyingQuestions({ questions, briefDate }: Props) {
+export default function ClarifyingQuestions({ questions, briefDate, onComplete }: Props) {
   const [remaining, setRemaining] = useState(questions)
   const [answer, setAnswer] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -48,7 +49,10 @@ export default function ClarifyingQuestions({ questions, briefDate }: Props) {
     const next = remaining.slice(1)
     setAnswer('')
     setRemaining(next)
-    if (next.length === 0) setSubmitted(true)
+    if (next.length === 0) {
+      setSubmitted(true)
+      onComplete?.()
+    }
     startTransition(async () => {
       await saveClarifyingAnswer(q, a, briefDate)
     })
@@ -59,8 +63,8 @@ export default function ClarifyingQuestions({ questions, briefDate }: Props) {
     const q = current
     const next = remaining.slice(1)
     setRemaining(next)
-    if (next.length === 0 && answer.trim() === '') {
-      // skipped everything without answering — just disappear quietly
+    if (next.length === 0) {
+      onComplete?.()
     }
     startTransition(async () => {
       await skipClarifyingQuestion(q)

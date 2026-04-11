@@ -118,6 +118,10 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <ClarifyingQuestions
           questions={clarifyingQuestions}
           briefDate={todayStr}
+          onComplete={() => {
+            // Give the server action time to persist before regenerating
+            setTimeout(() => handleRegenerate(), 800)
+          }}
         />
       )}
 
