@@ -88,25 +88,12 @@ export default function GoalsList({ goals: initial, existingHabitNames: initialH
     })
 
   /* ── GOAL SAVED (add or edit) ── */
-  const handleGoalSaved = async (goal: GoalWithSteps, isNew: boolean) => {
+  const handleGoalSaved = (goal: GoalWithSteps, isNew: boolean) => {
     if (isNew) {
       setGoals(gs => [...gs, goal])
       setStepsMap(m => new Map(m).set(goal.id, []))
-      // auto-expand + generate steps
-      setExpanded(s => new Set([...s, goal.id]))
-      setGeneratingFor(s => new Set([...s, goal.id]))
-      try {
-        const steps = await generateAndSaveStepsAction(goal.id)
-        setStepsMap(m => new Map(m).set(goal.id, steps))
-        // progress starts at 0 when steps exist
-        setGoals(gs => gs.map(g => g.id === goal.id ? { ...g, progress_pct: 0 } : g))
-      } catch (err) {
-        console.error('Step generation failed:', err)
-      } finally {
-        setGeneratingFor(s => { const n = new Set(s); n.delete(goal.id); return n })
-        // Show habit suggestions after steps are generated
-        setSuggestingFor(s => new Set([...s, goal.id]))
-      }
+      // Show habit suggestions immediately — user generates steps manually later
+      setSuggestingFor(s => new Set([...s, goal.id]))
     } else {
       setGoals(gs => gs.map(g => g.id === goal.id ? { ...goal, steps: stepsMap.get(goal.id) ?? [] } : g))
     }
