@@ -116,6 +116,10 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 
   async function handleCellClick(col: number, slot: Slot) {
     if (!selectedItem) return
+    // Cannot place anything in a past week
+    if (weekOffset < 0) return
+    // Habits set a persistent time_of_day — only meaningful for the current week
+    if (selectedItem.kind === 'habit' && weekOffset !== 0) return
     const dow = colToDow(col)
     const cellKey = `${col}-${slot}`
 
@@ -297,7 +301,9 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
 
   /* ── Computed ── */
 
-  const isSelecting = selectedItem !== null
+  const isPastWeek = weekOffset < 0
+  const isHabitOnFutureWeek = selectedItem?.kind === 'habit' && weekOffset !== 0
+  const isSelecting = selectedItem !== null && !isPastWeek && !isHabitOnFutureWeek
   const todayDow = new Date(today + 'T12:00:00').getDay()
 
   // Build column date strings (col 0 = Monday)
@@ -734,11 +740,11 @@ function HabitBlock({ habit, onRemove }: { habit: HabitWithLogs; onRemove: () =>
       }}
     >
       {tooltipRect && <Tooltip text={`${habit.emoji} ${habit.name}`} anchorRect={tooltipRect} />}
-      <span style={{ fontSize: '12px' }}>{habit.emoji}</span>
-      <span ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
       {hovered && (
         <span style={{ fontSize: '13px', color: 'var(--text-2)', flexShrink: 0, lineHeight: 1 }}>×</span>
       )}
+      <span style={{ fontSize: '12px' }}>{habit.emoji}</span>
+      <span ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
     </div>
   )
 }
@@ -793,13 +799,10 @@ function PlanBlock({
       }}
     >
       {tooltipRect && <Tooltip text={block.title} anchorRect={tooltipRect} />}
-      <div ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: isGhost ? '40px' : '16px' }}>
-        {block.title}
-      </div>
 
-      {/* Ghost: accept / dismiss buttons */}
+      {/* Ghost: accept / dismiss buttons on left */}
       {isGhost && hovered && (
-        <div style={{ position: 'absolute', top: '50%', right: '4px', transform: 'translateY(-50%)', display: 'flex', gap: '2px' }}>
+        <div style={{ position: 'absolute', top: '50%', left: '4px', transform: 'translateY(-50%)', display: 'flex', gap: '2px' }}>
           <button
             onClick={e => { e.stopPropagation(); onAccept() }}
             title="Accept"
@@ -813,13 +816,17 @@ function PlanBlock({
         </div>
       )}
 
-      {/* Accepted: remove button */}
+      {/* Accepted: remove button on left */}
       {!isGhost && hovered && (
         <button
           onClick={e => { e.stopPropagation(); onRemove() }}
-          style={{ position: 'absolute', top: '50%', right: '4px', transform: 'translateY(-50%)', width: '14px', height: '14px', border: 'none', background: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1 }}
+          style={{ position: 'absolute', top: '50%', left: '4px', transform: 'translateY(-50%)', width: '14px', height: '14px', border: 'none', background: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1 }}
         >×</button>
       )}
+
+      <div ref={textRef} style={{ fontSize: '11px', color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingLeft: hovered ? (isGhost ? '42px' : '18px') : '0' }}>
+        {block.title}
+      </div>
     </div>
   )
 }
