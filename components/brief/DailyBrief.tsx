@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import BriefLoader from './BriefLoader'
@@ -32,6 +32,8 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
   const [genError, setGenError] = useState<string | null>(null)
   const [liveQuestions, setLiveQuestions] = useState<string[] | null>(null)
+  // After the user answers Q&A, suppress any new questions from the subsequent regeneration
+  const suppressNextQuestions = useRef(false)
 
   // Clarifying questions — prefer live questions from the current generation,
   // fall back to persisted questions in memory (shown on re-navigation)
@@ -46,7 +48,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const handleBriefReady = useCallback((b: Brief, questions: string[]) => {
     setBrief(b)
     setGenerating(false)
-    if (questions.length > 0) setLiveQuestions(questions)
+    if (questions.length > 0 && !suppressNextQuestions.current) {
+      setLiveQuestions(questions)
+    }
   }, [])
 
   const handleGenError = useCallback((detail: string) => {
@@ -75,9 +79,10 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json?.detail ?? json?.error ?? `HTTP ${res.status}`)
       setBrief(json.brief)
-      if (Array.isArray(json.clarifying_questions) && json.clarifying_questions.length > 0) {
+      if (Array.isArray(json.clarifying_questions) && json.clarifying_questions.length > 0 && !suppressNextQuestions.current) {
         setLiveQuestions(json.clarifying_questions)
       }
+      suppressNextQuestions.current = false
     } catch (err) {
       setGenError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -119,8 +124,10 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
           questions={clarifyingQuestions}
           briefDate={todayStr}
           onComplete={() => {
-            // Give the server action time to persist before regenerating
-            setTimeout(() => handleRegenerate(), 800)
+            suppressNextQuestions.current = true
+            setLiveQuestions(null)
+            // Give the server action time to persist answers before regenerating
+            setTimeout(() => handleRegenerate(), 1500)
           }}
         />
       )}
