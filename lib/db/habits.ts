@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Habit, HabitLog, HabitWithLogs } from '@/lib/types'
+import type { Goal, Habit, HabitLog, HabitWithLogs } from '@/lib/types'
 
 export async function getUserHabits(userId: string): Promise<Habit[]> {
   const supabase = await createClient()
@@ -20,7 +20,7 @@ export async function getUserHabitsWithLogs(userId: string): Promise<HabitWithLo
   const since = new Date()
   since.setDate(since.getDate() - 60)
 
-  type HabitRow = Habit & { goals: { id: string; title: string; category: string } | null }
+  type HabitRow = Habit & { goals: { id: string; title: string; category: Goal['category'] } | null }
 
   const [{ data: habitsRaw }, { data: logs }] = await Promise.all([
     supabase.from('habits').select('*, goals(id, title, category)').eq('user_id', userId).order('created_at'),
