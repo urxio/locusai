@@ -3,11 +3,12 @@
 import { useEffect, useState, useTransition } from 'react'
 import { createHabitAction } from '@/app/actions/habits'
 import type { HabitSuggestion } from '@/app/api/habits/suggest/route'
+import type { Habit } from '@/lib/types'
 
 type Props = {
   goalId: string
   existingHabitNames: string[]
-  onHabitAdded: (name: string) => void
+  onHabitAdded: (name: string, habit: Habit) => void
   onDismiss: () => void
 }
 
@@ -37,14 +38,14 @@ export default function HabitSuggestionPanel({ goalId, existingHabitNames, onHab
     setAddedIds(prev => new Set(prev).add(idx))
     startTransition(async () => {
       try {
-        await createHabitAction({
+        const habit = await createHabitAction({
           name: s.name,
           emoji: s.emoji,
           days_of_week: [],
           ends_at: null,
           goal_id: goalId,
         })
-        onHabitAdded(s.name)
+        onHabitAdded(s.name, habit as Habit)
       } catch (err) {
         console.error('createHabitAction from suggestion:', err)
         setAddedIds(prev => { const n = new Set(prev); n.delete(idx); return n })

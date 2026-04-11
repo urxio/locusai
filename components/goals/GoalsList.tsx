@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { GoalWithSteps, GoalStep } from '@/lib/types'
+import type { GoalWithSteps, GoalStep, Habit } from '@/lib/types'
 import { createGoalAction, updateGoalAction, deleteGoalAction, type GoalFormData } from '@/app/actions/goals'
 import {
   generateAndSaveStepsAction,
@@ -58,7 +58,7 @@ type ModalState = null | { mode: 'add' } | { mode: 'edit'; goal: GoalWithSteps }
 type CelebrationState = null | { goalTitle: string; milestone: 25 | 50 | 75 | 100 }
 
 /* ── ROOT ── */
-export default function GoalsList({ goals: initial, existingHabitNames: initialHabitNames = [] }: { goals: GoalWithSteps[]; existingHabitNames?: string[] }) {
+export default function GoalsList({ goals: initial, habits: initialHabits = [], existingHabitNames: initialHabitNames = [] }: { goals: GoalWithSteps[]; habits?: Habit[]; existingHabitNames?: string[] }) {
   const [goals, setGoals]         = useState<GoalWithSteps[]>(initial)
   const [modal, setModal]         = useState<ModalState>(null)
   const [celebration, setCelebration] = useState<CelebrationState>(null)
@@ -72,6 +72,8 @@ export default function GoalsList({ goals: initial, existingHabitNames: initialH
   const [generatingFor, setGeneratingFor] = useState<Set<string>>(new Set())
   // which goal cards are showing the habit suggestion panel
   const [suggestingFor, setSuggestingFor] = useState<Set<string>>(new Set())
+  // all user habits (for displaying linked habits per goal)
+  const [habits, setHabits] = useState<Habit[]>(initialHabits)
   // tracked habit names for deduplication in suggestions
   const [habitNames, setHabitNames] = useState<string[]>(initialHabitNames)
   // which goal cards have the steps panel expanded
@@ -231,7 +233,7 @@ export default function GoalsList({ goals: initial, existingHabitNames: initialH
 
         {(() => {
           const sharedHandlers = {
-            stepsMap, generatingFor, suggestingFor, habitNames,
+            stepsMap, generatingFor, suggestingFor, habitNames, habits,
             expanded, onToggleExpand: toggleExpand,
             onEdit: (g: GoalWithSteps) => setModal({ mode: 'edit', goal: g }),
             onDelete: handleDeleted,
@@ -239,7 +241,10 @@ export default function GoalsList({ goals: initial, existingHabitNames: initialH
             onToggleStep: handleToggleStep, onAddStep: handleAddStep,
             onUpdateStep: handleUpdateStep, onDeleteStep: handleDeleteStep,
             onRegenerate: handleRegenerateSteps,
-            onHabitAdded: (name: string) => setHabitNames(prev => [...prev, name]),
+            onHabitAdded: (name: string, habit: Habit) => {
+              setHabitNames(prev => [...prev, name])
+              setHabits(prev => [...prev, habit])
+            },
             onDismissSuggestion: (goalId: string) => setSuggestingFor(s => { const n = new Set(s); n.delete(goalId); return n }),
           }
           return (
@@ -290,7 +295,7 @@ export default function GoalsList({ goals: initial, existingHabitNames: initialH
 type SectionProps = {
   title: string; goals: GoalWithSteps[]; dim?: boolean
   stepsMap: Map<string, GoalStep[]>; generatingFor: Set<string>
-  suggestingFor: Set<string>; habitNames: string[]
+  suggestingFor: Set<string>; habitNames: string[]; habits: Habit[]
   expanded: Set<string>; onToggleExpand: (id: string) => void
   onEdit: (g: GoalWithSteps) => void; onDelete: (id: string) => void
   onUpdate: (g: GoalWithSteps) => void
@@ -299,7 +304,7 @@ type SectionProps = {
   onUpdateStep: (goalId: string, stepId: string, updates: { title?: string; due_date?: string | null }) => void
   onDeleteStep: (goalId: string, stepId: string) => void
   onRegenerate: (goalId: string) => void
-  onHabitAdded: (name: string) => void
+  onHabitAdded: (name: string, habit: Habit) => void
   onDismissSuggestion: (goalId: string) => void
 }
 function GoalSection({ title, goals, dim, ...handlers }: SectionProps) {
@@ -316,7 +321,7 @@ function GoalSection({ title, goals, dim, ...handlers }: SectionProps) {
 
 /* ── GOAL CARD ── */
 type CardProps = Omit<SectionProps, 'title' | 'goals' | 'dim'> & { goal: GoalWithSteps }
-function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, expanded, onToggleExpand, onEdit, onDelete, onUpdate, onToggleStep, onAddStep, onUpdateStep, onDeleteStep, onRegenerate, onHabitAdded, onDismissSuggestion }: CardProps) {
+function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, habits, expanded, onToggleExpand, onEdit, onDelete, onUpdate, onToggleStep, onAddStep, onUpdateStep, onDeleteStep, onRegenerate, onHabitAdded, onDismissSuggestion }: CardProps) {
   const [hovered,       setHovered]       = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingProgress, setEditingProgress] = useState(false)
@@ -473,6 +478,22 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ex
           <svg width="12" height="12" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
           {isGenerating ? 'Locus is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
         </button>
+
+        {/* Linked habits */}
+        {(() => {
+          const linked = habits.filter(h => h.goal_id === goal.id)
+          if (linked.length === 0) return null
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+              {linked.map(h => (
+                <span key={h.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 9px', borderRadius: '20px', background: 'var(--bg-2)', border: '1px solid var(--border)', fontSize: '11.5px', color: 'var(--text-2)' }}>
+                  <span>{h.emoji}</span>
+                  <span>{h.name}</span>
+                </span>
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Habit suggestions — always visible after goal creation, regardless of steps expanded state */}
         {isSuggesting && (

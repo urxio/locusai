@@ -15,5 +15,5 @@ export default async function GoalsPage() {
     getUserHabits(user.id),
   ])
 
-  return <GoalsList goals={goals} existingHabitNames={habits.map(h => h.name)} />
+  return <GoalsList goals={goals} habits={habits} existingHabitNames={habits.map(h => h.name)} />
 }
