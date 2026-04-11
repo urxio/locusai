@@ -30,17 +30,25 @@ const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
 export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration, memory, pastBriefs = [] }: Props) {
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
+  const [forceRegen, setForceRegen] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   const [liveQuestions, setLiveQuestions] = useState<string[] | null>(null)
+  // Tracks whether the user has answered Q&A this session — prevents persisted questions from re-appearing
+  const [questionsAnswered, setQuestionsAnswered] = useState(false)
+  // Whether a silent post-Q&A regen is in progress (no loading spinner shown)
+  const [silentUpdating, setSilentUpdating] = useState(false)
   // After the user answers Q&A, suppress any new questions from the subsequent regeneration
   const suppressNextQuestions = useRef(false)
 
   // Clarifying questions — prefer live questions from the current generation,
-  // fall back to persisted questions in memory (shown on re-navigation)
+  // fall back to persisted questions in memory (shown on re-navigation).
+  // Suppressed once user has answered this session.
   const todayStr = new Date().toISOString().split('T')[0]
   const pendingClarifications = memory?.pending_clarifications
   const persistedQuestions =
-    pendingClarifications?.brief_date === todayStr && pendingClarifications.questions.length > 0
+    !questionsAnswered &&
+    pendingClarifications?.brief_date === todayStr &&
+    pendingClarifications.questions.length > 0
       ? pendingClarifications.questions
       : null
   const clarifyingQuestions = liveQuestions ?? persistedQuestions
@@ -48,13 +56,17 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const handleBriefReady = useCallback((b: Brief, questions: string[]) => {
     setBrief(b)
     setGenerating(false)
+    setForceRegen(false)
     if (questions.length > 0 && !suppressNextQuestions.current) {
       setLiveQuestions(questions)
     }
+    // Reset AFTER checking so suppression covers the full round-trip
+    suppressNextQuestions.current = false
   }, [])
 
   const handleGenError = useCallback((detail: string) => {
     setGenerating(false)
+    setForceRegen(false)
     setGenError(detail)
   }, [])
 
@@ -67,9 +79,16 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const activeGoals = goals.filter(g => g.status === 'active').slice(0, 3)
   const completedHabits = habits.filter(h => h.weekCompletions > 0).length
 
-  const handleRegenerate = async () => {
+  // Full-spinner regeneration (manual "Regenerate" button) — BriefLoader handles the fetch
+  const handleRegenerate = () => {
     setGenerating(true)
+    setForceRegen(true)
     setGenError(null)
+  }
+
+  // Silent regeneration after Q&A — updates brief/cards without showing the full loader
+  const silentRegenerate = async () => {
+    setSilentUpdating(true)
     try {
       const res = await fetch('/api/brief/generate', {
         method: 'POST',
@@ -77,16 +96,12 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         body: JSON.stringify({ force: true }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json?.detail ?? json?.error ?? `HTTP ${res.status}`)
-      setBrief(json.brief)
-      if (Array.isArray(json.clarifying_questions) && json.clarifying_questions.length > 0 && !suppressNextQuestions.current) {
-        setLiveQuestions(json.clarifying_questions)
-      }
-      suppressNextQuestions.current = false
-    } catch (err) {
-      setGenError(err instanceof Error ? err.message : 'Unknown error')
+      if (res.ok && json.brief) setBrief(json.brief)
+    } catch {
+      // silent fail — answers are saved, brief will catch up on next load
     } finally {
-      setGenerating(false)
+      suppressNextQuestions.current = false
+      setSilentUpdating(false)
     }
   }
 
@@ -108,12 +123,12 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       {/* AI Insight / Loader / No-brief card */}
       {generating ? (
         <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: '20px' }}>
-          <BriefLoader onBriefReady={handleBriefReady} onError={handleGenError} />
+          <BriefLoader force={forceRegen} onBriefReady={handleBriefReady} onError={handleGenError} />
         </div>
       ) : genError ? (
         <ErrorCard message={genError} onRetry={handleRegenerate} />
       ) : brief ? (
-        <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} />
+        <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} updating={silentUpdating} />
       ) : (
         <NoBriefCard hasCheckin={!!checkin} />
       )}
@@ -126,8 +141,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
           onComplete={() => {
             suppressNextQuestions.current = true
             setLiveQuestions(null)
-            // Give the server action time to persist answers before regenerating
-            setTimeout(() => handleRegenerate(), 1500)
+            setQuestionsAnswered(true)
+            // Silently refresh brief/cards without showing full loading spinner
+            setTimeout(() => silentRegenerate(), 1500)
           }}
         />
       )}
@@ -191,7 +207,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   )
 }
 
-function AIInsightCard({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
+function AIInsightCard({ text, onRegenerate, updating }: { text: string; onRegenerate?: () => void; updating?: boolean }) {
   return (
     <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', position: 'relative', overflow: 'hidden', marginBottom: '20px' }}>
       <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(212,168,83,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -200,15 +216,20 @@ function AIInsightCard({ text, onRegenerate }: { text: string; onRegenerate?: ()
           <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 2s ease-in-out infinite' }} />
           Locus AI · Daily Insight
         </div>
-        {onRegenerate && (
-          <button
-            onClick={onRegenerate}
-            className="icon-btn"
-            style={{ background: 'none', border: '1px solid var(--border-md)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '11px', padding: '3px 9px', cursor: 'pointer', letterSpacing: '0.03em', flexShrink: 0 }}
-          >
-            Regenerate
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {updating && (
+            <span style={{ fontSize: '11px', color: 'var(--text-3)', fontStyle: 'italic' }}>Refining brief…</span>
+          )}
+          {onRegenerate && !updating && (
+            <button
+              onClick={onRegenerate}
+              className="icon-btn"
+              style={{ background: 'none', border: '1px solid var(--border-md)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '11px', padding: '3px 9px', cursor: 'pointer', letterSpacing: '0.03em', flexShrink: 0 }}
+            >
+              Regenerate
+            </button>
+          )}
+        </div>
       </div>
       <div style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 300, color: 'var(--ai-card-text)', lineHeight: 1.6, letterSpacing: '0.01em', position: 'relative', zIndex: 1 }}>{text}</div>
       <div style={{ marginTop: '16px', fontSize: '12px', color: 'var(--text-3)', position: 'relative', zIndex: 1 }}>Based on your check-ins and goal data · Updated today</div>

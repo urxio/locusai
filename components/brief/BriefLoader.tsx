@@ -6,9 +6,10 @@ import type { Brief } from '@/lib/types'
 type Props = {
   onBriefReady: (brief: Brief, questions: string[]) => void
   onError: (detail: string) => void
+  force?: boolean
 }
 
-export default function BriefLoader({ onBriefReady, onError }: Props) {
+export default function BriefLoader({ onBriefReady, onError, force = false }: Props) {
   const [dots, setDots] = useState('.')
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function BriefLoader({ onBriefReady, onError }: Props) {
         const res = await fetch('/api/brief/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ force: false }),
+          body: JSON.stringify({ force }),
         })
         if (cancelled) return
         const json = await res.json().catch(() => ({}))
