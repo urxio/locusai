@@ -6,7 +6,7 @@ import type { UserMemory } from '@/lib/ai/memory'
 import BriefLoader from './BriefLoader'
 import MemoryCard from './MemoryCard'
 import BriefHistory from './BriefHistory'
-import ClarifyingQuestions from './ClarifyingQuestions'
+import ClarifyingQuestions, { type QAPair } from './ClarifyingQuestions'
 
 type Props = {
   goals: Goal[]
@@ -37,6 +37,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const [questionsAnswered, setQuestionsAnswered] = useState(false)
   // Whether a silent post-Q&A regen is in progress (no loading spinner shown)
   const [silentUpdating, setSilentUpdating] = useState(false)
+  // Short AI note appended below the brief after Q&A
+  const [clarificationNote, setClarificationNote] = useState<string | null>(null)
+  const [noteLoading, setNoteLoading] = useState(false)
   // After the user answers Q&A, suppress any new questions from the subsequent regeneration
   const suppressNextQuestions = useRef(false)
 
@@ -86,22 +89,34 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
     setGenError(null)
   }
 
-  // Silent regeneration after Q&A — updates brief/cards without showing the full loader
-  const silentRegenerate = async () => {
-    setSilentUpdating(true)
+  // After Q&A: generate a short note + optionally update insight/priorities
+  const generateClarificationNote = async (answers: QAPair[], currentBrief: Brief) => {
+    if (!answers.length) return
+    setNoteLoading(true)
     try {
-      const res = await fetch('/api/brief/generate', {
+      const res = await fetch('/api/brief/clarify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: true }),
+        body: JSON.stringify({
+          answers,
+          briefInsight: currentBrief.insight_text,
+          currentPriorities: currentBrief.priorities,
+        }),
       })
       const json = await res.json().catch(() => ({}))
-      if (res.ok && json.brief) setBrief(json.brief)
+      if (json.note) setClarificationNote(json.note)
+      // Patch brief card if AI decided updates are warranted
+      if (json.updatedInsight || json.updatedPriorities) {
+        setBrief(b => b ? {
+          ...b,
+          ...(json.updatedInsight ? { insight_text: json.updatedInsight } : {}),
+          ...(json.updatedPriorities ? { priorities: json.updatedPriorities } : {}),
+        } : b)
+      }
     } catch {
-      // silent fail — answers are saved, brief will catch up on next load
+      // silent fail — answers are saved regardless
     } finally {
-      suppressNextQuestions.current = false
-      setSilentUpdating(false)
+      setNoteLoading(false)
     }
   }
 
@@ -135,17 +150,41 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <NoBriefCard hasCheckin={true} />
       )}
 
+      {/* Clarification note — short AI addendum shown after Q&A, below the brief */}
+      {(clarificationNote || noteLoading) && !generating && (
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', marginTop: '-8px', marginBottom: '16px', animation: 'fadeUp 0.25s var(--ease) both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
+            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', opacity: noteLoading ? 0 : 1, animation: noteLoading ? 'pulse 1s ease-in-out infinite' : 'none' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+              {noteLoading ? 'Locus is reflecting on your answers…' : 'Locus · Clarification'}
+            </span>
+          </div>
+          {noteLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ height: '12px', borderRadius: '6px', background: 'var(--bg-3)', width: '90%', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ height: '12px', borderRadius: '6px', background: 'var(--bg-3)', width: '70%', animation: 'pulse 1.5s ease-in-out infinite', animationDelay: '0.1s' }} />
+            </div>
+          ) : (
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 300, color: 'var(--text-1)', lineHeight: 1.6, margin: 0 }}>
+              {clarificationNote}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Clarifying questions — shown when AI needs more context */}
       {clarifyingQuestions && !generating && (
         <ClarifyingQuestions
           questions={clarifyingQuestions}
           briefDate={todayStr}
-          onComplete={() => {
+          onComplete={(answers) => {
             suppressNextQuestions.current = true
             setLiveQuestions(null)
             setQuestionsAnswered(true)
-            // Silently refresh brief/cards without showing full loading spinner
-            setTimeout(() => silentRegenerate(), 1500)
+            // Generate a short note + optionally patch insight/priorities
+            if (brief && answers.length > 0) {
+              generateClarificationNote(answers, brief)
+            }
           }}
         />
       )}

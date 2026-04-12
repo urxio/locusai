@@ -3,10 +3,12 @@
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { saveClarifyingAnswer, skipClarifyingQuestion } from '@/app/actions/clarifying-answer'
 
+export type QAPair = { question: string; answer: string }
+
 type Props = {
   questions: string[]
   briefDate: string
-  onComplete?: () => void
+  onComplete?: (answers: QAPair[]) => void
 }
 
 export default function ClarifyingQuestions({ questions, briefDate, onComplete }: Props) {
@@ -14,6 +16,7 @@ export default function ClarifyingQuestions({ questions, briefDate, onComplete }
   const [answer, setAnswer] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [answeredPairs, setAnsweredPairs] = useState<QAPair[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const current = remaining[0]
@@ -47,11 +50,13 @@ export default function ClarifyingQuestions({ questions, briefDate, onComplete }
     const q = current
     const a = answer.trim()
     const next = remaining.slice(1)
+    const newPairs = [...answeredPairs, { question: q, answer: a }]
     setAnswer('')
     setRemaining(next)
+    setAnsweredPairs(newPairs)
     if (next.length === 0) {
       setSubmitted(true)
-      onComplete?.()
+      onComplete?.(newPairs)
     }
     startTransition(async () => {
       await saveClarifyingAnswer(q, a, briefDate)
@@ -64,7 +69,8 @@ export default function ClarifyingQuestions({ questions, briefDate, onComplete }
     const next = remaining.slice(1)
     setRemaining(next)
     if (next.length === 0) {
-      onComplete?.()
+      // Pass only answered pairs (skipped questions contribute nothing)
+      onComplete?.(answeredPairs)
     }
     startTransition(async () => {
       await skipClarifyingQuestion(q)
