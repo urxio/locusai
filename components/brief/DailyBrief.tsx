@@ -116,7 +116,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
           {greeting}, <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>you.</em>
         </div>
         <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>
-          {checkin ? "Here's your brief for today." : "Complete a check-in to get your personalized AI brief."}
+          {checkin ? "Here's your brief for today." : "Check in to unlock your personalized AI brief."}
         </div>
       </div>
 
@@ -129,8 +129,10 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <ErrorCard message={genError} onRetry={handleRegenerate} />
       ) : brief ? (
         <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} updating={silentUpdating} />
+      ) : !checkin ? (
+        <PreBriefState goals={goals} habits={habits} pastBriefs={pastBriefs} avgEnergy={avgEnergy} />
       ) : (
-        <NoBriefCard hasCheckin={!!checkin} />
+        <NoBriefCard hasCheckin={true} />
       )}
 
       {/* Clarifying questions — shown when AI needs more context */}
@@ -250,6 +252,139 @@ function NoBriefCard({ hasCheckin }: { hasCheckin: boolean }) {
           Start check-in →
         </a>
       )}
+    </div>
+  )
+}
+
+function PreBriefState({ goals, habits, pastBriefs, avgEnergy }: {
+  goals: Goal[]
+  habits: HabitWithLogs[]
+  pastBriefs: Brief[]
+  avgEnergy: number | null
+}) {
+  const yesterday = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().split('T')[0]
+  })()
+  const yesterdayBrief = pastBriefs[0]?.brief_date === yesterday ? pastBriefs[0] : null
+
+  const todayHabits = habits.filter(h => h.isScheduledToday)
+  const habitGroups: Record<string, HabitWithLogs[]> = {
+    morning:   todayHabits.filter(h => h.time_of_day === 'morning'),
+    afternoon: todayHabits.filter(h => h.time_of_day === 'afternoon'),
+    evening:   todayHabits.filter(h => h.time_of_day === 'evening'),
+    anytime:   todayHabits.filter(h => h.time_of_day === null),
+  }
+  const habitGroupOrder = ['morning', 'afternoon', 'evening', 'anytime'] as const
+  const habitGroupLabels: Record<string, string> = {
+    morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', anytime: 'Anytime',
+  }
+
+  const activeGoals = goals.filter(g => g.status === 'active').slice(0, 3)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+
+      {/* ── Check-in prompt card ── */}
+      <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '220px', height: '220px', background: 'radial-gradient(circle, rgba(122,158,138,0.08) 0%, rgba(212,168,83,0.06) 50%, transparent 70%)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '20px', padding: '3px 10px 3px 7px', fontSize: '10.5px', color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)' }} />
+          Locus AI · Daily Brief
+        </div>
+
+        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '21px', fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.45, letterSpacing: '0.01em', marginBottom: '8px', position: 'relative', zIndex: 1 }}>
+          Your AI brief is ready when you are.
+        </div>
+        <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '20px', position: 'relative', zIndex: 1 }}>
+          {`It'll weave together your ${activeGoals.length > 0 ? `${activeGoals.length} active goal${activeGoals.length !== 1 ? 's' : ''}` : 'goals'}, today's habits${avgEnergy !== null ? ', and your recent energy trends' : ''} into a focused daily plan.`}
+        </div>
+
+        {yesterdayBrief && (
+          <div style={{ borderTop: '1px solid var(--border)', marginBottom: '20px', paddingTop: '14px', position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
+              Yesterday
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13.5px', fontWeight: 300, color: 'var(--text-3)', lineHeight: 1.55, fontStyle: 'italic' }}>
+              {yesterdayBrief.insight_text.length > 120
+                ? yesterdayBrief.insight_text.slice(0, 117).trimEnd() + '…'
+                : yesterdayBrief.insight_text}
+            </div>
+          </div>
+        )}
+
+        <a href="/checkin" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold)', color: '#131110', borderRadius: 'var(--radius-md)', padding: '10px 22px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', position: 'relative', zIndex: 1 }}>
+          Start check-in →
+        </a>
+      </div>
+
+      {/* ── Today's habits ── */}
+      {todayHabits.length > 0 && (
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', animation: 'fadeUp 0.3s var(--ease) both', animationDelay: '0.05s' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '14px' }}>
+            On deck today
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {habitGroupOrder.map(key => {
+              const group = habitGroups[key]
+              if (!group || group.length === 0) return null
+              return (
+                <div key={key}>
+                  <div style={{ fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
+                    {habitGroupLabels[key]}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {group.map(habit => (
+                      <div key={habit.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '5px 10px', fontSize: '12.5px', color: 'var(--text-1)', fontWeight: 500, lineHeight: 1 }}>
+                        <span style={{ fontSize: '14px', lineHeight: 1 }}>{habit.emoji}</span>
+                        {habit.name}
+                        {habit.streak > 1 && (
+                          <span style={{ fontSize: '10px', color: 'var(--gold)', fontWeight: 600, marginLeft: '2px', opacity: 0.85 }}>
+                            {habit.streak}d
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Goal progress snapshot ── */}
+      {activeGoals.length > 0 && (
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', animation: 'fadeUp 0.3s var(--ease) both', animationDelay: '0.1s' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '14px' }}>
+            Goal progress
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {activeGoals.map(goal => {
+              const colors = CATEGORY_COLORS[goal.category] ?? { tag: 'rgba(160,160,160,0.1)', border: 'var(--text-3)' }
+              return (
+                <div key={goal.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: colors.border, flexShrink: 0, opacity: 0.85 }} />
+                  <div style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-1)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+                    {goal.title}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <div style={{ width: '72px', height: '3px', background: 'var(--bg-4)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: '3px', background: colors.border, width: `${Math.min(100, Math.max(0, goal.progress_pct))}%`, opacity: 0.75, transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)' }} />
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', minWidth: '28px', textAlign: 'right' }}>
+                      {goal.progress_pct}%
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
