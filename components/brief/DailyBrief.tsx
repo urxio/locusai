@@ -89,7 +89,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
     setGenError(null)
   }
 
-  // After Q&A: generate a short note + optionally update insight/priorities
+  // After Q&A: generate a short clarification note to show below the brief
   const generateClarificationNote = async (answers: QAPair[], currentBrief: Brief) => {
     if (!answers.length) return
     setNoteLoading(true)
@@ -97,22 +97,10 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       const res = await fetch('/api/brief/clarify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers,
-          briefInsight: currentBrief.insight_text,
-          currentPriorities: currentBrief.priorities,
-        }),
+        body: JSON.stringify({ answers, briefInsight: currentBrief.insight_text }),
       })
       const json = await res.json().catch(() => ({}))
       if (json.note) setClarificationNote(json.note)
-      // Patch brief card if AI decided updates are warranted
-      if (json.updatedInsight || json.updatedPriorities) {
-        setBrief(b => b ? {
-          ...b,
-          ...(json.updatedInsight ? { insight_text: json.updatedInsight } : {}),
-          ...(json.updatedPriorities ? { priorities: json.updatedPriorities } : {}),
-        } : b)
-      }
     } catch {
       // silent fail — answers are saved regardless
     } finally {
