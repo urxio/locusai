@@ -26,7 +26,7 @@ export default async function ReviewPage() {
   const year       = today.getFullYear()
 
   const [checkins, habits, goals, savedReflection, patternsCtx, memory, pastReflections] = await Promise.all([
-    getRecentCheckins(user.id, 7),
+    getRecentCheckins(user.id, 60),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
     getWeeklyReflection(user.id, weekNumber, year),
