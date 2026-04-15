@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTransition } from 'react'
 import ThemeToggle from './ThemeToggle'
+import { signOut } from '@/app/actions/auth'
 
 const NAV = [
   {
@@ -31,6 +33,7 @@ const NAV = [
 
 export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: { userName: string; avatarUrl: string | null; overdueStepCount?: number }) {
   const pathname = usePathname()
+  const [pending, startTransition] = useTransition()
   const now = new Date()
   const day = now.toLocaleDateString('en-US', { weekday: 'long' })
   const full = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -103,6 +106,30 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
           <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '1px' }}>🔥 Keep the streak</div>
         </div>
         <ThemeToggle />
+        <button
+          onClick={() => startTransition(() => signOut())}
+          disabled={pending}
+          aria-label="Sign out"
+          title="Sign out"
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: 'transparent',
+            border: '1px solid var(--border-md)',
+            color: pending ? 'var(--text-3)' : 'var(--text-2)',
+            cursor: pending ? 'default' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => { if (!pending) { (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-0)' } }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)' }}
+        >
+          <LogoutIcon />
+        </button>
       </div>
     </aside>
   )
@@ -128,6 +155,14 @@ function SetupIcon() {
 }
 function PatternsIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18"><path d="M3 14l4-5 3 3 3-4 4 5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1" fill="currentColor" stroke="none"/></svg>
+}
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
+      <path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3" strokeLinecap="round"/>
+      <path d="M13 14l3-4-3-4M16 10H7" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
 }
 function PlannerIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
