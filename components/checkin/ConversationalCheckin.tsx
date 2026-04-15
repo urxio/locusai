@@ -38,18 +38,15 @@ export default function ConversationalCheckin({
         }
       : null
   )
-  // Snapshot of the check-in being replaced — shared with the API for redo context
   const [previousCheckin, setPreviousCheckin] = useState<CheckinData | null>(null)
   const [isRedo, setIsRedo] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [focused, setFocused] = useState(false)
 
   const router = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const initFetched = useRef(false)
 
-  // Scroll to bottom on new content
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -66,10 +63,7 @@ export default function ConversationalCheckin({
         const res = await fetch('/api/checkin/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: msgs,
-            previousCheckin: prevCheckin,
-          }),
+          body: JSON.stringify({ messages: msgs, previousCheckin: prevCheckin }),
         })
 
         if (!res.ok || !res.body) throw new Error('Request failed')
@@ -117,7 +111,6 @@ export default function ConversationalCheckin({
     [router]
   )
 
-  // Fetch opener on mount / after redo reset
   useEffect(() => {
     if (step !== 'chat' || initFetched.current) return
     initFetched.current = true
@@ -147,7 +140,7 @@ export default function ConversationalCheckin({
   }
 
   const handleRedo = () => {
-    setPreviousCheckin(checkinData) // save for redo context
+    setPreviousCheckin(checkinData)
     setIsRedo(true)
     setStep('chat')
     setMessages([])
@@ -166,14 +159,12 @@ export default function ConversationalCheckin({
     checkinData.energy_level >= 7 ? 'var(--sage)' :
     checkinData.energy_level >= 5 ? 'var(--gold)' : '#c08060'
 
-  const canSend = input.trim() && !streaming && step !== 'saving'
+  const canSend = !!input.trim() && !streaming && step !== 'saving'
 
   return (
-    <div
-      className="page-pad"
-      style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}
-    >
-      {/* Header */}
+    <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+
+      {/* ── Header ── */}
       <div style={{ marginBottom: '28px' }}>
         <div style={{
           fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -196,58 +187,47 @@ export default function ConversationalCheckin({
 
       <div style={{ maxWidth: '580px' }}>
 
-        {/* ── CHAT / SAVING ── */}
+        {/* ── CHAT ── */}
         {(step === 'chat' || step === 'saving') && (
-          <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
+          <div style={{ animation: 'fadeUp 0.25s var(--ease) both' }}>
 
-            {/* Unified chat card */}
+            {/* Chat card */}
             <div style={{
-              background: 'var(--bg-1)',
-              border: `1px solid ${focused ? 'var(--border-bright)' : 'var(--border-md)'}`,
-              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-md)',
+              borderRadius: '18px',
               overflow: 'hidden',
-              transition: 'border-color 0.2s',
+              background: 'var(--bg-1)',
             }}>
 
-              {/* Messages area — fixed height, messages anchor to bottom */}
+              {/* Messages — fixed height, anchored to bottom */}
               <div style={{
-                height: '280px',
+                height: '300px',
                 overflowY: 'auto',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '20px 20px 12px',
+                background: 'var(--bg-0)',
                 scrollbarWidth: 'none',
               }}>
-                {/* Spacer pushes messages to the bottom */}
+                {/* Spacer to anchor messages at the bottom */}
                 <div style={{ flex: 1 }} />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 20px 16px' }}>
                   {messages.map((msg, i) => {
                     const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant'
                     const showCursor = isLastAssistant && streaming && !msg.content
 
-                    return (
-                      <div key={i} style={{
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        gap: '8px',
-                        justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                      }}>
-                        {/* Locus avatar — only on assistant messages */}
-                        {msg.role === 'assistant' && (
+                    if (msg.role === 'assistant') {
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          {/* Locus logo badge */}
                           <div style={{
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '7px',
+                            width: '26px', height: '26px', borderRadius: '8px', flexShrink: 0,
                             background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            marginBottom: '2px',
-                            boxShadow: '0 1px 6px rgba(212,168,83,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 1px 8px rgba(212,168,83,0.2)',
+                            marginTop: '1px',
                           }}>
-                            <svg width="10" height="10" viewBox="0 0 16 16" fill="#131110">
+                            <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
                               <circle cx="8" cy="8" r="3"/>
                               <circle cx="8" cy="2" r="1.2"/>
                               <circle cx="8" cy="14" r="1.2"/>
@@ -255,51 +235,50 @@ export default function ConversationalCheckin({
                               <circle cx="14" cy="8" r="1.2"/>
                             </svg>
                           </div>
-                        )}
+                          <div style={{
+                            fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.65,
+                            paddingTop: '3px', maxWidth: 'calc(100% - 36px)',
+                          }}>
+                            {showCursor ? (
+                              <span style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', paddingTop: '6px' }}>
+                                {[0, 180, 360].map(delay => (
+                                  <span key={delay} style={{
+                                    width: '5px', height: '5px', borderRadius: '50%',
+                                    background: 'var(--text-3)',
+                                    animation: 'pulse 1.4s ease-in-out infinite',
+                                    animationDelay: `${delay}ms`,
+                                  }} />
+                                ))}
+                              </span>
+                            ) : msg.content}
+                          </div>
+                        </div>
+                      )
+                    }
 
-                        {/* Bubble */}
+                    // User message
+                    return (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <div style={{
-                          maxWidth: '78%',
-                          padding: showCursor ? '10px 14px' : '10px 14px',
-                          borderRadius: msg.role === 'user'
-                            ? '18px 18px 4px 18px'
-                            : '4px 18px 18px 18px',
-                          background: msg.role === 'user'
-                            ? 'var(--gold-dim)'
-                            : 'var(--bg-3)',
-                          border: `1px solid ${msg.role === 'user'
-                            ? 'rgba(212,168,83,0.2)'
-                            : 'var(--border)'}`,
+                          maxWidth: '75%',
+                          padding: '9px 14px',
+                          borderRadius: '16px 16px 4px 16px',
+                          background: 'var(--gold-dim)',
+                          border: '1px solid rgba(212,168,83,0.18)',
                           fontSize: '14px',
-                          color: msg.role === 'user' ? 'var(--gold)' : 'var(--text-0)',
+                          color: 'var(--text-0)',
                           lineHeight: 1.6,
-                          minWidth: showCursor ? '42px' : undefined,
-                          minHeight: showCursor ? '38px' : undefined,
-                          display: 'flex',
-                          alignItems: 'center',
                         }}>
-                          {showCursor ? (
-                            <span style={{
-                              display: 'inline-flex',
-                              gap: '4px',
-                              alignItems: 'center',
-                            }}>
-                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.2s ease-in-out infinite', animationDelay: '0ms' }} />
-                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.2s ease-in-out infinite', animationDelay: '200ms' }} />
-                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.2s ease-in-out infinite', animationDelay: '400ms' }} />
-                            </span>
-                          ) : msg.content}
+                          {msg.content}
                         </div>
                       </div>
                     )
                   })}
 
-                  {/* Saving state */}
                   {step === 'saving' && (
                     <div style={{
                       fontSize: '12px', color: 'var(--text-3)',
                       textAlign: 'center', padding: '4px 0',
-                      animation: 'fadeUp 0.2s var(--ease) both',
                     }}>
                       Saving check-in…
                     </div>
@@ -312,35 +291,25 @@ export default function ConversationalCheckin({
               {/* Divider */}
               <div style={{ height: '1px', background: 'var(--border)' }} />
 
-              {/* Input row — inside the card */}
+              {/* Input */}
               <div style={{
-                display: 'flex',
-                gap: '10px',
-                alignItems: 'flex-end',
+                display: 'flex', alignItems: 'flex-end', gap: '10px',
                 padding: '12px 14px',
+                background: 'var(--bg-1)',
               }}>
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={handleInput}
                   onKeyDown={handleKeyDown}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
                   placeholder={streaming ? '' : 'Share how you\'re doing…'}
                   disabled={streaming || step === 'saving'}
                   rows={1}
                   style={{
-                    flex: 1,
-                    background: 'none',
-                    border: 'none',
-                    outline: 'none',
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '14px',
-                    color: 'var(--text-0)',
-                    resize: 'none',
-                    lineHeight: 1.5,
-                    overflow: 'hidden',
-                    paddingTop: '2px',
+                    flex: 1, background: 'none', border: 'none', outline: 'none',
+                    fontFamily: 'var(--font-sans)', fontSize: '14px',
+                    color: 'var(--text-0)', resize: 'none', lineHeight: 1.5,
+                    overflow: 'hidden', paddingTop: '2px',
                   }}
                 />
                 <button
@@ -348,21 +317,14 @@ export default function ConversationalCheckin({
                   disabled={!canSend}
                   aria-label="Send"
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
+                    width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
                     background: canSend ? 'var(--gold)' : 'var(--bg-4)',
                     border: 'none',
                     color: canSend ? '#131110' : 'var(--text-3)',
                     cursor: canSend ? 'pointer' : 'default',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'background 0.15s, color 0.15s',
-                    fontFamily: 'inherit',
-                    fontSize: '15px',
-                    fontWeight: 700,
+                    fontSize: '15px', fontWeight: 700, fontFamily: 'inherit',
                   }}
                 >
                   ↑
@@ -370,18 +332,16 @@ export default function ConversationalCheckin({
               </div>
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{
                 fontSize: '13px', color: '#c08060', marginTop: '10px',
-                padding: '10px 14px', background: 'rgba(192,128,96,0.1)',
-                border: '1px solid rgba(192,128,96,0.2)', borderRadius: '8px',
+                padding: '10px 14px', background: 'rgba(192,128,96,0.08)',
+                border: '1px solid rgba(192,128,96,0.2)', borderRadius: '10px',
               }}>
                 {error}
               </div>
             )}
 
-            {/* Hint */}
             <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '10px' }}>
               Enter to send · Shift+Enter for new line
             </div>
@@ -393,23 +353,25 @@ export default function ConversationalCheckin({
           <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
             <div style={{
               background: 'var(--bg-1)', border: '1px solid var(--border-md)',
-              borderRadius: 'var(--radius-xl)', padding: '28px', marginBottom: '20px',
+              borderRadius: '18px', padding: '28px', marginBottom: '16px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '22px' }}>
                 <div style={{
-                  width: '52px', height: '52px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(122,158,138,0.2), rgba(122,158,138,0.08))',
-                  border: '1px solid rgba(122,158,138,0.3)',
+                  width: '44px', height: '44px', borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(122,158,138,0.25), rgba(122,158,138,0.08))',
+                  border: '1px solid rgba(122,158,138,0.25)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '24px', flexShrink: 0,
+                  flexShrink: 0,
                 }}>
-                  ✓
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--sage)" strokeWidth="2">
+                    <path d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
                 <div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'var(--text-0)' }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--text-0)' }}>
                     {isRedo ? 'Check-in updated.' : 'Check-in complete.'}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '3px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '2px' }}>
                     {isRedo ? 'Your brief will regenerate with the new data.' : 'Locus has updated your daily brief.'}
                   </div>
                 </div>
@@ -420,23 +382,27 @@ export default function ConversationalCheckin({
                 <SummaryTile
                   label="Mood note"
                   value={checkinData.mood_note ? '✓ logged' : '—'}
-                  sub={checkinData.mood_note ? checkinData.mood_note.slice(0, 24) + (checkinData.mood_note.length > 24 ? '…' : '') : 'skipped'}
+                  sub={checkinData.mood_note
+                    ? checkinData.mood_note.slice(0, 26) + (checkinData.mood_note.length > 26 ? '…' : '')
+                    : 'skipped'}
                 />
                 <SummaryTile
                   label="Blockers"
                   value={`${checkinData.blockers.filter(b => b !== 'No blockers today').length}`}
-                  sub={checkinData.blockers.length === 0 || checkinData.blockers.includes('No blockers today') ? 'none today' : checkinData.blockers[0]}
+                  sub={checkinData.blockers.length === 0 || checkinData.blockers.includes('No blockers today')
+                    ? 'none today'
+                    : checkinData.blockers[0]}
                 />
               </div>
 
               {checkinData.highlight && (
                 <div style={{
-                  marginTop: '12px', padding: '10px 14px',
-                  background: 'rgba(122,158,138,0.08)', border: '1px solid rgba(122,158,138,0.2)',
-                  borderRadius: '8px', fontSize: '13px', color: 'var(--text-1)',
+                  marginTop: '14px', padding: '10px 14px',
+                  background: 'rgba(122,158,138,0.07)', border: '1px solid rgba(122,158,138,0.18)',
+                  borderRadius: '10px', fontSize: '13px', color: 'var(--text-1)',
                   display: 'flex', alignItems: 'flex-start', gap: '8px',
                 }}>
-                  <span style={{ color: 'var(--sage)', flexShrink: 0 }}>★</span>
+                  <span style={{ color: 'var(--sage)', flexShrink: 0, marginTop: '1px' }}>★</span>
                   <span>{checkinData.highlight}</span>
                 </div>
               )}
@@ -447,18 +413,18 @@ export default function ConversationalCheckin({
                 onClick={handleRedo}
                 style={{
                   flex: 1, background: 'none', border: '1px solid var(--border-md)',
-                  color: 'var(--text-2)', borderRadius: '9px', padding: '12px',
+                  color: 'var(--text-2)', borderRadius: '10px', padding: '12px',
                   fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                ↺ Update check-in
+                ↺ Update
               </button>
               <a
                 href="/brief"
                 style={{
-                  flex: 2, display: 'block', padding: '12px', background: 'var(--gold)',
-                  color: '#131110', borderRadius: '9px', fontSize: '13.5px',
-                  fontWeight: 700, textDecoration: 'none', textAlign: 'center',
+                  flex: 2, display: 'block', padding: '12px',
+                  background: 'var(--gold)', color: '#131110', borderRadius: '10px',
+                  fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', textAlign: 'center',
                 }}
               >
                 View Daily Brief →
@@ -471,12 +437,23 @@ export default function ConversationalCheckin({
   )
 }
 
-function SummaryTile({ label, value, sub, color }: { label: string; value: string; sub: string; color?: string }) {
+function SummaryTile({ label, value, sub, color }: {
+  label: string; value: string; sub: string; color?: string
+}) {
   return (
     <div style={{ background: 'var(--bg-2)', borderRadius: '10px', padding: '12px 14px' }}>
-      <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: color ?? 'var(--text-0)', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>
+      <div style={{
+        fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase',
+        letterSpacing: '0.07em', fontWeight: 600, marginBottom: '4px',
+      }}>{label}</div>
+      <div style={{
+        fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400,
+        color: color ?? 'var(--text-0)', lineHeight: 1,
+      }}>{value}</div>
+      <div style={{
+        fontSize: '11px', color: 'var(--text-3)', marginTop: '3px',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>{sub}</div>
     </div>
   )
 }
