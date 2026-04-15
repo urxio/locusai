@@ -136,6 +136,13 @@ body::before {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* Strip browser/Tailwind focus rings from bare inputs — components add their own */
+textarea:focus, textarea:focus-visible,
+input:focus,    input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
