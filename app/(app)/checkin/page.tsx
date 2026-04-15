@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTodayCheckin } from '@/lib/db/checkins'
 import { getTodayJournal } from '@/lib/db/journals'
-import CheckinFlow from '@/components/checkin/CheckinFlow'
+import ConversationalCheckin from '@/components/checkin/ConversationalCheckin'
 import JournalSection from '@/components/checkin/JournalSection'
 import Link from 'next/link'
 
@@ -19,7 +19,7 @@ export default async function CheckinPage() {
 
   return (
     <>
-      <CheckinFlow existingCheckin={existing} />
+      <ConversationalCheckin existingCheckin={existing} />
 
       {/* Journal section — always visible, below the check-in flow */}
       <div className="page-pad" style={{ maxWidth: '860px', paddingTop: 0 }}>
