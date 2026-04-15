@@ -7,7 +7,14 @@ export const maxDuration = 30
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
-const SYSTEM = `You are Locus, a warm and attentive AI conducting a brief daily check-in.
+type PreviousCheckin = {
+  energy_level: number
+  mood_note: string | null
+  blockers: string[]
+  highlight: string | null
+}
+
+const BASE_SYSTEM = `You are Locus, a warm and attentive AI conducting a brief daily check-in.
 
 Your goal is to learn, through natural conversation, how the user is doing today. You need to collect:
 1. Energy level (1–10) — infer from their words if they don't give a number ("exhausted" ≈ 2, "solid" ≈ 7, "buzzing" ≈ 9)
@@ -36,24 +43,43 @@ JSON field rules:
 - highlight: string describing a recent win, or null
 - ready: always true when appending this block`
 
+function buildSystem(previousCheckin: PreviousCheckin | null): string {
+  if (!previousCheckin) return BASE_SYSTEM
+
+  const parts: string[] = []
+  parts.push(`energy ${previousCheckin.energy_level}/10`)
+  if (previousCheckin.mood_note) parts.push(`mood: "${previousCheckin.mood_note}"`)
+  if (previousCheckin.blockers.length > 0) parts.push(`blockers: ${previousCheckin.blockers.join(', ')}`)
+  if (previousCheckin.highlight) parts.push(`highlight: "${previousCheckin.highlight}"`)
+
+  return BASE_SYSTEM + `
+
+CONTEXT — This is an update to an existing check-in for today. Earlier today the user logged: ${parts.join(' · ')}.
+When opening, briefly acknowledge what they shared before and ask if anything has shifted or if they want to change something. Keep it natural — one sentence is enough.`
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   let messages: Message[]
+  let previousCheckin: PreviousCheckin | null = null
+
   try {
     const body = await request.json()
     messages = body.messages ?? []
+    previousCheckin = body.previousCheckin ?? null
   } catch {
     return new Response('Bad request', { status: 400 })
   }
 
   const client = getAnthropicClient()
+  const system = buildSystem(previousCheckin)
 
-  // Seed the conversation with a compact opener prompt when starting fresh
+  // Seed with a hidden prompt when starting fresh so Claude generates the opener
   const apiMessages = messages.length === 0
-    ? [{ role: 'user' as const, content: '(start the check-in with a single warm opening question)' }]
+    ? [{ role: 'user' as const, content: '(start the check-in now)' }]
     : messages
 
   const encoder = new TextEncoder()
@@ -63,7 +89,7 @@ export async function POST(request: NextRequest) {
         const response = await client.messages.create({
           model: 'claude-haiku-4-5',
           max_tokens: 300,
-          system: SYSTEM,
+          system,
           messages: apiMessages,
           stream: true,
         })
