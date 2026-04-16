@@ -135,3 +135,32 @@ export type JournalEntry = {
   created_at: string
   updated_at: string
 }
+
+export type WheelArea = {
+  key: string
+  label: string
+  // Which goal category maps to this area (for AI-suggested scores)
+  goalCategory: string | null
+}
+
+export const WHEEL_AREAS: WheelArea[] = [
+  { key: 'health',        label: 'Health & Energy',    goalCategory: 'health'    },
+  { key: 'career',        label: 'Career & Work',      goalCategory: 'product'   },
+  { key: 'finances',      label: 'Finances',           goalCategory: 'financial' },
+  { key: 'relationships', label: 'Relationships',      goalCategory: null        },
+  { key: 'wellbeing',     label: 'Wellbeing & Mind',   goalCategory: 'wellbeing' },
+  { key: 'growth',        label: 'Learning & Growth',  goalCategory: 'learning'  },
+  { key: 'purpose',       label: 'Purpose & Meaning',  goalCategory: null        },
+]
+
+export type WheelScores = Record<string, number>
+
+export type WheelSnapshot = {
+  id: string
+  user_id: string
+  snapshot_date: string
+  scores: WheelScores
+  insight: string | null
+  created_at: string
+  updated_at: string
+}

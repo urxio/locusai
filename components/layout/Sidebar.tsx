@@ -19,8 +19,9 @@ const NAV = [
     section: 'System',
     items: [
       { href: '/goals',    label: 'Goals',          badge: null, icon: <GoalsIcon /> },
-      { href: '/planner',  label: 'Planner', badge: null, icon: <PlannerIcon /> },
+      { href: '/planner',  label: 'Planner',        badge: null, icon: <PlannerIcon /> },
       { href: '/review',   label: 'Weekly Review',  badge: null, icon: <ReviewIcon /> },
+      { href: '/wheel',    label: 'Wheel of Life',  badge: null, icon: <WheelIcon /> },
     ]
   },
   {
@@ -163,6 +164,13 @@ function LogoutIcon() {
       <path d="M13 14l3-4-3-4M16 10H7" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
+}
+function WheelIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+    <circle cx="10" cy="10" r="7"/>
+    <circle cx="10" cy="10" r="2.5"/>
+    <path d="M10 3v4M10 13v4M3 10h4M13 10h4" strokeLinecap="round"/>
+  </svg>
 }
 function PlannerIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
