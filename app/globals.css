@@ -215,9 +215,8 @@ input:focus,    input:focus-visible {
   /* Items always 60px tall; safe area is pure extra padding below */
   padding-top: 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  align-items: center;
+  align-items: stretch;
   justify-content: space-around;
-  overflow: visible;
 }
 
 .bottom-nav-item {

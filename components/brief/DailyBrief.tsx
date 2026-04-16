@@ -230,6 +230,29 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <StatCard value={`${completedHabits}/${habits.length}`} label="Habits this week" delta={null} />
       </div>
 
+      {/* Weekly Review link */}
+      <a
+        href="/review"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: '16px',
+          padding: '13px 16px',
+          background: 'var(--bg-1)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          textDecoration: 'none',
+          color: 'var(--text-1)',
+          fontSize: '13px',
+          fontWeight: 500,
+          transition: 'border-color 0.15s',
+        }}
+      >
+        <span>Weekly review</span>
+        <span style={{ color: 'var(--gold)', fontSize: '13px' }}>This week →</span>
+      </a>
+
       {/* Brief history */}
       <BriefHistory briefs={pastBriefs} />
     </div>
