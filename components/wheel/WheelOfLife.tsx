@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { WHEEL_AREAS, type WheelScores, type WheelSnapshot } from '@/lib/types'
 import { saveWheelSnapshot } from '@/app/actions/wheel'
+import { useToast } from '@/components/ui/ToastContext'
 import RadarChart from './RadarChart'
 
 // ── Score selector ──────────────────────────────────────────────────────────
@@ -146,6 +147,7 @@ export default function WheelOfLife({
   suggested: Partial<WheelScores>
   history: WheelSnapshot[]
 }) {
+  const toast = useToast()
   const defaultScores = existingSnapshot?.scores ?? {}
   const [scores, setScores] = useState<WheelScores>(
     Object.fromEntries(WHEEL_AREAS.map(a => [a.key, defaultScores[a.key] ?? 0]))
@@ -183,7 +185,7 @@ export default function WheelOfLife({
           // Persist insight
           await saveWheelSnapshot(today, scores, text)
         } catch (e) {
-          console.error('Insight generation failed', e)
+          console.error('Insight generation failed', e); toast.error('Could not generate insight — your scores were saved')
         } finally {
           setInsightLoading(false)
         }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/ToastContext'
 import type { GoalWithSteps, GoalStep, Habit } from '@/lib/types'
 import { createGoalAction, updateGoalAction, deleteGoalAction, type GoalFormData } from '@/app/actions/goals'
 import {
@@ -59,6 +60,7 @@ type CelebrationState = null | { goalTitle: string; milestone: 25 | 50 | 75 | 10
 
 /* ── ROOT ── */
 export default function GoalsList({ goals: initial, habits: initialHabits = [], existingHabitNames: initialHabitNames = [] }: { goals: GoalWithSteps[]; habits?: Habit[]; existingHabitNames?: string[] }) {
+  const toast = useToast()
   const [goals, setGoals]         = useState<GoalWithSteps[]>(initial)
   const [modal, setModal]         = useState<ModalState>(null)
   const [celebration, setCelebration] = useState<CelebrationState>(null)
@@ -163,7 +165,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
       const steps = [...(stepsMap.get(goalId) ?? []), newStep]
       const pct = steps.length > 0 ? Math.round(steps.filter(s => s.completed).length / steps.length * 100) : 0
       setGoals(gs => gs.map(g => g.id === goalId ? { ...g, progress_pct: pct } : g))
-    } catch (err) { console.error('Add step failed:', err) }
+    } catch (err) { console.error('Add step failed:', err); toast.error('Failed to add step') }
   }
 
   /* ── STEP UPDATE ── */
@@ -174,7 +176,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
       return n
     })
     try { await updateStepAction(stepId, updates) }
-    catch (err) { console.error('Update step failed:', err) }
+    catch (err) { console.error('Update step failed:', err); toast.error('Failed to update step') }
   }
 
   /* ── STEP DELETE ── */
@@ -188,7 +190,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
     const pct = steps.length > 0 ? Math.round(steps.filter(s => s.completed).length / steps.length * 100) : 0
     setGoals(gs => gs.map(g => g.id === goalId ? { ...g, progress_pct: pct } : g))
     try { await deleteStepAction(stepId) }
-    catch (err) { console.error('Delete step failed:', err) }
+    catch (err) { console.error('Delete step failed:', err); toast.error('Failed to delete step') }
   }
 
   /* ── REGENERATE STEPS ── */
@@ -200,7 +202,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
       setStepsMap(m => new Map(m).set(goalId, steps))
       const pct = steps.length > 0 ? Math.round(steps.filter(s => s.completed).length / steps.length * 100) : 0
       setGoals(gs => gs.map(g => g.id === goalId ? { ...g, progress_pct: pct } : g))
-    } catch (err) { console.error('Regenerate failed:', err) }
+    } catch (err) { console.error('Regenerate failed:', err); toast.error('Failed to generate steps — try again') }
     finally { setGeneratingFor(s => { const n = new Set(s); n.delete(goalId); return n }) }
   }
 

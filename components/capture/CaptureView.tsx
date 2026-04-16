@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition } from 'react'
 import type { MemoryNote } from '@/lib/types'
 import { createMemoryNote, resolveMemoryNote, deleteMemoryNote } from '@/app/actions/memory-notes'
+import { useToast } from '@/components/ui/ToastContext'
 
 // ── Type config ──────────────────────────────────────────────────────────────
 
@@ -282,12 +283,12 @@ function Gallery({ notes, onResolve, onDelete }: {
 function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
   type Classified = { type: MemoryNote['type']; trigger_date: string | null; ai_tags: string[]; clarifying_question: string | null }
 
+  const toast = useToast()
   const [text, setText] = useState('')
   const [classifying, setClassifying] = useState(false)
   const [classified, setClassified] = useState<Classified | null>(null)
   // When AI asks for clarification — user answers here before saving
   const [clarifyAnswer, setClarifyAnswer] = useState('')
-  const [error, setError] = useState<string | null>(null)
   const [saving, startSave] = useTransition()
   const taRef = useRef<HTMLTextAreaElement>(null)
   const clarifyRef = useRef<HTMLInputElement>(null)
@@ -336,7 +337,6 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
 
   async function handleSubmit() {
     if (!text.trim() || classifying || saving) return
-    setError(null)
 
     // If we already have classification and are waiting for a clarify answer,
     // save immediately with the enriched content
@@ -378,11 +378,11 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
           setClarifyAnswer('')
           taRef.current?.focus()
         } else {
-          setError('Failed to save — make sure the memory_notes table has been created in Supabase.')
+          toast.error('Failed to save — make sure the memory_notes table has been created in Supabase.')
         }
       } catch (e) {
-        setError('Something went wrong. Check the console for details.')
         console.error('createMemoryNote error:', e)
+        toast.error('Something went wrong saving your note.')
       }
     })
   }
@@ -441,12 +441,6 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
           <button onClick={handleSkipClarification} style={{ marginTop: '6px', background: 'none', border: 'none', fontSize: '11px', color: 'var(--text-3)', cursor: 'pointer', padding: 0 }}>
             skip and save as-is
           </button>
-        </div>
-      )}
-
-      {error && (
-        <div style={{ margin: '8px 0 0', fontSize: '12px', color: '#e05c4a', background: 'rgba(224,92,74,0.08)', border: '1px solid rgba(224,92,74,0.2)', borderRadius: '8px', padding: '8px 12px' }}>
-          {error}
         </div>
       )}
 

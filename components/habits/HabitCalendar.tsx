@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { HabitWithLogs } from '@/lib/types'
 import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
+import { useToast } from '@/components/ui/ToastContext'
 
 /* ── CONSTANTS ── */
 const MONTHS = [
@@ -43,6 +44,7 @@ export default function HabitCalendar({ habits, today }: {
   habits: HabitWithLogs[]
   today: string
 }) {
+  const toast = useToast()
   const todayDate = new Date(today + 'T12:00:00')
   const [year,  setYear]  = useState(todayDate.getFullYear())
   const [month, setMonth] = useState(todayDate.getMonth())
@@ -64,7 +66,7 @@ export default function HabitCalendar({ habits, today }: {
         data.forEach(({ habitId, dates }) => m.set(habitId, new Set(dates)))
         setLogMap(m)
       })
-      .catch(console.error)
+      .catch(err => { console.error(err); toast.error('Failed to load habit logs') })
       .finally(() => setLoading(false))
   }, [year, month])
 

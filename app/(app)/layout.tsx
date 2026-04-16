@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import BottomNav from '@/components/layout/BottomNav'
 import TimezoneSync from '@/components/layout/TimezoneSync'
+import ToastShell from '@/components/ui/ToastShell'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -34,17 +35,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const overdueCount = overdueStepCount ?? 0
 
   return (
-    <div className="app-shell">
-      <Sidebar
-        userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
-        avatarUrl={profile?.avatar_url ?? null}
-        overdueStepCount={overdueCount}
-      />
-      <main className="app-main">
-        {children}
-      </main>
-      <BottomNav overdueStepCount={overdueCount} />
-      <TimezoneSync />
-    </div>
+    <ToastShell>
+      <div className="app-shell">
+        <Sidebar
+          userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
+          avatarUrl={profile?.avatar_url ?? null}
+          overdueStepCount={overdueCount}
+        />
+        <main className="app-main">
+          {children}
+        </main>
+        <BottomNav overdueStepCount={overdueCount} />
+        <TimezoneSync />
+      </div>
+    </ToastShell>
   )
 }

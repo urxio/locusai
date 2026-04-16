@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { HabitWithLogs, GoalWithSteps, WeeklyPlanBlock } from '@/lib/types'
+import { useToast } from '@/components/ui/ToastContext'
 import {
   addPlanBlock,
   removePlanBlock,
@@ -88,6 +89,7 @@ type Props = {
 /* ── Main Component ── */
 
 export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: initialWeekStart, today }: Props) {
+  const toast = useToast()
   const [planBlocks, setPlanBlocks] = useState<WeeklyPlanBlock[]>(initialPlan)
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
   const [weekOffset, setWeekOffset] = useState(0)
@@ -109,7 +111,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
     fetch(`/api/planner/week?weekStart=${ws}`)
       .then(r => r.json())
       .then((data: WeeklyPlanBlock[]) => setPlanBlocks(data))
-      .catch(err => console.error('fetch week plan:', err))
+      .catch(err => { console.error('fetch week plan:', err); toast.error('Failed to load plan') })
   }, [weekOffset])
 
   /* ── Handlers ── */
@@ -134,7 +136,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
       try {
         await setHabitTimeOfDay(habit.id, slot)
       } catch (err) {
-        console.error('setHabitTimeOfDay:', err)
+        console.error('setHabitTimeOfDay:', err); toast.error('Failed to update habit time')
         setLocalHabits(prev =>
           prev.map(h => h.id === habit.id ? { ...h, time_of_day: habit.time_of_day } : h)
         )
@@ -166,7 +168,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
         const saved = await addPlanBlock(weekStart, dow, slot, title, 'goal', goalId)
         setPlanBlocks(prev => prev.map(b => b.id === optimistic.id ? saved : b))
       } catch (err) {
-        console.error('addPlanBlock goal:', err)
+        console.error('addPlanBlock goal:', err); toast.error('Failed to add goal to plan')
         setPlanBlocks(prev => prev.filter(b => b.id !== optimistic.id))
       }
       return
@@ -195,7 +197,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
         const saved = await addPlanBlock(weekStart, dow, slot, title, 'custom')
         setPlanBlocks(prev => prev.map(b => b.id === optimistic.id ? saved : b))
       } catch (err) {
-        console.error('addPlanBlock custom:', err)
+        console.error('addPlanBlock custom:', err); toast.error('Failed to add task to plan')
         setPlanBlocks(prev => prev.filter(b => b.id !== optimistic.id))
       }
     }
@@ -206,7 +208,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
     try {
       await removePlanBlock(block.id)
     } catch (err) {
-      console.error('removePlanBlock:', err)
+      console.error('removePlanBlock:', err); toast.error('Failed to remove block')
       setPlanBlocks(prev => [...prev, block])
     }
   }
@@ -217,7 +219,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
     try {
       await setHabitTimeOfDay(habit.id, null)
     } catch (err) {
-      console.error('removeHabitSlot:', err)
+      console.error('removeHabitSlot:', err); toast.error('Failed to remove habit slot')
       setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prev } : h))
     }
   }
@@ -227,7 +229,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
     try {
       await acceptSuggestion(block.id)
     } catch (err) {
-      console.error('acceptSuggestion:', err)
+      console.error('acceptSuggestion:', err); toast.error('Failed to accept suggestion')
       setPlanBlocks(prev => prev.map(b => b.id === block.id ? { ...b, accepted: false } : b))
     }
   }
@@ -237,7 +239,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
     try {
       await dismissSuggestion(block.id)
     } catch (err) {
-      console.error('dismissSuggestion:', err)
+      console.error('dismissSuggestion:', err); toast.error('Failed to dismiss suggestion')
       setPlanBlocks(prev => [...prev, block])
     }
   }
@@ -282,7 +284,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
       setPlanBlocks(prev => [...prev, ...saved])
       setSuggestionSummary(summary ?? '')
     } catch (err) {
-      console.error('handleAISuggest:', err)
+      console.error('handleAISuggest:', err); toast.error('AI suggestions failed — try again')
       setSuggestError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setSuggesting(false)
@@ -295,7 +297,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
     try {
       await setHabitTimeOfDay(habit.id, slot)
     } catch (err) {
-      console.error('handleQuickSlot:', err)
+      console.error('handleQuickSlot:', err); toast.error('Failed to save slot')
       setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prev } : h))
     }
   }
