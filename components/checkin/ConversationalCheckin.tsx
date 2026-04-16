@@ -98,8 +98,8 @@ export default function ConversationalCheckin({
         if (match) {
           const data: CheckinData = JSON.parse(match[1])
           setCheckinData(data)
-          // Let the user read the AI's closing message for 1.8s before transitioning
-          await new Promise(res => setTimeout(res, 1800))
+          // Let the user read the AI's closing message for 10s before transitioning
+          await new Promise(res => setTimeout(res, 10000))
           setStep('saving')
           await submitCheckin({
             energy_level: data.energy_level,
