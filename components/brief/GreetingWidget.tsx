@@ -8,6 +8,7 @@ type Props = {
   goals: Goal[]
   brief?: Brief | null
   pastBriefs?: Brief[]
+  userName?: string | null
 }
 
 // ── Icon helpers ────────────────────────────────────────────────────────────────
@@ -109,10 +110,13 @@ function buildPulseSummary(
 
 // ── Main component ──────────────────────────────────────────────────────────────
 
-export default function GreetingWidget({ checkin, habits, goals, brief, pastBriefs = [] }: Props) {
+export default function GreetingWidget({ checkin, habits, goals, brief, pastBriefs = [], userName }: Props) {
   const now = new Date()
   const hour = now.getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  // Extract first name only (e.g. "Boris Fosso" → "Boris")
+  const firstName = userName?.split(' ')[0] ?? null
+  const greeting = firstName ? `${timeGreeting}, ${firstName}` : timeGreeting
 
   const todayHabits = habits.filter(h => h.isScheduledToday)
   const activeGoals = goals.filter(g => g.status === 'active')

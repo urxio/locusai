@@ -16,11 +16,12 @@ type Props = {
   memory?: UserMemory | null
   pastBriefs?: Brief[]
   coverUrl?: string | null
+  userName?: string | null
 }
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, memory, pastBriefs = [], coverUrl }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, memory, pastBriefs = [], coverUrl, userName }: Props) {
   const cover = coverUrl || DEFAULT_COVER
   const energy = checkin?.energy_level ?? avgEnergy ?? 7
   const energyPct = ((energy - 1) / 9) * 100
@@ -78,7 +79,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
 
       <div className="page-pad" style={{ paddingTop: '20px' }}>
         <WeeklyCalendarStrip />
-        <GreetingWidget checkin={checkin} habits={habits} goals={goals} brief={brief} pastBriefs={pastBriefs} />
+        <GreetingWidget checkin={checkin} habits={habits} goals={goals} brief={brief} pastBriefs={pastBriefs} userName={userName} />
 
         {/* Weekly Review link */}
         <a

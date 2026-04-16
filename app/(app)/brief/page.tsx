@@ -26,12 +26,20 @@ async function BriefContent() {
     getTodayBrief(user.id),
     readUserMemory(user.id),
     getRecentBriefs(user.id, 14),
-    supabase.from('users').select('cover_url').eq('id', user.id).single(),
+    supabase.from('users').select('cover_url, full_name').eq('id', user.id).single(),
   ])
 
   const avgEnergy = recentCheckins.length
     ? recentCheckins.reduce((s, c) => s + c.energy_level, 0) / recentCheckins.length
     : null
+
+  // Derive display name: users table → auth metadata → email prefix
+  const userName: string | null =
+    profile.data?.full_name ||
+    (user.user_metadata?.full_name as string | undefined) ||
+    (user.user_metadata?.name as string | undefined) ||
+    user.email?.split('@')[0] ||
+    null
 
   return (
     <DailyBrief
@@ -43,6 +51,7 @@ async function BriefContent() {
       memory={memory}
       pastBriefs={pastBriefs}
       coverUrl={profile.data?.cover_url ?? null}
+      userName={userName}
     />
   )
 }
