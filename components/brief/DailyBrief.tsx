@@ -226,20 +226,29 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       {/* Priorities */}
       {brief?.priorities && brief.priorities.length > 0 ? (
         <div style={{ marginBottom: '32px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
             Today&apos;s priorities
           </div>
-          {brief.priorities.map((p, i) => (
-            <PriorityCard
-              key={i}
-              num={i + 1}
-              title={p.title}
-              category={p.category}
-              time={p.estimated_time}
-              timeOfDay={p.time_of_day}
-              reasoning={p.reasoning}
-            />
-          ))}
+          <div style={{
+            background: 'var(--bg-1)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            padding: '0 24px',
+            overflow: 'hidden',
+          }}>
+            {brief.priorities.map((p, i) => (
+              <PriorityCard
+                key={i}
+                num={i + 1}
+                title={p.title}
+                category={p.category}
+                time={p.estimated_time}
+                timeOfDay={p.time_of_day}
+                reasoning={p.reasoning}
+                last={i === brief.priorities!.length - 1}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
 
@@ -547,9 +556,9 @@ function GoalCard({ goal, rank }: { goal: Goal; rank: number }) {
 }
 
 function PriorityCard({
-  num, title, category, time, timeOfDay, reasoning
+  num, title, category, time, timeOfDay, reasoning, last
 }: {
-  num: number; title: string; category: string; time: string; timeOfDay?: string; reasoning?: string
+  num: number; title: string; category: string; time: string; timeOfDay?: string; reasoning?: string; last?: boolean
 }) {
   const colors = CATEGORY_COLORS[category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
   const rankStr = String(num).padStart(2, '0')
@@ -560,7 +569,7 @@ function PriorityCard({
       gap: '20px',
       alignItems: 'flex-start',
       padding: '24px 0',
-      borderBottom: '1px solid var(--border)',
+      borderBottom: last ? 'none' : '1px solid var(--border)',
     }}>
       {/* Large serif rank */}
       <div style={{
