@@ -231,11 +231,13 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
   const [text, setText] = useState('')
   const [classifying, setClassifying] = useState(false)
   const [preview, setPreview] = useState<{ type: MemoryNote['type']; trigger_date: string | null; ai_tags: string[] } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [saving, startSave] = useTransition()
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   async function handleSubmit() {
     if (!text.trim() || classifying || saving) return
+    setError(null)
 
     setClassifying(true)
     let classified = { type: 'idea' as MemoryNote['type'], trigger_date: null as string | null, ai_tags: [] as string[] }
@@ -249,23 +251,30 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
       classified = await res.json()
       setPreview(classified)
     } catch {
-      // fallback: proceed with default
+      // fallback: proceed with default classification
     } finally {
       setClassifying(false)
     }
 
     startSave(async () => {
-      const note = await createMemoryNote(
-        text.trim(),
-        classified.type,
-        classified.trigger_date,
-        classified.ai_tags
-      )
-      if (note) {
-        onAdded(note)
-        setText('')
-        setPreview(null)
-        taRef.current?.focus()
+      try {
+        const note = await createMemoryNote(
+          text.trim(),
+          classified.type,
+          classified.trigger_date,
+          classified.ai_tags
+        )
+        if (note) {
+          onAdded(note)
+          setText('')
+          setPreview(null)
+          taRef.current?.focus()
+        } else {
+          setError('Failed to save — make sure the memory_notes table has been created in Supabase.')
+        }
+      } catch (e) {
+        setError('Something went wrong. Check the console for details.')
+        console.error('createMemoryNote error:', e)
       }
     })
   }
@@ -301,6 +310,12 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
           boxSizing: 'border-box',
         }}
       />
+
+      {error && (
+        <div style={{ margin: '8px 0 0', fontSize: '12px', color: '#e05c4a', background: 'rgba(224,92,74,0.08)', border: '1px solid rgba(224,92,74,0.2)', borderRadius: '8px', padding: '8px 12px' }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
         {preview && (
