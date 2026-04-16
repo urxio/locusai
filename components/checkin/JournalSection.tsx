@@ -199,8 +199,11 @@ export default function JournalSection({
   const [reflectionLoading, setReflectionLoading]     = useState(false)
   const [reflectionDismissed, setReflectionDismissed] = useState(false)
 
-  const aiFetchedRef = useRef(!!existing)
-  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // aiFetchedRef: has AI been triggered this session for the current date?
+  // contentChangedRef: has the user actually edited content this session?
+  const aiFetchedRef     = useRef(false)
+  const contentChangedRef = useRef(false)
+  const timerRef          = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // When the selected date changes, load that day's content and reset AI state
   useEffect(() => {
@@ -212,9 +215,8 @@ export default function JournalSection({
     setReflection(null)
     setReflectionLoading(false)
     setReflectionDismissed(false)
-    aiFetchedRef.current = selectedDate !== todayStr
-      ? !!recentJournals.find(j => j.date === selectedDate)
-      : !!existing
+    aiFetchedRef.current      = false
+    contentChangedRef.current = false
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate])
 
@@ -236,7 +238,7 @@ export default function JournalSection({
 
   // Fire AI once per date-session — only called when the user explicitly finishes writing
   const triggerAI = useCallback((text: string) => {
-    if (aiFetchedRef.current) return
+    if (aiFetchedRef.current || !contentChangedRef.current) return
     aiFetchedRef.current = true
 
     const trimmed = text.trim()
@@ -270,6 +272,7 @@ export default function JournalSection({
   const handleChange = (val: string) => {
     setContent(val)
     setStatus('idle')
+    contentChangedRef.current = true   // mark that user has actually edited
     if (timerRef.current) clearTimeout(timerRef.current)
     // Auto-save to DB only — no AI trigger
     timerRef.current = setTimeout(() => saveToDb(val, selectedDate), 1800)
