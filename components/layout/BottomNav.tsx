@@ -43,7 +43,7 @@ export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?:
   }
 
   return (
-    <nav className="bottom-nav" style={{ position: 'relative' }}>
+    <nav className="bottom-nav">
       {LEFT_ITEMS.map(item => <NavItem key={item.href} {...item} />)}
 
       {/* Center FAB */}
