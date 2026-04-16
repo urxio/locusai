@@ -225,7 +225,10 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
 
       {/* Priorities */}
       {brief?.priorities && brief.priorities.length > 0 ? (
-        <div style={{ borderTop: '1px solid var(--border)', marginBottom: '28px' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>
+            Today&apos;s priorities
+          </div>
           {brief.priorities.map((p, i) => (
             <PriorityCard
               key={i}
@@ -549,46 +552,74 @@ function PriorityCard({
   num: number; title: string; category: string; time: string; timeOfDay?: string; reasoning?: string
 }) {
   const colors = CATEGORY_COLORS[category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
+  const rankStr = String(num).padStart(2, '0')
 
   return (
     <div style={{
-      padding: '18px 0',
-      borderBottom: '1px solid var(--border)',
       display: 'flex',
-      gap: '16px',
+      gap: '20px',
       alignItems: 'flex-start',
+      padding: '24px 0',
+      borderBottom: '1px solid var(--border)',
     }}>
-      {/* Rank */}
-      <span style={{
-        fontFamily: 'var(--font-serif)', fontSize: '13px', fontWeight: 400,
-        color: 'var(--text-3)', flexShrink: 0, paddingTop: '2px', width: '14px',
+      {/* Large serif rank */}
+      <div style={{
+        fontFamily: 'var(--font-serif)',
+        fontSize: '42px',
+        fontWeight: 300,
+        lineHeight: 1,
+        color: 'var(--text-3)',
+        opacity: 0.4,
+        flexShrink: 0,
+        width: '48px',
         textAlign: 'right',
+        letterSpacing: '-0.02em',
+        paddingTop: '2px',
       }}>
-        {num}
-      </span>
+        {rankStr}
+      </div>
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.35, marginBottom: reasoning ? '8px' : '10px' }}>
+        {/* Title */}
+        <div style={{
+          fontSize: '16px',
+          fontWeight: 600,
+          color: 'var(--text-0)',
+          lineHeight: 1.3,
+          marginBottom: '6px',
+          letterSpacing: '-0.01em',
+        }}>
           {title}
         </div>
 
+        {/* Reasoning */}
         {reasoning && (
-          <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6 }}>
+          <p style={{
+            margin: '0 0 12px',
+            fontSize: '13px',
+            color: 'var(--text-2)',
+            lineHeight: 1.65,
+            fontStyle: 'italic',
+          }}>
             {reasoning}
           </p>
         )}
 
-        {/* Meta */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', background: colors.tag, color: colors.border }}>
+        {/* Meta pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '10px', padding: '2px 8px', borderRadius: '4px',
+            fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
+            background: colors.tag, color: colors.border,
+          }}>
             {category}
           </span>
           {time && time !== '—' && (
             <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>{time}</span>
           )}
           {timeOfDay && timeOfDay !== 'flexible' && timeOfDay !== 'anytime' && (
-            <span style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>{timeOfDay}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>· {timeOfDay}</span>
           )}
         </div>
       </div>
