@@ -8,6 +8,7 @@ import MemoryCard from './MemoryCard'
 import BriefHistory from './BriefHistory'
 import ClarifyingQuestions, { type QAPair } from './ClarifyingQuestions'
 import DateHeaderWidget from './DateHeaderWidget'
+import GreetingWidget from './GreetingWidget'
 
 type Props = {
   goals: Goal[]
@@ -143,7 +144,8 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
 
       <div className="page-pad" style={{ paddingTop: 0 }}>
       <DateHeaderWidget energyPct={energyPct} />
-      
+      <GreetingWidget checkin={checkin} habits={habits} goals={goals} brief={brief} />
+
       {/* Header subtext */}
       <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.5 }}>
         {checkin ? "Here's your brief for today." : "Check in to unlock your personalized AI brief."}
