@@ -294,8 +294,16 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
 
   const waitingForClarification = !!classified?.clarifying_question
 
+  function preClassifyLocal(content: string): 'reminder' | 'idea' | 'resource' | null {
+    const lower = content.toLowerCase()
+    if (/https?:\/\/[^\s]+/.test(content)) return 'resource'
+    if (/\b(today|tomorrow|tonight|this (monday|tuesday|wednesday|thursday|friday|saturday|sunday|week|month|weekend)|next (week|month|monday|tuesday|wednesday|thursday|friday)|by (friday|monday|end of|the)|before |deadline|due |don'?t forget|remember to|need to (call|email|send|submit|pay|buy|pick up|book|schedule|follow up)|appointment|renew|expires?)\b/i.test(lower)) return 'reminder'
+    if (/\b(app|tool|site|website|book|article|course|podcast|video|plugin|software|service|platform|newsletter|channel|repo|github|library|framework|recipe)\b/i.test(lower)) return 'resource'
+    return null
+  }
+
   async function classify(content: string): Promise<Classified> {
-    // Run classification and clarification question in parallel
+    // Run classification and clarification in parallel
     const [classifyRes, clarifyRes] = await Promise.all([
       fetch('/api/memory-notes/classify', {
         method: 'POST',
@@ -305,7 +313,7 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
       fetch('/api/memory-notes/clarify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, type: 'idea' /* updated after classify */ }),
+        body: JSON.stringify({ content }),
       }),
     ])
 
@@ -314,10 +322,12 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
       clarifyRes.json(),
     ])
 
-    if (/https?:\/\/[^\s]+/.test(content)) classifyData.type = 'resource'
+    // Client-side signal words override AI if AI returned a generic 'idea'
+    const preType = preClassifyLocal(content)
+    const finalType = (preType && classifyData.type === 'idea') ? preType : (classifyData.type ?? 'idea')
 
     return {
-      type: classifyData.type ?? 'idea',
+      type: finalType,
       trigger_date: classifyData.trigger_date ?? null,
       ai_tags: classifyData.ai_tags ?? [],
       clarifying_question: clarifyData.question ?? null,
