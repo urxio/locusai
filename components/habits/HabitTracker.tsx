@@ -479,7 +479,7 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 12px)', gap: '3px' }}>
                 {/* Padding cells before first day */}
                 {paddingCells.map((_, i) => (
-                  <div key={`pad-${i}`} style={{ width: '12px', height: '12px' }} />
+                  <div key={`pad-${i}`} style={{ width: '12px', height: '12px', flexShrink: 0 }} />
                 ))}
                 {/* Actual day cells */}
                 {last28.map(date => {
@@ -488,9 +488,12 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
                   const scheduled = isScheduledOn(date, habit.days_of_week ?? null)
                   const pending   = pendingSet.has(`${habit.id}:${date}`)
                   return (
-                    <button
+                    <div
                       key={date}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onToggle(date)}
+                      onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onToggle(date)}
                       title={`${date} — ${done ? 'logged ✓' : scheduled ? 'not logged' : 'not scheduled'}`}
                       style={{
                         width: '12px', height: '12px',
@@ -504,8 +507,8 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
                         cursor: pending ? 'wait' : 'pointer',
                         opacity: pending ? 0.4 : scheduled ? 1 : 0.25,
                         transition: 'background 0.15s, opacity 0.15s',
-                        padding: 0,
                         flexShrink: 0,
+                        boxSizing: 'border-box',
                       }}
                     />
                   )
@@ -586,9 +589,12 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
               const isToday   = dateStr === today
               const isFuture  = dateStr > today
               return (
-                <button
+                <div
                   key={dateStr}
+                  role="button"
+                  tabIndex={isFuture ? -1 : 0}
                   onClick={() => !isFuture && onToggle(dateStr)}
+                  onKeyDown={e => !isFuture && (e.key === 'Enter' || e.key === ' ') && onToggle(dateStr)}
                   style={{
                     aspectRatio: '1',
                     borderRadius: '7px',
@@ -600,11 +606,11 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
                     fontSize: '11px', fontWeight: done ? 700 : 400,
                     color: done ? '#fff' : isToday ? habitColor : 'var(--text-2)',
                     transition: 'background 0.15s',
-                    padding: 0,
+                    boxSizing: 'border-box',
                   }}
                 >
                   {dayNum}
-                </button>
+                </div>
               )
             })}
           </div>
