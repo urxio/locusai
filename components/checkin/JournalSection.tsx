@@ -1,126 +1,145 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { saveJournalAction } from '@/app/actions/journal'
 import { localDateStr } from '@/lib/utils/date'
 import type { JournalEntry } from '@/lib/types'
 import FollowupQuestion from './FollowupQuestion'
 
-// ─── Week dot-map ────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function WeekDotMap({
-  recentJournals,
-  todayHasEntry,
-}: {
-  recentJournals: JournalEntry[]
-  todayHasEntry: boolean
-}) {
-  const today = new Date()
-  const todayStr = localDateStr(today)
+function formatDisplayDate(dateStr: string): string {
+  // dateStr is YYYY-MM-DD, parse as local date to avoid UTC offset shifting the day
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'short', day: 'numeric',
+  })
+}
 
-  // Build set of dates that have journal entries
-  const journalDates = new Set(recentJournals.map(j => j.date))
-  if (todayHasEntry) journalDates.add(todayStr)
-
-  // Compute Mon–Sun of the current week
-  const dow = today.getDay() // 0=Sun
+function getWeekDays(todayStr: string): Array<{
+  label: string; dateStr: string; isToday: boolean; isFuture: boolean
+}> {
+  const [y, m, d] = todayStr.split('-').map(Number)
+  const today = new Date(y, m - 1, d)
+  const dow = today.getDay()
   const mondayOffset = dow === 0 ? -6 : 1 - dow
   const monday = new Date(today)
   monday.setDate(today.getDate() + mondayOffset)
 
-  const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-  const weekDays = DAY_LABELS.map((label, i) => {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    const dateStr = localDateStr(d)
-    const isFuture = d > today && dateStr !== todayStr
-    return { label, dateStr, isToday: dateStr === todayStr, hasEntry: journalDates.has(dateStr), isFuture }
+  return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => {
+    const date = new Date(monday)
+    date.setDate(monday.getDate() + i)
+    const dateStr = localDateStr(date)
+    return { label, dateStr, isToday: dateStr === todayStr, isFuture: date > today }
   })
+}
 
-  const filledCount = weekDays.filter(d => !d.isFuture && d.hasEntry).length
+// ─── Week dot-map ─────────────────────────────────────────────────────────────
+
+function WeekDotMap({
+  recentJournals,
+  selectedDate,
+  todayStr,
+  onSelectDate,
+}: {
+  recentJournals: JournalEntry[]
+  selectedDate: string
+  todayStr: string
+  onSelectDate: (date: string) => void
+}) {
+  const journalDates = new Set(recentJournals.filter(j => j.content.trim()).map(j => j.date))
+  const weekDays = getWeekDays(todayStr)
+
+  const filledCount = weekDays.filter(d => !d.isFuture && journalDates.has(d.dateStr)).length
   const totalSoFar  = weekDays.filter(d => !d.isFuture).length
 
   return (
     <div style={{ marginBottom: '28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{
-          fontSize: '11px', fontWeight: 600, color: 'var(--text-3)',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>
+        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           This week
         </div>
         <div style={{ fontSize: '11px', color: filledCount === totalSoFar ? 'var(--sage)' : 'var(--text-3)', fontWeight: 600 }}>
-          {filledCount}/{totalSoFar} {filledCount === totalSoFar && totalSoFar > 1 ? '✓' : ''}
+          {filledCount}/{totalSoFar}{filledCount === totalSoFar && totalSoFar > 1 ? ' ✓' : ''}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: '6px' }}>
-        {weekDays.map((day, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flex: 1 }}>
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '9px',
-              background: day.hasEntry
-                ? day.isToday ? 'var(--sage)'    : 'var(--sage-dim)'
-                : day.isToday ? 'var(--bg-3)'    : 'var(--bg-2)',
-              border: day.isToday
-                ? `1.5px solid ${day.hasEntry ? 'var(--sage)' : 'var(--border-bright)'}`
-                : '1px solid transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: day.isFuture ? 0.25 : 1,
-              transition: 'background 0.2s, border-color 0.2s',
-              flexShrink: 0,
-            }}>
-              {day.hasEntry && (
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path
-                    d="M2 5.5l2.5 2.5 4.5-4.5"
-                    stroke={day.isToday ? '#fff' : 'var(--sage)'}
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
+        {weekDays.map((day, i) => {
+          const isSelected = day.dateStr === selectedDate
+          const hasEntry   = journalDates.has(day.dateStr)
+          const clickable  = !day.isFuture
+
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flex: 1 }}>
+              <button
+                onClick={() => clickable && onSelectDate(day.dateStr)}
+                title={clickable ? formatDisplayDate(day.dateStr) : undefined}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '9px',
+                  background: hasEntry
+                    ? isSelected ? 'var(--sage)' : 'var(--sage-dim)'
+                    : isSelected ? 'var(--bg-3)'  : 'var(--bg-2)',
+                  border: isSelected
+                    ? `2px solid ${hasEntry ? 'var(--sage)' : 'var(--gold)'}`
+                    : day.isToday
+                      ? '1.5px solid var(--border-bright)'
+                      : '1px solid transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  opacity: day.isFuture ? 0.25 : 1,
+                  cursor: clickable ? 'pointer' : 'default',
+                  transition: 'background 0.15s, border-color 0.15s, transform 0.1s',
+                  flexShrink: 0,
+                  padding: 0,
+                  transform: isSelected && !hasEntry ? 'scale(1.05)' : 'scale(1)',
+                }}
+                onMouseEnter={e => { if (clickable && !isSelected) (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)' }}
+                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+              >
+                {hasEntry && (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                    <path
+                      d="M2 5.5l2.5 2.5 4.5-4.5"
+                      stroke={isSelected ? '#fff' : 'var(--sage)'}
+                      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+              <div style={{
+                fontSize: '10px',
+                color: isSelected ? 'var(--text-0)' : day.isToday ? 'var(--text-1)' : 'var(--text-3)',
+                fontWeight: isSelected ? 700 : day.isToday ? 600 : 400,
+              }}>
+                {day.label}
+              </div>
             </div>
-            <div style={{
-              fontSize: '10px',
-              color: day.isToday ? 'var(--text-1)' : 'var(--text-3)',
-              fontWeight: day.isToday ? 700 : 400,
-            }}>
-              {day.label}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ─── Reflection card ─────────────────────────────────────────────────────────
+// ─── Reflection card ──────────────────────────────────────────────────────────
 
 function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismiss: () => void }) {
   return (
     <div style={{
-      marginTop: '16px',
-      background: 'var(--bg-1)',
-      border: '1px solid var(--border-md)',
-      borderRadius: '14px',
-      overflow: 'hidden',
-      animation: 'fadeUp 0.3s var(--ease) both',
+      marginTop: '16px', background: 'var(--bg-1)',
+      border: '1px solid var(--border-md)', borderRadius: '14px',
+      overflow: 'hidden', animation: 'fadeUp 0.3s var(--ease) both',
     }}>
-      {/* Header */}
       <div style={{
-        padding: '10px 14px',
-        background: 'var(--bg-2)',
+        padding: '10px 14px', background: 'var(--bg-2)',
         borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Locus logo */}
           <div style={{
-            width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+            width: '20px', height: '20px', borderRadius: '6px',
             background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <svg width="9" height="9" viewBox="0 0 16 16" fill="#131110">
               <circle cx="8" cy="8" r="3"/>
@@ -134,28 +153,15 @@ function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismi
             Locus noticed
           </span>
         </div>
-        <button
-          onClick={onDismiss}
-          aria-label="Dismiss"
-          style={{
-            background: 'none', border: 'none', color: 'var(--text-3)',
-            cursor: 'pointer', fontSize: '16px', lineHeight: 1,
-            padding: '0 2px', fontFamily: 'inherit',
-          }}
-        >
-          ×
-        </button>
+        <button onClick={onDismiss} aria-label="Dismiss" style={{
+          background: 'none', border: 'none', color: 'var(--text-3)',
+          cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 2px', fontFamily: 'inherit',
+        }}>×</button>
       </div>
-
-      {/* Body */}
       <div style={{ padding: '14px 16px' }}>
         <p style={{
-          margin: 0,
-          fontFamily: 'var(--font-serif)',
-          fontSize: '15px',
-          fontWeight: 300,
-          color: 'var(--text-0)',
-          lineHeight: 1.65,
+          margin: 0, fontFamily: 'var(--font-serif)', fontSize: '15px',
+          fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.65,
         }}>
           {reflection}
         </p>
@@ -173,29 +179,51 @@ export default function JournalSection({
   existing: JournalEntry | null
   recentJournals?: JournalEntry[]
 }) {
-  const [content, setContent] = useState(existing?.content ?? '')
-  const [status, setStatus]   = useState<'idle' | 'saving' | 'saved'>('idle')
+  const todayStr = localDateStr()
 
-  // Follow-up question (for short/vague entries < 50 words)
-  const [followupQ, setFollowupQ]       = useState<string | null>(null)
-  const [followupDone, setFollowupDone] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(todayStr)
+  const isToday = selectedDate === todayStr
 
-  // Locus reflection (for substantial entries ≥ 50 words)
-  const [reflection, setReflection]           = useState<string | null>(null)
+  // Derive initial content from existing (today's server-fetched entry) or recentJournals
+  function entryForDate(date: string): string {
+    if (date === todayStr) return existing?.content ?? ''
+    return recentJournals.find(j => j.date === date)?.content ?? ''
+  }
+
+  const [content, setContent]   = useState(entryForDate(todayStr))
+  const [status, setStatus]     = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  const [followupQ, setFollowupQ]           = useState<string | null>(null)
+  const [followupDone, setFollowupDone]     = useState(false)
+  const [reflection, setReflection]         = useState<string | null>(null)
   const [reflectionDismissed, setReflectionDismissed] = useState(false)
 
-  const aiFetchedRef  = useRef(!!existing) // skip on first load if entry already exists
-  const timerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const aiFetchedRef = useRef(!!existing)
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // When the selected date changes, load that day's content and reset AI state
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setContent(entryForDate(selectedDate))
+    setStatus('idle')
+    setFollowupQ(null)
+    setFollowupDone(false)
+    setReflection(null)
+    setReflectionDismissed(false)
+    aiFetchedRef.current = selectedDate !== todayStr
+      ? !!recentJournals.find(j => j.date === selectedDate)
+      : !!existing
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate])
 
   const wordCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0
-  const todayHasEntry = !!content.trim()
 
-  const save = useCallback(async (text: string) => {
+  const save = useCallback(async (text: string, date: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     setStatus('saving')
     try {
-      await saveJournalAction(trimmed, localDateStr())
+      await saveJournalAction(trimmed, date)
       setStatus('saved')
       setTimeout(() => setStatus('idle'), 2500)
 
@@ -204,7 +232,6 @@ export default function JournalSection({
         const words = trimmed.split(/\s+/).filter(Boolean).length
 
         if (words < 50) {
-          // Short entry → ask a clarifying follow-up question
           fetch('/api/followup/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -214,7 +241,6 @@ export default function JournalSection({
             .then(({ question }) => { if (question) setFollowupQ(question) })
             .catch(() => {})
         } else {
-          // Substantial entry → surface a Locus observation
           fetch('/api/journal/reflect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -235,29 +261,77 @@ export default function JournalSection({
     setContent(val)
     setStatus('idle')
     if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => save(val), 1800)
+    timerRef.current = setTimeout(() => save(val, selectedDate), 1800)
   }
 
   const handleBlur = () => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (content.trim()) save(content)
+    if (content.trim()) save(content, selectedDate)
   }
 
   const handleSaveNow = () => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    save(content)
+    save(content, selectedDate)
   }
+
+  const handleSelectDate = (date: string) => {
+    if (date === selectedDate) return
+    setSelectedDate(date)
+  }
+
+  // Merge today's entry into recentJournals for the dot-map (server entry may be fresher)
+  const journalsForMap: JournalEntry[] = existing
+    ? [existing, ...recentJournals.filter(j => j.date !== todayStr)]
+    : recentJournals
 
   return (
     <div style={{ maxWidth: '560px' }}>
 
       {/* Week dot-map */}
-      <WeekDotMap recentJournals={recentJournals} todayHasEntry={todayHasEntry} />
+      <WeekDotMap
+        recentJournals={journalsForMap}
+        selectedDate={selectedDate}
+        todayStr={todayStr}
+        onSelectDate={handleSelectDate}
+      />
+
+      {/* Past-date editing banner */}
+      {!isToday && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '16px',
+          padding: '10px 14px',
+          background: 'var(--gold-dim)',
+          border: '1px solid rgba(212,168,83,0.2)',
+          borderRadius: '10px',
+          animation: 'fadeUp 0.2s var(--ease) both',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--gold)" strokeWidth="1.5">
+              <rect x="2" y="3" width="12" height="11" rx="1.5"/>
+              <path d="M5 1v3M11 1v3M2 7h12" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontSize: '13px', color: 'var(--gold)', fontWeight: 600 }}>
+              {formatDisplayDate(selectedDate)}
+            </span>
+          </div>
+          <button
+            onClick={() => setSelectedDate(todayStr)}
+            style={{
+              fontSize: '12px', color: 'var(--text-2)', background: 'none',
+              border: '1px solid var(--border-md)', borderRadius: '6px',
+              padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+            }}
+          >
+            ← Today
+          </button>
+        </div>
+      )}
 
       {/* Section header */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'var(--text-0)' }}>
-          Today&apos;s Journal
+          {isToday ? 'Today\'s Journal' : 'Past Entry'}
         </div>
         <div style={{ fontSize: '12px', minWidth: '60px', textAlign: 'right', transition: 'color 0.2s' }}>
           {status === 'saving' && <span style={{ color: 'var(--text-3)' }}>Saving…</span>}
@@ -266,7 +340,9 @@ export default function JournalSection({
       </div>
 
       <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.55 }}>
-        A space for longer reflection — what happened today, how you&apos;re processing it, what&apos;s on your mind. Locus reads these to understand you better over time.
+        {isToday
+          ? 'A space for longer reflection — what happened today, how you\'re processing it, what\'s on your mind.'
+          : 'Add or update your reflection for this day. Locus will factor it into your patterns.'}
       </div>
 
       {/* Textarea */}
@@ -275,21 +351,15 @@ export default function JournalSection({
         onChange={e => handleChange(e.target.value)}
         onBlur={handleBlur}
         rows={9}
-        placeholder="Write freely. No structure required — a stream of thought, a few observations, or a detailed account of your day. Locus will look for patterns across entries over time..."
+        placeholder={isToday
+          ? 'Write freely. No structure required — a stream of thought, a few observations, or a detailed account of your day...'
+          : `Write a reflection for ${formatDisplayDate(selectedDate)}…`}
         style={{
-          width: '100%',
-          background: 'var(--bg-1)',
-          border: '1px solid var(--border-md)',
-          borderRadius: '12px',
-          padding: '16px',
-          fontFamily: 'var(--font-sans)',
-          fontSize: '14px',
-          color: 'var(--text-0)',
-          resize: 'vertical',
-          outline: 'none',
-          lineHeight: 1.75,
-          boxSizing: 'border-box',
-          minHeight: '200px',
+          width: '100%', background: 'var(--bg-1)',
+          border: '1px solid var(--border-md)', borderRadius: '12px',
+          padding: '16px', fontFamily: 'var(--font-sans)', fontSize: '14px',
+          color: 'var(--text-0)', resize: 'vertical', outline: 'none',
+          lineHeight: 1.75, boxSizing: 'border-box', minHeight: '200px',
           transition: 'border-color 0.15s',
         }}
       />
@@ -303,10 +373,9 @@ export default function JournalSection({
           <button
             onClick={handleSaveNow}
             style={{
-              fontSize: '12px', padding: '4px 12px',
-              background: 'none', border: '1px solid var(--border-md)',
-              borderRadius: '6px', color: 'var(--text-2)',
-              cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: '12px', padding: '4px 12px', background: 'none',
+              border: '1px solid var(--border-md)', borderRadius: '6px',
+              color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
             Save now
@@ -314,21 +383,14 @@ export default function JournalSection({
         )}
       </div>
 
-      {/* Locus reflection — for substantial entries */}
+      {/* Locus reflection */}
       {reflection && !reflectionDismissed && (
-        <ReflectionCard
-          reflection={reflection}
-          onDismiss={() => setReflectionDismissed(true)}
-        />
+        <ReflectionCard reflection={reflection} onDismiss={() => setReflectionDismissed(true)} />
       )}
 
-      {/* Follow-up question — for short/vague entries */}
+      {/* Follow-up question */}
       {followupQ && !followupDone && (
-        <FollowupQuestion
-          question={followupQ}
-          context={content}
-          onDone={() => setFollowupDone(true)}
-        />
+        <FollowupQuestion question={followupQ} context={content} onDone={() => setFollowupDone(true)} />
       )}
     </div>
   )
