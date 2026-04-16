@@ -1,0 +1,213 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { updateProfile } from '@/app/actions/settings'
+import { signOut } from '@/app/actions/auth'
+import ThemeToggle from '@/components/layout/ThemeToggle'
+import { useToast } from '@/components/ui/ToastContext'
+
+// ── Section wrapper ───────────────────────────────────────────────────────────
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: '28px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '12px' }}>
+        {title}
+      </div>
+      <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Row({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: '16px', padding: '14px 18px',
+      borderBottom: last ? 'none' : '1px solid var(--border)',
+    }}>
+      <span style={{ fontSize: '13.5px', color: 'var(--text-1)', fontWeight: 500, flexShrink: 0 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+function Avatar({ url, name }: { url: string | null; name: string }) {
+  const initial = name.charAt(0).toUpperCase() || '?'
+  if (url) {
+    return <img src={url} alt={name} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  }
+  return (
+    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #4a6e5a 0%, #2a4a3a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 600, color: '#a0d4b8', flexShrink: 0 }}>
+      {initial}
+    </div>
+  )
+}
+
+// ── Profile editor ────────────────────────────────────────────────────────────
+
+function ProfileSection({ name: initialName, avatarUrl: initialUrl }: { name: string; avatarUrl: string | null }) {
+  const toast = useToast()
+  const [name, setName] = useState(initialName)
+  const [avatarUrl, setAvatarUrl] = useState(initialUrl ?? '')
+  const [editing, setEditing] = useState(false)
+  const [saving, startSave] = useTransition()
+
+  const dirty = name !== initialName || (avatarUrl || null) !== initialUrl
+
+  function handleSave() {
+    startSave(async () => {
+      try {
+        await updateProfile(name, avatarUrl || null)
+        toast.success('Profile updated')
+        setEditing(false)
+      } catch {
+        toast.error('Failed to save profile')
+      }
+    })
+  }
+
+  return (
+    <Section title="Profile">
+      <div style={{ padding: '18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <Avatar url={avatarUrl || null} name={name} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-0)' }}>{name || '—'}</div>
+          <button
+            onClick={() => setEditing(e => !e)}
+            style={{ fontSize: '12px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '2px' }}
+          >
+            {editing ? 'Cancel' : 'Edit profile'}
+          </button>
+        </div>
+      </div>
+
+      {editing && (
+        <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</span>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px',
+                padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box',
+              }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avatar URL</span>
+            <input
+              value={avatarUrl}
+              onChange={e => setAvatarUrl(e.target.value)}
+              placeholder="https://…"
+              style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px',
+                padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box',
+              }}
+            />
+          </label>
+          <button
+            onClick={handleSave}
+            disabled={!dirty || saving || !name.trim()}
+            style={{
+              padding: '9px 18px', borderRadius: '9px', border: 'none', fontSize: '13px', fontWeight: 600,
+              background: dirty && name.trim() ? 'var(--gold)' : 'var(--bg-3)',
+              color: dirty && name.trim() ? 'var(--bg-0)' : 'var(--text-3)',
+              cursor: dirty && name.trim() ? 'pointer' : 'not-allowed',
+              alignSelf: 'flex-start', transition: 'all 0.15s',
+            }}
+          >
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      )}
+    </Section>
+  )
+}
+
+// ── Main view ─────────────────────────────────────────────────────────────────
+
+export default function SettingsView({
+  name, avatarUrl, timezone, email,
+}: {
+  name: string
+  avatarUrl: string | null
+  timezone: string
+  email: string
+}) {
+  const toast = useToast()
+  const router = useRouter()
+  const [signingOut, startSignOut] = useTransition()
+
+  return (
+    <div className="page-pad" style={{ maxWidth: '560px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: '28px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '30px', fontWeight: 400, color: 'var(--text-0)', margin: '0 0 4px' }}>
+          Settings
+        </h1>
+        <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: 0 }}>Manage your profile and preferences.</p>
+      </div>
+
+      {/* Profile */}
+      <ProfileSection name={name} avatarUrl={avatarUrl} />
+
+      {/* Account info */}
+      <Section title="Account">
+        <Row label="Email">
+          <span style={{ fontSize: '13px', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
+        </Row>
+        <Row label="Timezone" last>
+          <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>{timezone}</span>
+          <span style={{ fontSize: '10px', color: 'var(--text-3)', background: 'var(--bg-3)', borderRadius: '5px', padding: '2px 7px' }}>auto</span>
+        </Row>
+      </Section>
+
+      {/* Appearance */}
+      <Section title="Appearance">
+        <Row label="Theme" last>
+          <ThemeToggle />
+        </Row>
+      </Section>
+
+      {/* System */}
+      <Section title="System">
+        <Row label="Onboarding">
+          <a
+            href="/onboarding?redo=true"
+            style={{ fontSize: '13px', color: 'var(--gold)', textDecoration: 'none', fontWeight: 500 }}
+          >
+            Redo setup →
+          </a>
+        </Row>
+        <Row label="Sign out" last>
+          <button
+            onClick={() => startSignOut(() => signOut())}
+            disabled={signingOut}
+            style={{
+              padding: '7px 16px', borderRadius: '8px', border: '1px solid rgba(224,92,74,0.3)',
+              background: 'rgba(224,92,74,0.07)', color: signingOut ? 'var(--text-3)' : '#e05c4a',
+              fontSize: '13px', fontWeight: 500, cursor: signingOut ? 'default' : 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {signingOut ? 'Signing out…' : 'Sign out'}
+          </button>
+        </Row>
+      </Section>
+
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '12px' }}>
+        Locus · AI Life OS
+      </div>
+    </div>
+  )
+}
