@@ -78,7 +78,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
 
       <div className="page-pad" style={{ paddingTop: '20px' }}>
         <WeeklyCalendarStrip />
-        <GreetingWidget checkin={checkin} habits={habits} goals={goals} brief={brief} />
+        <GreetingWidget checkin={checkin} habits={habits} goals={goals} brief={brief} pastBriefs={pastBriefs} />
 
         {/* Weekly Review link */}
         <a

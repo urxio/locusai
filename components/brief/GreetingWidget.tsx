@@ -7,6 +7,7 @@ type Props = {
   habits: HabitWithLogs[]
   goals: Goal[]
   brief?: Brief | null
+  pastBriefs?: Brief[]
 }
 
 // ── Icon helpers ────────────────────────────────────────────────────────────────
@@ -58,33 +59,44 @@ function buildPulseSummary(
   brief: Brief | null | undefined,
   habits: HabitWithLogs[],
   goals: Goal[],
+  pastBriefs: Brief[],
 ): string | null {
-  // Use AI insight if available (trimmed to ~2 sentences)
-  if (brief?.insight_text) {
-    const text = brief.insight_text.trim()
-    // Take first 2 sentences max
-    const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [text]
+  // 1. Use today's AI insight (first 2 sentences)
+  const todayInsight = brief?.insight_text
+  if (todayInsight) {
+    const sentences = todayInsight.match(/[^.!?]+[.!?]+/g) ?? [todayInsight]
     return sentences.slice(0, 2).join(' ').trim()
   }
 
-  // Fallback: synthesise a short data summary
-  if (!checkin) return null
+  // 2. Fall back to most recent past brief insight
+  const recentInsight = pastBriefs[0]?.insight_text
+  if (recentInsight) {
+    const sentences = recentInsight.match(/[^.!?]+[.!?]+/g) ?? [recentInsight]
+    return sentences.slice(0, 2).join(' ').trim()
+  }
+
+  // 3. Synthesise from live data — always show something
   const todayHabits = habits.filter(h => h.isScheduledToday)
   const doneHabits  = todayHabits.filter(h => h.weekCompletions > 0)
   const activeGoals = goals.filter(g => g.status === 'active')
-  const energy      = checkin.energy_level
 
   const parts: string[] = []
-  if (energy >= 7)
-    parts.push(`Your energy is tracking well today at ${energy}/10.`)
-  else if (energy <= 4)
-    parts.push(`Energy looks lower today (${energy}/10) — keep it sustainable.`)
+
+  if (checkin) {
+    const energy = checkin.energy_level
+    if (energy >= 7)
+      parts.push(`Your energy is tracking well today at ${energy}/10.`)
+    else if (energy <= 4)
+      parts.push(`Energy looks lower today (${energy}/10) — keep it sustainable.`)
+  }
 
   if (todayHabits.length > 0) {
     if (doneHabits.length === todayHabits.length)
       parts.push(`All ${todayHabits.length} habits are done — great consistency.`)
-    else
+    else if (doneHabits.length > 0)
       parts.push(`${doneHabits.length} of ${todayHabits.length} habits checked off so far.`)
+    else
+      parts.push(`You have ${todayHabits.length} habit${todayHabits.length > 1 ? 's' : ''} scheduled today.`)
   }
 
   if (activeGoals.length > 0) {
@@ -97,7 +109,7 @@ function buildPulseSummary(
 
 // ── Main component ──────────────────────────────────────────────────────────────
 
-export default function GreetingWidget({ checkin, habits, goals, brief }: Props) {
+export default function GreetingWidget({ checkin, habits, goals, brief, pastBriefs = [] }: Props) {
   const now = new Date()
   const hour = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -108,8 +120,8 @@ export default function GreetingWidget({ checkin, habits, goals, brief }: Props)
   const habitCount = todayHabits.length
   const goalCount  = activeGoals.length
 
-  const pills       = getMoodPills(checkin)
-  const pulseSummary = buildPulseSummary(checkin, brief, habits, goals)
+  const pills        = getMoodPills(checkin)
+  const pulseSummary = buildPulseSummary(checkin, brief, habits, goals, pastBriefs)
 
   return (
     <div style={{
