@@ -23,52 +23,30 @@ const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2
 
 export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, memory, pastBriefs = [], coverUrl, userName }: Props) {
   const cover = coverUrl || DEFAULT_COVER
-  const energy = checkin?.energy_level ?? avgEnergy ?? 7
-  const energyPct = ((energy - 1) / 9) * 100
   const now = new Date()
-
-  const sw = 3.5
-  const r = 22
-  const circ = 2 * Math.PI * r
-  const dashOffset = circ - (energyPct / 100) * circ
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
-      {/* ── Cover hero — energy ring + date ── */}
+      {/* ── Cover hero ── */}
       <div style={{
         position: 'relative', height: '180px',
         background: `url(${cover}) center/cover no-repeat`,
         borderRadius: '0 0 20px 20px', overflow: 'hidden',
       }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(19,17,16,0.92) 0%, rgba(19,17,16,0.25) 60%, transparent 100%)' }} />
+        {/* Gradient overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(19,17,16,0.88) 0%, rgba(19,17,16,0.20) 60%, transparent 100%)' }} />
+        {/* Bottom row: date only */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {/* Energy ring */}
-            <div style={{ position: 'relative', width: '52px', height: '52px', flexShrink: 0 }}>
-              <svg width="52" height="52" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
-                <circle cx="26" cy="26" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
-                <circle cx="26" cy="26" r={r} fill="none" stroke="var(--sage)" strokeWidth={sw}
-                  strokeDasharray={circ} strokeDashoffset={dashOffset} strokeLinecap="round"
-                  style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1) 0.15s' }}
-                />
-              </svg>
-              <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
-                {Math.round(energyPct)}
-              </span>
+          <div>
+            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,168,83,0.85)', fontWeight: 600, marginBottom: '4px' }}>
+              {now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
             </div>
-            {/* Date */}
-            <div>
-              <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,168,83,0.85)', fontWeight: 600, marginBottom: '3px' }}>
-                {now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '30px', fontWeight: 800, color: '#f2ebe0', lineHeight: 1, letterSpacing: '-0.02em' }}>{now.getDate()}</span>
-                <span style={{ fontSize: '20px', fontWeight: 500, color: 'rgba(242,235,224,0.65)', lineHeight: 1 }}>{now.toLocaleDateString('en-US', { weekday: 'long' })}</span>
-              </div>
+            <div style={{ fontSize: '26px', fontWeight: 700, color: '#f2ebe0', lineHeight: 1, letterSpacing: '-0.02em' }}>
+              {now.toLocaleDateString('en-US', { weekday: 'long' })}
             </div>
           </div>
-          <div style={{ color: 'rgba(242,235,224,0.5)', cursor: 'pointer', paddingBottom: '4px' }}>
+          <div style={{ color: 'rgba(242,235,224,0.45)', cursor: 'pointer', paddingBottom: '4px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="9" x2="20" y2="9" />
               <line x1="4" y1="15" x2="20" y2="15" />

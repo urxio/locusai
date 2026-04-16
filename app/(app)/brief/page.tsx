@@ -26,16 +26,24 @@ async function BriefContent() {
     getTodayBrief(user.id),
     readUserMemory(user.id),
     getRecentBriefs(user.id, 14),
-    supabase.from('users').select('cover_url, full_name').eq('id', user.id).single(),
+    // cover_url only — safest query that always works
+    supabase.from('users').select('cover_url').eq('id', user.id).single(),
   ])
 
   const avgEnergy = recentCheckins.length
     ? recentCheckins.reduce((s, c) => s + c.energy_level, 0) / recentCheckins.length
     : null
 
-  // Derive display name: users table → auth metadata → email prefix
+  // Try to fetch full_name separately — handles missing column gracefully
+  let dbFullName: string | null = null
+  try {
+    const { data: nameRow } = await supabase
+      .from('users').select('full_name').eq('id', user.id).single()
+    dbFullName = (nameRow as { full_name?: string } | null)?.full_name ?? null
+  } catch { /* column may not exist yet — non-fatal */ }
+
   const userName: string | null =
-    profile.data?.full_name ||
+    dbFullName ||
     (user.user_metadata?.full_name as string | undefined) ||
     (user.user_metadata?.name as string | undefined) ||
     user.email?.split('@')[0] ||
