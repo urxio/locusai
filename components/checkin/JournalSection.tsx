@@ -193,9 +193,10 @@ export default function JournalSection({
   const [content, setContent]   = useState(entryForDate(todayStr))
   const [status, setStatus]     = useState<'idle' | 'saving' | 'saved'>('idle')
 
-  const [followupQ, setFollowupQ]           = useState<string | null>(null)
-  const [followupDone, setFollowupDone]     = useState(false)
-  const [reflection, setReflection]         = useState<string | null>(null)
+  const [followupQ, setFollowupQ]                     = useState<string | null>(null)
+  const [followupDone, setFollowupDone]               = useState(false)
+  const [reflection, setReflection]                   = useState<string | null>(null)
+  const [reflectionLoading, setReflectionLoading]     = useState(false)
   const [reflectionDismissed, setReflectionDismissed] = useState(false)
 
   const aiFetchedRef = useRef(!!existing)
@@ -209,6 +210,7 @@ export default function JournalSection({
     setFollowupQ(null)
     setFollowupDone(false)
     setReflection(null)
+    setReflectionLoading(false)
     setReflectionDismissed(false)
     aiFetchedRef.current = selectedDate !== todayStr
       ? !!recentJournals.find(j => j.date === selectedDate)
@@ -218,7 +220,8 @@ export default function JournalSection({
 
   const wordCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0
 
-  const save = useCallback(async (text: string, date: string) => {
+  // Persist to DB only — called by the debounce timer while the user is still typing
+  const saveToDb = useCallback(async (text: string, date: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     setStatus('saving')
@@ -226,52 +229,63 @@ export default function JournalSection({
       await saveJournalAction(trimmed, date)
       setStatus('saved')
       setTimeout(() => setStatus('idle'), 2500)
-
-      if (!aiFetchedRef.current) {
-        aiFetchedRef.current = true
-        const words = trimmed.split(/\s+/).filter(Boolean).length
-
-        if (words < 50) {
-          fetch('/api/followup/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: trimmed, type: 'journal' }),
-          })
-            .then(r => r.json())
-            .then(({ question }) => { if (question) setFollowupQ(question) })
-            .catch(() => {})
-        } else {
-          fetch('/api/journal/reflect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: trimmed }),
-          })
-            .then(r => r.json())
-            .then(({ reflection: r }) => { if (r) setReflection(r) })
-            .catch(() => {})
-        }
-      }
     } catch {
       setStatus('idle')
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fire AI once per date-session — only called when the user explicitly finishes writing
+  const triggerAI = useCallback((text: string) => {
+    if (aiFetchedRef.current) return
+    aiFetchedRef.current = true
+
+    const trimmed = text.trim()
+    const words   = trimmed.split(/\s+/).filter(Boolean).length
+
+    if (words < 50) {
+      // Short entry: ask a follow-up question
+      fetch('/api/followup/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: trimmed, type: 'journal' }),
+      })
+        .then(r => r.json())
+        .then(({ question }) => { if (question) setFollowupQ(question) })
+        .catch(() => {})
+    } else {
+      // Long entry: surface a Locus reflection
+      setReflectionLoading(true)
+      fetch('/api/journal/reflect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: trimmed }),
+      })
+        .then(r => r.json())
+        .then(({ reflection: r }) => { if (r) setReflection(r) })
+        .catch(() => {})
+        .finally(() => setReflectionLoading(false))
+    }
   }, [])
 
   const handleChange = (val: string) => {
     setContent(val)
     setStatus('idle')
     if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => save(val, selectedDate), 1800)
+    // Auto-save to DB only — no AI trigger
+    timerRef.current = setTimeout(() => saveToDb(val, selectedDate), 1800)
   }
 
   const handleBlur = () => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (content.trim()) save(content, selectedDate)
+    if (!content.trim()) return
+    saveToDb(content, selectedDate)
+    triggerAI(content)          // ← fires only on explicit finish
   }
 
   const handleSaveNow = () => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    save(content, selectedDate)
+    saveToDb(content, selectedDate)
+    triggerAI(content)          // ← fires only on explicit finish
   }
 
   const handleSelectDate = (date: string) => {
@@ -383,7 +397,42 @@ export default function JournalSection({
         )}
       </div>
 
-      {/* Locus reflection */}
+      {/* Locus reflection — loading state */}
+      {reflectionLoading && !reflection && (
+        <div style={{
+          marginTop: '16px', padding: '14px 16px',
+          background: 'var(--bg-1)', border: '1px solid var(--border)',
+          borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '10px',
+          animation: 'fadeUp 0.25s var(--ease) both',
+        }}>
+          <div style={{
+            width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="9" height="9" viewBox="0 0 16 16" fill="#131110">
+              <circle cx="8" cy="8" r="3"/>
+              <circle cx="8" cy="2" r="1.2"/>
+              <circle cx="8" cy="14" r="1.2"/>
+              <circle cx="2" cy="8" r="1.2"/>
+              <circle cx="14" cy="8" r="1.2"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>
+            Locus is reading…
+          </span>
+          <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', marginLeft: '2px' }}>
+            {[0, 200, 400].map(delay => (
+              <span key={delay} style={{
+                width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)',
+                animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms`,
+              }} />
+            ))}
+          </span>
+        </div>
+      )}
+
+      {/* Locus reflection — result */}
       {reflection && !reflectionDismissed && (
         <ReflectionCard reflection={reflection} onDismiss={() => setReflectionDismissed(true)} />
       )}
