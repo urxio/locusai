@@ -147,7 +147,7 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
         value={text}
         onChange={e => { setText(e.target.value); setPreview(null) }}
         onKeyDown={handleKeyDown}
-        placeholder={'Jot something down…\n\n"Buy Sarah a birthday gift — her birthday is May 3"\n"Scott\'s Cheap Flights is great for deals"\n"Try cold plunges for recovery"'}
+        placeholder={'Jot something down…\n\n"Submit the project proposal before Friday"\n"Scott\'s Cheap Flights is great for deals"\n"Try cold plunges for recovery"'}
         rows={4}
         style={{
           width: '100%',
