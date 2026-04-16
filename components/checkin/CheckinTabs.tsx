@@ -76,44 +76,45 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
         </div>
       </div>
 
-      {/* ── Content ── */}
-      <div key={tab} style={{ animation: 'fadeUp 0.22s var(--ease) both' }}>
-        {tab === 'checkin' ? (
-          <ConversationalCheckin existingCheckin={existingCheckin} />
-        ) : (
-          <div className="page-pad" style={{ maxWidth: '860px' }}>
-            <JournalSection existing={todayJournal} recentJournals={recentJournals} />
+      {/* ── Content — both panels stay mounted; CSS hides the inactive one ── */}
+      {/* Keeping both mounted preserves JournalSection's in-memory AI cache     */}
+      <div style={{ display: tab === 'checkin' ? 'block' : 'none', animation: tab === 'checkin' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
+        <ConversationalCheckin existingCheckin={existingCheckin} />
+      </div>
 
-            {/* History link */}
-            <div style={{
-              maxWidth: '560px',
-              marginTop: '36px',
-              paddingTop: '24px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <div style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.4 }}>
-                Past entries, mood notes, and journal reflections
-              </div>
-              <a
-                href="/checkin/history"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none',
-                  fontWeight: 600, padding: '8px 14px',
-                  border: '1px solid var(--border-md)',
-                  borderRadius: '8px',
-                  background: 'var(--bg-2)',
-                  flexShrink: 0,
-                }}
-              >
-                View history →
-              </a>
+      <div style={{ display: tab === 'journal' ? 'block' : 'none', animation: tab === 'journal' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
+        <div className="page-pad" style={{ maxWidth: '860px' }}>
+          <JournalSection existing={todayJournal} recentJournals={recentJournals} />
+
+          {/* History link */}
+          <div style={{
+            maxWidth: '560px',
+            marginTop: '36px',
+            paddingTop: '24px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.4 }}>
+              Past entries, mood notes, and journal reflections
             </div>
+            <a
+              href="/checkin/history"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none',
+                fontWeight: 600, padding: '8px 14px',
+                border: '1px solid var(--border-md)',
+                borderRadius: '8px',
+                background: 'var(--bg-2)',
+                flexShrink: 0,
+              }}
+            >
+              View history →
+            </a>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

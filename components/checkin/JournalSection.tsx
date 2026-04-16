@@ -258,7 +258,11 @@ export default function JournalSection({
     if (!trimmed) return
     const words = trimmed.split(/\s+/).filter(Boolean).length
 
-    if (words < 50) {
+    // Too short for anything meaningful — skip
+    if (words < 10) return
+
+    if (words < 20) {
+      // Very short: only try a follow-up question
       fetch('/api/followup/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -266,13 +270,11 @@ export default function JournalSection({
       })
         .then(r => r.json())
         .then(({ question }) => {
-          if (question) {
-            setCache(date, { followupQ: question })
-            setFollowupQ(question)
-          }
+          if (question) { setCache(date, { followupQ: question }); setFollowupQ(question) }
         })
         .catch(() => {})
     } else {
+      // 20+ words: try reflection first; if null, fall back to follow-up question
       setReflectionLoading(true)
       fetch('/api/journal/reflect', {
         method: 'POST',
@@ -285,12 +287,27 @@ export default function JournalSection({
             setCache(date, { reflection: r })
             setReflection(r)
           } else {
-            setCache(date, { reflectionEmpty: true })
-            setReflectionEmpty(true)
-            setTimeout(() => {
-              setCache(date, { reflectionEmpty: false })
-              setReflectionEmpty(false)
-            }, 4000)
+            // Reflection found nothing — try a follow-up question as fallback
+            return fetch('/api/followup/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: trimmed, type: 'journal' }),
+            })
+              .then(r2 => r2.json())
+              .then(({ question }) => {
+                if (question) {
+                  setCache(date, { followupQ: question })
+                  setFollowupQ(question)
+                } else {
+                  // Both APIs returned null — show a brief neutral close
+                  setCache(date, { reflectionEmpty: true })
+                  setReflectionEmpty(true)
+                  setTimeout(() => {
+                    setCache(date, { reflectionEmpty: false })
+                    setReflectionEmpty(false)
+                  }, 4000)
+                }
+              })
           }
         })
         .catch(() => {})
