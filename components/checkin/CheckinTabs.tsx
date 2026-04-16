@@ -11,9 +11,10 @@ type Tab = 'checkin' | 'journal'
 type Props = {
   existingCheckin: CheckIn | null
   todayJournal:    JournalEntry | null
+  recentJournals:  JournalEntry[]
 }
 
-export default function CheckinTabs({ existingCheckin, todayJournal }: Props) {
+export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals }: Props) {
   const [tab, setTab] = useState<Tab>('checkin')
 
   return (
@@ -81,7 +82,7 @@ export default function CheckinTabs({ existingCheckin, todayJournal }: Props) {
           <ConversationalCheckin existingCheckin={existingCheckin} />
         ) : (
           <div className="page-pad" style={{ maxWidth: '860px' }}>
-            <JournalSection existing={todayJournal} />
+            <JournalSection existing={todayJournal} recentJournals={recentJournals} />
 
             {/* History link */}
             <div style={{
