@@ -7,6 +7,21 @@ import { signOut } from '@/app/actions/auth'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import { useToast } from '@/components/ui/ToastContext'
 
+// ── Cover presets ─────────────────────────────────────────────────────────────
+
+const COVER_PRESETS = [
+  { id: 'fog-mountains',   url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80', label: 'Fog & peaks' },
+  { id: 'night-sky',       url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1400&q=80', label: 'Night sky' },
+  { id: 'dark-forest',     url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1400&q=80', label: 'Forest' },
+  { id: 'desert-dunes',    url: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1400&q=80', label: 'Desert' },
+  { id: 'ocean-horizon',   url: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=1400&q=80', label: 'Ocean' },
+  { id: 'mountain-lake',   url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1400&q=80', label: 'Mountain lake' },
+  { id: 'dark-water',      url: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1400&q=80', label: 'Still water' },
+  { id: 'minimal-arch',    url: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1400&q=80', label: 'Architecture' },
+  { id: 'golden-field',    url: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1400&q=80', label: 'Golden field' },
+  { id: 'dark-canyon',     url: 'https://images.unsplash.com/photo-1512273222628-4daea6a6a6b5?w=1400&q=80', label: 'Canyon' },
+]
+
 // ── Section wrapper ───────────────────────────────────────────────────────────
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -114,15 +129,51 @@ function ProfileSection({ name: initialName, avatarUrl: initialUrl, coverUrl: in
               style={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cover image URL</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cover image</span>
+            {/* Preset grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+              {COVER_PRESETS.map(preset => {
+                const selected = coverUrl === preset.url
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setCoverUrl(preset.url)}
+                    title={preset.label}
+                    style={{
+                      aspectRatio: '16/9',
+                      borderRadius: '6px',
+                      border: selected ? '2px solid var(--gold)' : '2px solid transparent',
+                      background: `url(${preset.url}) center/cover no-repeat`,
+                      cursor: 'pointer',
+                      padding: 0,
+                      outline: 'none',
+                      boxShadow: selected ? '0 0 0 1px var(--gold)' : 'none',
+                      transition: 'border-color 0.12s, box-shadow 0.12s',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {selected && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(212,168,83,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 6l3 3 5-5" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Custom URL fallback */}
             <input
-              value={coverUrl}
+              value={COVER_PRESETS.some(p => p.url === coverUrl) ? '' : coverUrl}
               onChange={e => setCoverUrl(e.target.value)}
-              placeholder="https://…"
-              style={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+              placeholder="Or paste a custom URL…"
+              style={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', padding: '9px 12px', fontSize: '13px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
             />
-          </label>
+          </div>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avatar URL</span>
             <input
