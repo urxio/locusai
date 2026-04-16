@@ -13,6 +13,7 @@ const NAV = [
       { href: '/brief',   label: 'Daily Brief', badge: null, icon: <BriefIcon /> },
       { href: '/checkin', label: 'Check-in',    badge: null, icon: <CheckinIcon /> },
       { href: '/habits',  label: 'Habits',      badge: null, icon: <HabitsIcon /> },
+      { href: '/capture', label: 'Capture',     badge: null, icon: <CaptureIcon /> },
     ]
   },
   {
@@ -164,6 +165,11 @@ function LogoutIcon() {
       <path d="M13 14l3-4-3-4M16 10H7" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
+}
+function CaptureIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18" strokeLinecap="round">
+    <path d="M4 5h12M4 9h8M4 13h5"/><path d="M15 11l-2 5-2-2-2 1 1-3 4-4 1 3z" strokeLinejoin="round"/>
+  </svg>
 }
 function WheelIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">

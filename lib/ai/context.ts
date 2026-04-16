@@ -4,7 +4,8 @@ import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { readUserMemory, type UserMemory } from '@/lib/ai/memory'
 import { getTodayJournal, getRecentJournals } from '@/lib/db/journals'
 import { getPlanForDate } from '@/lib/db/planner'
-import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry, WeeklyPlanBlock } from '@/lib/types'
+import { getContextualNotes } from '@/lib/db/memory-notes'
+import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry, WeeklyPlanBlock, MemoryNote } from '@/lib/types'
 
 export type NeglectedHabit = {
   name: string
@@ -26,6 +27,7 @@ export type BriefContext = {
   recentJournals: JournalEntry[]
   isFirstBrief: boolean
   todayPlan: WeeklyPlanBlock[]
+  memoryNotes: MemoryNote[]  // contextual notes to surface today
 }
 
 export async function buildBriefContext(userId: string, date: string): Promise<BriefContext> {
@@ -39,6 +41,14 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     getRecentJournals(userId, 7),
     getPlanForDate(userId, date),
   ])
+
+  // Build topic keywords from today's context for memory note matching
+  const topicKeywords = [
+    ...goalsWithSteps.map(g => g.category),
+    ...goalsWithSteps.map(g => g.title.toLowerCase().split(' ')).flat(),
+    ...habits.map(h => h.name.toLowerCase()),
+    todayCheckin?.mood_note ?? '',
+  ].filter(Boolean)
 
   const avgEnergy = recentCheckins.length
     ? Math.round((recentCheckins.reduce((s, c) => s + c.energy_level, 0) / recentCheckins.length) * 10) / 10
@@ -58,6 +68,8 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
   // First brief: user has at most 1 check-in (the one from onboarding)
   const isFirstBrief = recentCheckins.length <= 1
 
+  const memoryNotes = await getContextualNotes(userId, date, topicKeywords)
+
   return {
     date,
     goalsWithSteps,
@@ -72,5 +84,6 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     recentJournals,
     isFirstBrief,
     todayPlan,
+    memoryNotes,
   }
 }

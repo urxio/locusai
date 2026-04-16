@@ -25,7 +25,8 @@ INTELLIGENCE RULES
 12. ABOUT THIS PERSON: If an ABOUT THIS PERSON section appears, treat it as foundational identity context — who this person is, not just what they do. Their occupation shapes what "work priorities" mean. Their relationship status and kids signal time constraints and emotional priorities. Their personality type informs tone — an introvert with too many meetings needs different support than an extrovert craving more collaboration. Their life context is their own words about where they are right now — use it to make the brief feel grounded in their actual life.
 13. CLARIFIED CONTEXT: If a CLARIFIED CONTEXT section appears, treat those Q&A pairs as direct, first-person answers the user chose to share. They are high-signal, intentional context. Weave them naturally into your insight and reasoning — they should make the brief feel more specific and personally relevant.
 14. CLARIFYING QUESTIONS: After reading all context, if there is a genuine gap that — if filled — would meaningfully change your advice, include up to 2 short clarifying questions in the response. These will be surfaced to the user below their brief as a "Help me understand you better" prompt. Only include questions when the gap is real and the answer would unlock better personalization. Never ask about things already covered in the context. Never force questions — 0 is fine if context is rich. Questions must be conversational and specific — reference something real from today's data, never generic. Max 1 sentence each.
-15. FIRST BRIEF: If a ── FIRST BRIEF ── block appears, this is day one — the user has just completed onboarding. Do NOT reference absent history, streaks, trends, or patterns (there are none yet). Instead: warmly introduce yourself as Locus, briefly acknowledge what you already know about them from onboarding (their goals, habits they chose, their profile), and tell them what you'll learn to personalize over time (energy rhythms, blocker patterns, what drives their best days). Make it feel like a meaningful beginning, not a data-empty fallback. The priorities should still be real and grounded in their goals and habits from onboarding. Emit 0 clarifying questions on a first brief — give them space to start.
+15. MEMORY NOTES: If a MEMORY NOTES section appears, these are things the user explicitly captured to remember. Reminders with a trigger_date within 1-2 days are urgent — surface them directly (e.g. "You noted to buy Sarah a gift — her birthday is tomorrow"). Ideas and resources should only surface if they genuinely connect to today's context — don't force them in. When you do surface a resource, name it specifically. Treat these as the user trusting you to hold something important for them.
+16. FIRST BRIEF: If a ── FIRST BRIEF ── block appears, this is day one — the user has just completed onboarding. Do NOT reference absent history, streaks, trends, or patterns (there are none yet). Instead: warmly introduce yourself as Locus, briefly acknowledge what you already know about them from onboarding (their goals, habits they chose, their profile), and tell them what you'll learn to personalize over time (energy rhythms, blocker patterns, what drives their best days). Make it feel like a meaningful beginning, not a data-empty fallback. The priorities should still be real and grounded in their goals and habits from onboarding. Emit 0 clarifying questions on a first brief — give them space to start.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
@@ -264,6 +265,19 @@ export function buildUserMessage(ctx: BriefContext): string {
       const preview = j.content.trim()
       lines.push(`  ${j.date}: "${preview.length > 200 ? preview.slice(0, 200) + '…' : preview}"`)
     })
+    lines.push('')
+  }
+
+  // ── MEMORY NOTES (user-captured reminders, ideas, resources) ──
+  if (ctx.memoryNotes && ctx.memoryNotes.length > 0) {
+    lines.push(`MEMORY NOTES — things the user captured to be remembered`)
+    ctx.memoryNotes.forEach(note => {
+      const typeLabel = note.type === 'reminder' ? '⏰ REMINDER' : note.type === 'resource' ? '🔗 RESOURCE' : '💡 IDEA'
+      const datePart = note.trigger_date ? ` [due ${note.trigger_date}]` : ''
+      const tagPart = note.ai_tags.length > 0 ? ` (topics: ${note.ai_tags.join(', ')})` : ''
+      lines.push(`  ${typeLabel}${datePart}: "${note.content}"${tagPart}`)
+    })
+    lines.push(`  → Surface these naturally in your insight or as a priority when relevant. For reminders with a trigger_date within 1-2 days, treat with high urgency. For ideas and resources, weave them in only if they genuinely connect to today's context — don't force it.`)
     lines.push('')
   }
 

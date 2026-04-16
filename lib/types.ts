@@ -136,6 +136,17 @@ export type JournalEntry = {
   updated_at: string
 }
 
+export type MemoryNote = {
+  id: string
+  user_id: string
+  content: string
+  type: 'reminder' | 'idea' | 'resource'
+  trigger_date: string | null
+  ai_tags: string[]
+  resolved: boolean
+  created_at: string
+}
+
 export type WheelArea = {
   key: string
   label: string
