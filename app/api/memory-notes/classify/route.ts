@@ -45,15 +45,27 @@ Classification rules:
 - ai_tags: 2–5 lowercase topic tags. Pick from: travel, health, fitness, finance, relationships, learning, career, creativity, food, reading, shopping, family, friends, mindfulness, productivity, tools, research.
 
 Clarification rules:
-- clarifying_question: ask ONE short, specific question ONLY if the note is genuinely ambiguous and the answer would meaningfully change how Locus surfaces it. Examples of ambiguity: missing date on what sounds like a time-sensitive reminder, unclear what action is needed, vague reference ("that thing", "the guy", "later").
-- Do NOT ask if the note is self-contained and clear.
-- Do NOT ask about URLs — they are always self-explanatory.
-- Max 12 words. Start with a lowercase word. No question mark needed.`
+Ask a clarifying question whenever it would make the note more useful. Default to asking — silence is only correct when the note is fully self-contained.
+
+Ask when:
+- It sounds time-sensitive but has no date ("need to call them soon", "before it's too late")
+- There's a vague pronoun with no clear referent ("that thing", "the guy", "it")
+- The action is unclear ("deal with the contract")
+- A reminder is missing who, what, or when
+- An idea lacks enough context to act on later
+
+Do NOT ask when:
+- The note contains a URL (always self-explanatory)
+- The note already has a specific date, person, and action
+- It's a clear standalone observation with no follow-up needed
+
+Format: max 10 words, lowercase, no question mark, no filler words. Be direct.
+Examples: "when do you need to call them" / "which contract" / "what's the goal of this idea"`
 
   try {
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 180,
+      max_tokens: 300,
       messages: [{ role: 'user', content: prompt }],
     })
 
