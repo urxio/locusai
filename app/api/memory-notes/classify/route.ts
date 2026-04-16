@@ -71,6 +71,6 @@ Clarification rules:
 
     return Response.json(result)
   } catch {
-    return Response.json({ type: 'idea', trigger_date: null, ai_tags: [], clarifying_question: null } satisfies ClassifyResult)
+    return Response.json({ type: hasUrl ? 'resource' : 'idea', trigger_date: null, ai_tags: [], clarifying_question: null } satisfies ClassifyResult)
   }
 }

@@ -300,7 +300,10 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     })
-    return res.json()
+    const result: Classified = await res.json()
+    // Always force resource if content contains a URL
+    if (/https?:\/\/[^\s]+/.test(content)) result.type = 'resource'
+    return result
   }
 
   async function handleSubmit() {
