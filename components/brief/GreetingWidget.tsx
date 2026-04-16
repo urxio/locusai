@@ -208,7 +208,7 @@ export default function GreetingWidget({ checkin, habits, goals, brief }: Props)
               <SparkIcon />
             </span>
             <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gold)', opacity: 0.85 }}>
-              {brief?.insight_text ? 'Locus AI · Today's pulse' : 'Today\'s pulse'}
+              {brief?.insight_text ? "Locus AI · Today\u2019s pulse" : "Today\u2019s pulse"}
             </span>
           </div>
           <p style={{
