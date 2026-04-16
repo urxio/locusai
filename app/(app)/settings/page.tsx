@@ -11,7 +11,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('name, avatar_url, timezone')
+    .select('name, avatar_url, cover_url, timezone')
     .eq('id', user.id)
     .single()
 
@@ -19,6 +19,7 @@ export default async function SettingsPage() {
     <SettingsView
       name={profile?.name ?? ''}
       avatarUrl={profile?.avatar_url ?? null}
+      coverUrl={profile?.cover_url ?? null}
       timezone={profile?.timezone ?? 'UTC'}
       email={user.email ?? ''}
     />

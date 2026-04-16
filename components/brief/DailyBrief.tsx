@@ -17,6 +17,7 @@ type Props = {
   needsGeneration?: boolean | null
   memory?: UserMemory | null
   pastBriefs?: Brief[]
+  coverUrl?: string | null
 }
 
 const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
@@ -27,7 +28,7 @@ const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
   learning: { tag: 'rgba(100,130,180,0.12)', border: '#6090c8' },
 }
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration, memory, pastBriefs = [] }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: initialBrief, needsGeneration, memory, pastBriefs = [], coverUrl }: Props) {
   const [brief, setBrief] = useState<Brief | null | undefined>(initialBrief)
   const [generating, setGenerating] = useState(!!needsGeneration && !initialBrief)
   const [forceRegen, setForceRegen] = useState(false)
@@ -109,19 +110,50 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   }
 
   return (
-    <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85 }}>
-          {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+    <div style={{ maxWidth: '860px', margin: '0 auto', animation: 'fadeUp 0.3s var(--ease) both' }}>
+
+      {/* Cover hero */}
+      {coverUrl ? (
+        <div style={{
+          position: 'relative',
+          height: '220px',
+          background: `url(${coverUrl}) center/cover no-repeat`,
+          borderRadius: '0 0 20px 20px',
+          marginBottom: '28px',
+          overflow: 'hidden',
+        }}>
+          {/* Gradient overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(19,17,16,0.85) 0%, rgba(19,17,16,0.2) 60%, transparent 100%)',
+          }} />
+          {/* Text on cover */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 28px' }}>
+            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,168,83,0.9)', fontWeight: 600, marginBottom: '4px' }}>
+              {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400, color: '#f2ebe0', lineHeight: 1.15, letterSpacing: '-0.01em' }}>
+              {greeting}, <em style={{ fontStyle: 'italic', opacity: 0.8 }}>you.</em>
+            </div>
+          </div>
         </div>
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.15, letterSpacing: '-0.01em' }}>
-          {greeting}, <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>you.</em>
+      ) : null}
+
+      <div className="page-pad" style={{ paddingTop: coverUrl ? '0' : undefined }}>
+      {/* Header (no cover) */}
+      {!coverUrl && (
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85 }}>
+            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.15, letterSpacing: '-0.01em' }}>
+            {greeting}, <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>you.</em>
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>
+            {checkin ? "Here's your brief for today." : "Check in to unlock your personalized AI brief."}
+          </div>
         </div>
-        <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>
-          {checkin ? "Here's your brief for today." : "Check in to unlock your personalized AI brief."}
-        </div>
-      </div>
+      )}
 
       {/* AI Insight / Loader / No-brief card */}
       {generating ? (
@@ -255,6 +287,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
 
       {/* Brief history */}
       <BriefHistory briefs={pastBriefs} />
+      </div>{/* end page-pad */}
     </div>
   )
 }

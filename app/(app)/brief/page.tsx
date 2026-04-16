@@ -16,7 +16,7 @@ async function BriefContent() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [goals, checkin, recentCheckins, habits, brief, memory, pastBriefs] = await Promise.all([
+  const [goals, checkin, recentCheckins, habits, brief, memory, pastBriefs, profile] = await Promise.all([
     getActiveGoals(user.id),
     getTodayCheckin(user.id),
     getRecentCheckins(user.id, 7),
@@ -24,6 +24,7 @@ async function BriefContent() {
     getTodayBrief(user.id),
     readUserMemory(user.id),
     getRecentBriefs(user.id, 14),
+    supabase.from('users').select('cover_url').eq('id', user.id).single(),
   ])
 
   const avgEnergy = recentCheckins.length
@@ -43,6 +44,7 @@ async function BriefContent() {
       needsGeneration={needsGeneration}
       memory={memory}
       pastBriefs={pastBriefs}
+      coverUrl={profile.data?.cover_url ?? null}
     />
   )
 }

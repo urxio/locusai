@@ -53,19 +53,20 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
 
 // ── Profile editor ────────────────────────────────────────────────────────────
 
-function ProfileSection({ name: initialName, avatarUrl: initialUrl }: { name: string; avatarUrl: string | null }) {
+function ProfileSection({ name: initialName, avatarUrl: initialUrl, coverUrl: initialCover }: { name: string; avatarUrl: string | null; coverUrl: string | null }) {
   const toast = useToast()
   const [name, setName] = useState(initialName)
   const [avatarUrl, setAvatarUrl] = useState(initialUrl ?? '')
+  const [coverUrl, setCoverUrl] = useState(initialCover ?? '')
   const [editing, setEditing] = useState(false)
   const [saving, startSave] = useTransition()
 
-  const dirty = name !== initialName || (avatarUrl || null) !== initialUrl
+  const dirty = name !== initialName || (avatarUrl || null) !== initialUrl || (coverUrl || null) !== initialCover
 
   function handleSave() {
     startSave(async () => {
       try {
-        await updateProfile(name, avatarUrl || null)
+        await updateProfile(name, avatarUrl || null, coverUrl || null)
         toast.success('Profile updated')
         setEditing(false)
       } catch {
@@ -76,7 +77,21 @@ function ProfileSection({ name: initialName, avatarUrl: initialUrl }: { name: st
 
   return (
     <Section title="Profile">
-      <div style={{ padding: '18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Cover image preview */}
+      <div style={{
+        height: '100px', background: coverUrl
+          ? `url(${coverUrl}) center/cover no-repeat`
+          : 'linear-gradient(135deg, var(--bg-3) 0%, var(--bg-2) 100%)',
+        position: 'relative', borderRadius: '14px 14px 0 0',
+      }}>
+        {!coverUrl && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>No cover image</span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '16px' }}>
         <Avatar url={avatarUrl || null} name={name} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-0)' }}>{name || '—'}</div>
@@ -96,10 +111,16 @@ function ProfileSection({ name: initialName, avatarUrl: initialUrl }: { name: st
             <input
               value={name}
               onChange={e => setName(e.target.value)}
-              style={{
-                background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px',
-                padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box',
-              }}
+              style={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cover image URL</span>
+            <input
+              value={coverUrl}
+              onChange={e => setCoverUrl(e.target.value)}
+              placeholder="https://…"
+              style={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
             />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -108,10 +129,7 @@ function ProfileSection({ name: initialName, avatarUrl: initialUrl }: { name: st
               value={avatarUrl}
               onChange={e => setAvatarUrl(e.target.value)}
               placeholder="https://…"
-              style={{
-                background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px',
-                padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box',
-              }}
+              style={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
             />
           </label>
           <button
@@ -136,10 +154,11 @@ function ProfileSection({ name: initialName, avatarUrl: initialUrl }: { name: st
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function SettingsView({
-  name, avatarUrl, timezone, email,
+  name, avatarUrl, coverUrl, timezone, email,
 }: {
   name: string
   avatarUrl: string | null
+  coverUrl: string | null
   timezone: string
   email: string
 }) {
@@ -159,7 +178,7 @@ export default function SettingsView({
       </div>
 
       {/* Profile */}
-      <ProfileSection name={name} avatarUrl={avatarUrl} />
+      <ProfileSection name={name} avatarUrl={avatarUrl} coverUrl={coverUrl} />
 
       {/* Account info */}
       <Section title="Account">
