@@ -190,35 +190,45 @@ export default function JournalSection({
     return recentJournals.find(j => j.date === date)?.content ?? ''
   }
 
-  const [content, setContent]   = useState(entryForDate(todayStr))
-  const [status, setStatus]     = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [content, setContent] = useState(entryForDate(todayStr))
+  const [status, setStatus]   = useState<'idle' | 'saving' | 'saved'>('idle')
 
-  const [followupQ, setFollowupQ]                     = useState<string | null>(null)
-  const [followupDone, setFollowupDone]               = useState(false)
-  const [reflection, setReflection]                   = useState<string | null>(null)
-  const [reflectionLoading, setReflectionLoading]     = useState(false)
-  const [reflectionDismissed, setReflectionDismissed] = useState(false)
-  const [reflectionEmpty, setReflectionEmpty]         = useState(false)
+  // Per-date AI result cache — persists across date switches within the session
+  type AiCache = {
+    aiFetched:    boolean
+    followupQ:    string | null
+    reflection:   string | null
+    reflectionEmpty: boolean
+  }
+  const aiCacheRef = useRef<Map<string, AiCache>>(new Map())
+  const getCache   = (date: string): AiCache =>
+    aiCacheRef.current.get(date) ?? { aiFetched: false, followupQ: null, reflection: null, reflectionEmpty: false }
+  const setCache   = (date: string, patch: Partial<AiCache>) =>
+    aiCacheRef.current.set(date, { ...getCache(date), ...patch })
 
-  // aiFetchedRef: has AI been triggered this session for the current date?
-  // contentChangedRef: has the user actually edited content this session?
-  const aiFetchedRef     = useRef(false)
-  const contentChangedRef = useRef(false)
-  const timerRef          = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Reactive AI state — sourced from cache on date switch
+  const [followupQ,          setFollowupQ]          = useState<string | null>(null)
+  const [followupDone,       setFollowupDone]       = useState(false)
+  const [reflection,         setReflection]         = useState<string | null>(null)
+  const [reflectionLoading,  setReflectionLoading]  = useState(false)
+  const [reflectionDismissed,setReflectionDismissed]= useState(false)
+  const [reflectionEmpty,    setReflectionEmpty]    = useState(false)
 
-  // When the selected date changes, load that day's content and reset AI state
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // When the selected date changes: flush timer, load content, restore cached AI state
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     setContent(entryForDate(selectedDate))
     setStatus('idle')
-    setFollowupQ(null)
     setFollowupDone(false)
-    setReflection(null)
-    setReflectionLoading(false)
     setReflectionDismissed(false)
-    setReflectionEmpty(false)
-    aiFetchedRef.current      = false
-    contentChangedRef.current = false
+    setReflectionLoading(false)
+
+    const cached = getCache(selectedDate)
+    setFollowupQ(cached.followupQ)
+    setReflection(cached.reflection)
+    setReflectionEmpty(cached.reflectionEmpty)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate])
 
@@ -238,26 +248,31 @@ export default function JournalSection({
     }
   }, [])
 
-  // Fire AI once per date-session — only called when the user explicitly finishes writing
-  const triggerAI = useCallback((text: string) => {
-    if (aiFetchedRef.current || !contentChangedRef.current) return
-    aiFetchedRef.current = true
+  // Fire AI once per date — called only on blur/save, never by the auto-save debounce.
+  // Results are cached in aiCacheRef so switching dates and back restores them.
+  const triggerAI = useCallback((text: string, date: string) => {
+    if (getCache(date).aiFetched) return
+    setCache(date, { aiFetched: true })
 
     const trimmed = text.trim()
-    const words   = trimmed.split(/\s+/).filter(Boolean).length
+    if (!trimmed) return
+    const words = trimmed.split(/\s+/).filter(Boolean).length
 
     if (words < 50) {
-      // Short entry: ask a follow-up question
       fetch('/api/followup/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: trimmed, type: 'journal' }),
       })
         .then(r => r.json())
-        .then(({ question }) => { if (question) setFollowupQ(question) })
+        .then(({ question }) => {
+          if (question) {
+            setCache(date, { followupQ: question })
+            setFollowupQ(question)
+          }
+        })
         .catch(() => {})
     } else {
-      // Long entry: surface a Locus reflection
       setReflectionLoading(true)
       fetch('/api/journal/reflect', {
         method: 'POST',
@@ -267,23 +282,27 @@ export default function JournalSection({
         .then(r => r.json())
         .then(({ reflection: r }) => {
           if (r) {
+            setCache(date, { reflection: r })
             setReflection(r)
           } else {
+            setCache(date, { reflectionEmpty: true })
             setReflectionEmpty(true)
-            setTimeout(() => setReflectionEmpty(false), 4000)
+            setTimeout(() => {
+              setCache(date, { reflectionEmpty: false })
+              setReflectionEmpty(false)
+            }, 4000)
           }
         })
         .catch(() => {})
         .finally(() => setReflectionLoading(false))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleChange = (val: string) => {
     setContent(val)
     setStatus('idle')
-    contentChangedRef.current = true   // mark that user has actually edited
     if (timerRef.current) clearTimeout(timerRef.current)
-    // Auto-save to DB only — no AI trigger
     timerRef.current = setTimeout(() => saveToDb(val, selectedDate), 1800)
   }
 
@@ -291,13 +310,13 @@ export default function JournalSection({
     if (timerRef.current) clearTimeout(timerRef.current)
     if (!content.trim()) return
     saveToDb(content, selectedDate)
-    triggerAI(content)          // ← fires only on explicit finish
+    triggerAI(content, selectedDate)
   }
 
   const handleSaveNow = () => {
     if (timerRef.current) clearTimeout(timerRef.current)
     saveToDb(content, selectedDate)
-    triggerAI(content)          // ← fires only on explicit finish
+    triggerAI(content, selectedDate)
   }
 
   const handleSelectDate = (date: string) => {
