@@ -193,23 +193,33 @@ export default function JournalSection({
   const [content, setContent] = useState(entryForDate(todayStr))
   const [status, setStatus]   = useState<'idle' | 'saving' | 'saved'>('idle')
 
-  // Per-date AI result cache — persists across date switches within the session
+  // Per-date AI result cache backed by sessionStorage so it survives page navigation
   type AiCache = {
-    aiFetched:    boolean
-    followupQ:    string | null
-    reflection:   string | null
+    aiFetched:       boolean
+    followupQ:       string | null
+    reflection:      string | null
     reflectionEmpty: boolean
   }
-  const aiCacheRef = useRef<Map<string, AiCache>>(new Map())
-  const getCache   = (date: string): AiCache =>
-    aiCacheRef.current.get(date) ?? { aiFetched: false, followupQ: null, reflection: null, reflectionEmpty: false }
-  const setCache   = (date: string, patch: Partial<AiCache>) =>
-    aiCacheRef.current.set(date, { ...getCache(date), ...patch })
+  const CACHE_KEY = 'locus_journal_ai_cache'
 
-  // Reactive AI state — sourced from cache on date switch
-  const [followupQ,          setFollowupQ]          = useState<string | null>(null)
+  const readStorage = (): Record<string, AiCache> => {
+    try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? '{}') } catch { return {} }
+  }
+  const writeStorage = (store: Record<string, AiCache>) => {
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(store)) } catch {}
+  }
+  const EMPTY_CACHE: AiCache = { aiFetched: false, followupQ: null, reflection: null, reflectionEmpty: false }
+  const getCache = (date: string): AiCache => readStorage()[date] ?? EMPTY_CACHE
+  const setCache = (date: string, patch: Partial<AiCache>) => {
+    const store = readStorage()
+    store[date] = { ...getCache(date), ...patch }
+    writeStorage(store)
+  }
+
+  // Reactive AI state — seeded from sessionStorage on mount, refreshed on date switch
+  const [followupQ,          setFollowupQ]          = useState<string | null>(() => getCache(todayStr).followupQ)
   const [followupDone,       setFollowupDone]       = useState(false)
-  const [reflection,         setReflection]         = useState<string | null>(null)
+  const [reflection,         setReflection]         = useState<string | null>(() => getCache(todayStr).reflection)
   const [reflectionLoading,  setReflectionLoading]  = useState(false)
   const [reflectionDismissed,setReflectionDismissed]= useState(false)
   const [reflectionEmpty,    setReflectionEmpty]    = useState(false)
