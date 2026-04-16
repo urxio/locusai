@@ -198,6 +198,7 @@ export default function JournalSection({
   const [reflection, setReflection]                   = useState<string | null>(null)
   const [reflectionLoading, setReflectionLoading]     = useState(false)
   const [reflectionDismissed, setReflectionDismissed] = useState(false)
+  const [reflectionEmpty, setReflectionEmpty]         = useState(false)
 
   // aiFetchedRef: has AI been triggered this session for the current date?
   // contentChangedRef: has the user actually edited content this session?
@@ -215,6 +216,7 @@ export default function JournalSection({
     setReflection(null)
     setReflectionLoading(false)
     setReflectionDismissed(false)
+    setReflectionEmpty(false)
     aiFetchedRef.current      = false
     contentChangedRef.current = false
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,7 +265,14 @@ export default function JournalSection({
         body: JSON.stringify({ content: trimmed }),
       })
         .then(r => r.json())
-        .then(({ reflection: r }) => { if (r) setReflection(r) })
+        .then(({ reflection: r }) => {
+          if (r) {
+            setReflection(r)
+          } else {
+            setReflectionEmpty(true)
+            setTimeout(() => setReflectionEmpty(false), 4000)
+          }
+        })
         .catch(() => {})
         .finally(() => setReflectionLoading(false))
     }
@@ -431,6 +440,33 @@ export default function JournalSection({
                 animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms`,
               }} />
             ))}
+          </span>
+        </div>
+      )}
+
+      {/* Locus reflection — nothing to surface */}
+      {reflectionEmpty && (
+        <div style={{
+          marginTop: '16px', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'var(--bg-1)', border: '1px solid var(--border)',
+          borderRadius: '12px', animation: 'fadeUp 0.25s var(--ease) both',
+        }}>
+          <div style={{
+            width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="9" height="9" viewBox="0 0 16 16" fill="#131110">
+              <circle cx="8" cy="8" r="3"/>
+              <circle cx="8" cy="2" r="1.2"/>
+              <circle cx="8" cy="14" r="1.2"/>
+              <circle cx="2" cy="8" r="1.2"/>
+              <circle cx="14" cy="8" r="1.2"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
+            Nothing unusual to flag from this entry.
           </span>
         </div>
       )}
