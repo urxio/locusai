@@ -4,7 +4,6 @@ import { useState, useCallback, useRef } from 'react'
 import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import BriefLoader from './BriefLoader'
-import MemoryCard from './MemoryCard'
 import BriefHistory from './BriefHistory'
 import ClarifyingQuestions, { type QAPair } from './ClarifyingQuestions'
 import WeeklyCalendarStrip from './WeeklyCalendarStrip'
@@ -78,11 +77,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   const energy = checkin?.energy_level ?? avgEnergy ?? 7
   const energyPct = ((energy - 1) / 9) * 100
   const now = new Date()
-  const hour = now.getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-
-  const activeGoals = goals.filter(g => g.status === 'active').slice(0, 3)
-  const completedHabits = habits.filter(h => h.weekCompletions > 0).length
 
   // Full-spinner regeneration (manual "Regenerate" button) — BriefLoader handles the fetch
   const handleRegenerate = () => {
@@ -176,7 +170,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       <WeeklyCalendarStrip />
       <GreetingWidget checkin={checkin} habits={habits} goals={goals} brief={brief} />
 
-      {/* AI Insight / Loader / No-brief card */}
+      {/* AI Insight / Loader / fallback */}
       {generating ? (
         <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: '20px' }}>
           <BriefLoader force={forceRegen} onBriefReady={handleBriefReady} onError={handleGenError} />
@@ -185,10 +179,15 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         <ErrorCard message={genError} onRetry={handleRegenerate} />
       ) : brief ? (
         <AIInsightCard text={brief.insight_text} onRegenerate={checkin ? handleRegenerate : undefined} updating={silentUpdating} />
-      ) : !checkin ? (
-        <PreBriefState goals={goals} habits={habits} pastBriefs={pastBriefs} avgEnergy={avgEnergy} />
       ) : (
-        <NoBriefCard hasCheckin={true} />
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', marginBottom: '20px', textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-1)', lineHeight: 1.6 }}>
+            Complete your daily check-in to get your personalized brief.
+          </div>
+          <a href="/checkin" style={{ display: 'inline-block', marginTop: '16px', padding: '9px 22px', background: 'var(--gold)', color: '#131110', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+            Start check-in →
+          </a>
+        </div>
       )}
 
       {/* Clarification note — short AI addendum shown after Q&A, below the brief */}
@@ -230,28 +229,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         />
       )}
 
-      {/* Memory card — what Locus has learned about this user */}
-      {memory && memory.checkin_count >= 5 && (
-        <MemoryCard memory={memory} />
-      )}
-
-      {/* Energy */}
-      <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {checkin ? "Today's Energy" : 'Avg Energy (7 days)'}
-          </span>
-          <div>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'var(--text-0)' }}>{energy.toFixed(1)}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-2)', marginLeft: '6px' }}>
-              {energy >= 8 ? '— Excellent' : energy >= 6 ? '— Good' : energy >= 4 ? '— Moderate' : '— Low'}
-            </span>
-          </div>
-        </div>
-        <div style={{ height: '4px', background: 'var(--bg-4)', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', borderRadius: '4px', background: 'linear-gradient(90deg, #7a9e8a 0%, #d4a853 60%, #e8b86d 100%)', width: `${energyPct}%`, transition: 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)' }} />
-        </div>
-      </div>
 
       {/* Priorities */}
       {brief?.priorities && brief.priorities.length > 0 ? (
@@ -282,12 +259,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
         </div>
       ) : null}
 
-      {/* Stats */}
-      <div className="stats-grid-3">
-        <StatCard value={`${goals.filter(g => g.status === 'active').length}`} label="Active goals" delta={null} />
-        <StatCard value={`${Math.round(goals.filter(g => g.status === 'active').reduce((s, g) => s + g.progress_pct, 0) / (goals.length || 1))}%`} label="Avg progress" delta={null} />
-        <StatCard value={`${completedHabits}/${habits.length}`} label="Habits this week" delta={null} />
-      </div>
 
       {/* Weekly Review link */}
       <a
@@ -319,157 +290,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   )
 }
 
-
-function NoBriefCard({ hasCheckin }: { hasCheckin: boolean }) {
-  return (
-    <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', marginBottom: '20px', textAlign: 'center' }}>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 300, color: 'var(--text-1)', lineHeight: 1.6 }}>
-        {hasCheckin
-          ? 'Your AI brief will appear here once generated.'
-          : 'Complete your daily check-in to unlock your personalized AI brief.'}
-      </div>
-      {!hasCheckin && (
-        <a href="/checkin" style={{ display: 'inline-block', marginTop: '16px', padding: '9px 20px', background: 'var(--gold)', color: '#131110', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
-          Start check-in →
-        </a>
-      )}
-    </div>
-  )
-}
-
-function PreBriefState({ goals, habits, pastBriefs, avgEnergy }: {
-  goals: Goal[]
-  habits: HabitWithLogs[]
-  pastBriefs: Brief[]
-  avgEnergy: number | null
-}) {
-  const yesterday = (() => {
-    const d = new Date()
-    d.setDate(d.getDate() - 1)
-    return d.toISOString().split('T')[0]
-  })()
-  const yesterdayBrief = pastBriefs[0]?.brief_date === yesterday ? pastBriefs[0] : null
-
-  const todayHabits = habits.filter(h => h.isScheduledToday)
-  const habitGroups: Record<string, HabitWithLogs[]> = {
-    morning:   todayHabits.filter(h => h.time_of_day === 'morning'),
-    afternoon: todayHabits.filter(h => h.time_of_day === 'afternoon'),
-    evening:   todayHabits.filter(h => h.time_of_day === 'evening'),
-    anytime:   todayHabits.filter(h => h.time_of_day === null),
-  }
-  const habitGroupOrder = ['morning', 'afternoon', 'evening', 'anytime'] as const
-  const habitGroupLabels: Record<string, string> = {
-    morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', anytime: 'Anytime',
-  }
-
-  const activeGoals = goals.filter(g => g.status === 'active').slice(0, 3)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-
-      {/* ── Check-in prompt card ── */}
-      <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '220px', height: '220px', background: 'radial-gradient(circle, rgba(122,158,138,0.08) 0%, rgba(212,168,83,0.06) 50%, transparent 70%)', pointerEvents: 'none' }} />
-
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '20px', padding: '3px 10px 3px 7px', fontSize: '10.5px', color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)' }} />
-          Locus AI · Daily Brief
-        </div>
-
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '21px', fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.45, letterSpacing: '0.01em', marginBottom: '8px', position: 'relative', zIndex: 1 }}>
-          Your AI brief is ready when you are.
-        </div>
-        <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '20px', position: 'relative', zIndex: 1 }}>
-          {`It'll weave together your ${activeGoals.length > 0 ? `${activeGoals.length} active goal${activeGoals.length !== 1 ? 's' : ''}` : 'goals'}, today's habits${avgEnergy !== null ? ', and your recent energy trends' : ''} into a focused daily plan.`}
-        </div>
-
-        {yesterdayBrief && (
-          <div style={{ borderTop: '1px solid var(--border)', marginBottom: '20px', paddingTop: '14px', position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
-              Yesterday
-            </div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13.5px', fontWeight: 300, color: 'var(--text-3)', lineHeight: 1.55, fontStyle: 'italic' }}>
-              {yesterdayBrief.insight_text.length > 120
-                ? yesterdayBrief.insight_text.slice(0, 117).trimEnd() + '…'
-                : yesterdayBrief.insight_text}
-            </div>
-          </div>
-        )}
-
-        <a href="/checkin" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold)', color: '#131110', borderRadius: 'var(--radius-md)', padding: '10px 22px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', position: 'relative', zIndex: 1 }}>
-          Start check-in →
-        </a>
-      </div>
-
-      {/* ── Today's habits ── */}
-      {todayHabits.length > 0 && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', animation: 'fadeUp 0.3s var(--ease) both', animationDelay: '0.05s' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '14px' }}>
-            On deck today
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {habitGroupOrder.map(key => {
-              const group = habitGroups[key]
-              if (!group || group.length === 0) return null
-              return (
-                <div key={key}>
-                  <div style={{ fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
-                    {habitGroupLabels[key]}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {group.map(habit => (
-                      <div key={habit.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '5px 10px', fontSize: '12.5px', color: 'var(--text-1)', fontWeight: 500, lineHeight: 1 }}>
-                        <span style={{ fontSize: '14px', lineHeight: 1 }}>{habit.emoji}</span>
-                        {habit.name}
-                        {habit.streak > 1 && (
-                          <span style={{ fontSize: '10px', color: 'var(--gold)', fontWeight: 600, marginLeft: '2px', opacity: 0.85 }}>
-                            {habit.streak}d
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Goal progress snapshot ── */}
-      {activeGoals.length > 0 && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', animation: 'fadeUp 0.3s var(--ease) both', animationDelay: '0.1s' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '14px' }}>
-            Goal progress
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {activeGoals.map(goal => {
-              const colors = CATEGORY_COLORS[goal.category] ?? { tag: 'rgba(160,160,160,0.1)', border: 'var(--text-3)' }
-              return (
-                <div key={goal.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: colors.border, flexShrink: 0, opacity: 0.85 }} />
-                  <div style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-1)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
-                    {goal.title}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                    <div style={{ width: '72px', height: '3px', background: 'var(--bg-4)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: '3px', background: colors.border, width: `${Math.min(100, Math.max(0, goal.progress_pct))}%`, opacity: 0.75, transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)' }} />
-                    </div>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', minWidth: '28px', textAlign: 'right' }}>
-                      {goal.progress_pct}%
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-    </div>
-  )
-}
-
 function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ background: 'var(--bg-1)', border: '1px solid rgba(200,80,80,0.2)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', marginBottom: '20px', textAlign: 'center' }}>
@@ -485,85 +305,6 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
       >
         Try again
       </button>
-    </div>
-  )
-}
-
-function GoalCard({ goal, rank }: { goal: Goal; rank: number }) {
-  const colors = CATEGORY_COLORS[goal.category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
-  const accentColor = rank === 1 ? 'var(--gold)' : rank === 2 ? 'var(--sage)' : 'var(--text-3)'
-  const pct = Math.round(goal.progress_pct ?? 0)
-
-  return (
-    <a href="/goals" style={{ textDecoration: 'none', display: 'block' }}>
-      <div style={{
-        background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-        padding: '16px 18px', display: 'flex', alignItems: 'flex-start', gap: '14px',
-        position: 'relative', overflow: 'hidden',
-        transition: 'border-color 0.15s',
-      }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-md)'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}
-      >
-        {/* Left accent */}
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: accentColor }} />
-
-        {/* Rank number */}
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 300, color: accentColor, lineHeight: 1, flexShrink: 0, width: '22px', textAlign: 'right', opacity: 0.7, marginTop: '2px' }}>
-          {rank}
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3, marginBottom: '4px' }}>
-            {goal.title}
-          </div>
-          {goal.next_action && (
-            <div style={{ fontSize: '12.5px', color: 'var(--text-2)', lineHeight: 1.4, marginBottom: '10px' }}>
-              Next: {goal.next_action}
-            </div>
-          )}
-
-          {/* Progress bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg-3)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: '2px',
-                width: `${pct}%`,
-                background: rank === 1 ? 'var(--gold)' : rank === 2 ? 'var(--sage)' : 'var(--text-3)',
-                transition: 'width 0.4s var(--ease)',
-              }} />
-            </div>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', flexShrink: 0 }}>{pct}%</span>
-          </div>
-
-          {/* Category */}
-          <div style={{ marginTop: '8px' }}>
-            <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', background: colors.tag, color: colors.border }}>
-              {goal.category}
-            </span>
-          </div>
-        </div>
-
-        {/* Arrow */}
-        <div style={{ color: 'var(--text-3)', flexShrink: 0, marginTop: '2px' }}>
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 3l5 5-5 5" />
-          </svg>
-        </div>
-      </div>
-    </a>
-  )
-}
-
-
-
-function StatCard({ value, label, delta }: { value: string; label: string; delta: string | null }) {
-  return (
-    <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 18px' }}>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 300, color: 'var(--text-0)', lineHeight: 1, marginBottom: '4px' }}>{value}</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 500 }}>{label}</div>
-      {delta && <div style={{ fontSize: '11px', color: 'var(--sage)', marginTop: '6px' }}>{delta}</div>}
     </div>
   )
 }
