@@ -8,6 +8,16 @@ import type { CheckIn } from '@/lib/types'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
+// Make "daily brief" a gold link wherever it appears in an AI message
+function renderMessageContent(text: string) {
+  const parts = text.split(/(daily brief)/gi)
+  return parts.map((part, i) =>
+    /daily brief/i.test(part)
+      ? <a key={i} href="/brief" style={{ color: 'var(--gold)', textDecoration: 'underline', textUnderlineOffset: '2px', fontWeight: 600 }}>{part}</a>
+      : part
+  )
+}
+
 type CheckinData = {
   energy_level: number
   mood_note: string | null
@@ -252,7 +262,7 @@ export default function ConversationalCheckin({
                                   }} />
                                 ))}
                               </span>
-                            ) : msg.content}
+                            ) : renderMessageContent(msg.content)}
                           </div>
                         </div>
                       )
