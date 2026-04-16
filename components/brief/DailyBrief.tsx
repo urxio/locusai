@@ -225,7 +225,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
 
       {/* Priorities */}
       {brief?.priorities && brief.priorities.length > 0 ? (
-        <div style={{ display: 'grid', gap: '10px', marginBottom: '12px' }}>
+        <div style={{ borderTop: '1px solid var(--border)', marginBottom: '28px' }}>
           {brief.priorities.map((p, i) => (
             <PriorityCard
               key={i}
@@ -543,76 +543,54 @@ function GoalCard({ goal, rank }: { goal: Goal; rank: number }) {
   )
 }
 
-const TIME_OF_DAY_ICON: Record<string, string> = {
-  morning: '🌅', afternoon: '☀️', evening: '🌙', anytime: '✦',
-}
-
 function PriorityCard({
   num, title, category, time, timeOfDay, reasoning
 }: {
   num: number; title: string; category: string; time: string; timeOfDay?: string; reasoning?: string
 }) {
   const colors = CATEGORY_COLORS[category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
-  const accent = num === 1 ? 'var(--gold)' : num === 2 ? 'var(--sage)' : '#8a90b4'
-  const accentAlpha = num === 1 ? 'rgba(212,168,83,0.06)' : num === 2 ? 'rgba(122,158,138,0.06)' : 'rgba(138,144,180,0.06)'
-  const todIcon = TIME_OF_DAY_ICON[timeOfDay ?? 'anytime'] ?? '✦'
 
   return (
     <div style={{
-      background: `linear-gradient(135deg, ${accentAlpha} 0%, var(--bg-1) 60%)`,
-      border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-      padding: '18px 20px', position: 'relative', overflow: 'hidden',
+      padding: '18px 0',
+      borderBottom: '1px solid var(--border)',
+      display: 'flex',
+      gap: '16px',
+      alignItems: 'flex-start',
     }}>
-      {/* Left accent bar */}
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: accent, borderRadius: '3px 0 0 3px' }} />
+      {/* Rank */}
+      <span style={{
+        fontFamily: 'var(--font-serif)', fontSize: '13px', fontWeight: 400,
+        color: 'var(--text-3)', flexShrink: 0, paddingTop: '2px', width: '14px',
+        textAlign: 'right',
+      }}>
+        {num}
+      </span>
 
-      {/* Watermark rank number */}
-      <div style={{
-        position: 'absolute', right: '14px', top: '8px',
-        fontFamily: 'var(--font-serif)', fontSize: '64px', fontWeight: 300,
-        color: accent, opacity: 0.07, lineHeight: 1, pointerEvents: 'none', userSelect: 'none',
-      }}>{num}</div>
-
-      {/* Title row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: reasoning ? '12px' : '10px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.35 }}>{title}</div>
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.35, marginBottom: reasoning ? '8px' : '10px' }}>
+          {title}
         </div>
-      </div>
 
-      {/* AI reasoning */}
-      {reasoning && (
-        <div style={{
-          background: 'var(--bg-2)', borderRadius: '8px',
-          padding: '10px 13px', marginBottom: '12px',
-          borderLeft: `2px solid ${accent}`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px' }}>
-            <svg viewBox="0 0 12 12" width="11" height="11" style={{ flexShrink: 0, marginTop: '2px', opacity: 0.7 }} fill={accent}>
-              <circle cx="6" cy="6" r="2.2"/>
-              <circle cx="6" cy="1.2" r="1"/><circle cx="6" cy="10.8" r="1"/>
-              <circle cx="1.2" cy="6" r="1"/><circle cx="10.8" cy="6" r="1"/>
-            </svg>
-            <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-1)', lineHeight: 1.55 }}>{reasoning}</p>
-          </div>
+        {reasoning && (
+          <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6 }}>
+            {reasoning}
+          </p>
+        )}
+
+        {/* Meta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', background: colors.tag, color: colors.border }}>
+            {category}
+          </span>
+          {time && time !== '—' && (
+            <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>{time}</span>
+          )}
+          {timeOfDay && timeOfDay !== 'flexible' && timeOfDay !== 'anytime' && (
+            <span style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>{timeOfDay}</span>
+          )}
         </div>
-      )}
-
-      {/* Meta row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', background: colors.tag, color: colors.border }}>
-          {category}
-        </span>
-        {time && time !== '—' && (
-          <span style={{ fontSize: '11px', color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 7px', borderRadius: '4px' }}>
-            ⏱ {time}
-          </span>
-        )}
-        {timeOfDay && timeOfDay !== 'flexible' && timeOfDay !== 'anytime' && (
-          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-            {todIcon} {timeOfDay}
-          </span>
-        )}
       </div>
     </div>
   )
