@@ -7,7 +7,9 @@ import { getTodayBrief, getRecentBriefs } from '@/lib/db/briefs'
 import { readUserMemory } from '@/lib/ai/memory'
 import DailyBrief from '@/components/brief/DailyBrief'
 import BriefSkeleton from '@/components/brief/BriefSkeleton'
-import BriefLoader from '@/components/brief/BriefLoader'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Home — Locus' }
 
 export const dynamic = 'force-dynamic'
 
@@ -31,9 +33,6 @@ async function BriefContent() {
     ? recentCheckins.reduce((s, c) => s + c.energy_level, 0) / recentCheckins.length
     : null
 
-  // If user has checked in but no brief yet, trigger generation client-side
-  const needsGeneration = checkin && !brief
-
   return (
     <DailyBrief
       goals={goals}
@@ -41,7 +40,6 @@ async function BriefContent() {
       avgEnergy={avgEnergy}
       habits={habits}
       brief={brief}
-      needsGeneration={needsGeneration}
       memory={memory}
       pastBriefs={pastBriefs}
       coverUrl={profile.data?.cover_url ?? null}

@@ -7,7 +7,7 @@ const NAV = [
   {
     section: 'Today',
     items: [
-      { href: '/brief',   label: 'Daily Brief', badge: null, icon: <BriefIcon /> },
+      { href: '/brief',   label: 'Home', badge: null, icon: <BriefIcon /> },
       { href: '/checkin', label: 'Check-in',    badge: null, icon: <CheckinIcon /> },
       { href: '/habits',  label: 'Habits',      badge: null, icon: <HabitsIcon /> },
       { href: '/capture', label: 'Capture',     badge: null, icon: <CaptureIcon /> },
