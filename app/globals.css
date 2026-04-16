@@ -32,30 +32,106 @@
   --noise-opacity: 0.60;
 }
 
-/* ── LIGHT MODE ────────────────────────────── */
+/* ── LIGHT MODE — Glassmorphism ─────────────── */
 [data-theme="light"] {
-  --bg-0: #f5f0e8;
-  --bg-1: #ece6da;
-  --bg-2: #e2dbd0;
-  --bg-3: #d6cfc4;
-  --bg-4: #c8c0b4;
-  --border: rgba(80, 58, 28, 0.10);
-  --border-md: rgba(80, 58, 28, 0.18);
-  --border-bright: rgba(80, 58, 28, 0.30);
-  --gold: #9a6510;
-  --gold-dim: rgba(154, 101, 16, 0.12);
-  --gold-glow: rgba(154, 101, 16, 0.07);
-  --sage: #3d6e56;
-  --sage-dim: rgba(61, 110, 86, 0.14);
-  --text-0: #1a1610;
-  --text-1: #38301e;
-  --text-2: #6a5e48;
-  --text-3: #9a9080;
-  /* AI card light mode — warm parchment, not a dark box */
-  --ai-card-bg: linear-gradient(135deg, #e8dfc8 0%, #ede4cc 50%, #e4dbc4 100%);
-  --ai-card-text: #1a1610;
-  --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.08);
-  --noise-opacity: 0.20;
+  /* ── Glass surfaces (semi-transparent, body gradient shows through) */
+  --bg-0: rgba(255, 255, 255, 0.0);    /* transparent — gradient bleeds in */
+  --bg-1: rgba(255, 255, 255, 0.58);   /* primary card */
+  --bg-2: rgba(255, 255, 255, 0.40);   /* nested surface  */
+  --bg-3: rgba(255, 255, 255, 0.26);   /* tertiary */
+  --bg-4: rgba(255, 255, 255, 0.16);   /* subtle chrome */
+
+  /* ── Borders — white hairlines are the glassmorphism signature */
+  --border:        rgba(255, 255, 255, 0.44);
+  --border-md:     rgba(255, 255, 255, 0.64);
+  --border-bright: rgba(255, 255, 255, 0.85);
+
+  /* ── Accents */
+  --gold:      #b87e18;
+  --gold-dim:  rgba(184, 126, 24, 0.15);
+  --gold-glow: rgba(184, 126, 24, 0.07);
+  --sage:      #36785a;
+  --sage-dim:  rgba(54, 120, 90, 0.16);
+
+  /* ── Text — dark for readability on light glass */
+  --text-0: #1a1628;
+  --text-1: #30293e;
+  --text-2: #67607e;
+  --text-3: #a49ab8;
+
+  /* ── AI card — brightest glass pane */
+  --ai-card-bg:   rgba(255, 255, 255, 0.74);
+  --ai-card-text: #1a1628;
+
+  /* ── Elevation — soft violet tint shadow + inner highlight */
+  --shadow-card:  0 8px 32px rgba(80, 60, 130, 0.10),
+                  0 2px 8px rgba(0, 0, 0, 0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.78);
+
+  --noise-opacity: 0.0;
+
+  /* ── Background gradient the glass blurs against */
+  --body-bg: linear-gradient(135deg,
+    #dce9f8 0%,
+    #ede3f8 28%,
+    #f8e4df 62%,
+    #daf2ec 100%
+  );
+}
+
+/* Gradient body in light mode — the canvas glass panels sit on */
+[data-theme="light"] body {
+  background: var(--body-bg) fixed;
+}
+
+/* Main content area must be transparent so body gradient shows through cards */
+[data-theme="light"] .app-main {
+  background: transparent;
+}
+
+/* ── Frosted sidebar ── */
+[data-theme="light"] .app-sidebar {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ── Frosted bottom nav ── */
+[data-theme="light"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.74) !important;
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ── Modal overlay — soft tinted blur ── */
+[data-theme="light"] .modal-overlay {
+  background: rgba(60, 50, 90, 0.30);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ── Modal box — brightest glass pane ── */
+[data-theme="light"] .modal-box {
+  background: rgba(255, 255, 255, 0.84) !important;
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 64px rgba(60, 50, 100, 0.14), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+/* ── Input fields — slightly more opaque glass ── */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  color: #1a1628 !important;
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #a49ab8 !important;
 }
 
 @theme inline {
