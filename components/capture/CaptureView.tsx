@@ -295,15 +295,33 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
   const waitingForClarification = !!classified?.clarifying_question
 
   async function classify(content: string): Promise<Classified> {
-    const res = await fetch('/api/memory-notes/classify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    })
-    const result: Classified = await res.json()
-    // Always force resource if content contains a URL
-    if (/https?:\/\/[^\s]+/.test(content)) result.type = 'resource'
-    return result
+    // Run classification and clarification question in parallel
+    const [classifyRes, clarifyRes] = await Promise.all([
+      fetch('/api/memory-notes/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      }),
+      fetch('/api/memory-notes/clarify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, type: 'idea' /* updated after classify */ }),
+      }),
+    ])
+
+    const [classifyData, clarifyData] = await Promise.all([
+      classifyRes.json(),
+      clarifyRes.json(),
+    ])
+
+    if (/https?:\/\/[^\s]+/.test(content)) classifyData.type = 'resource'
+
+    return {
+      type: classifyData.type ?? 'idea',
+      trigger_date: classifyData.trigger_date ?? null,
+      ai_tags: classifyData.ai_tags ?? [],
+      clarifying_question: clarifyData.question ?? null,
+    }
   }
 
   async function handleSubmit() {
