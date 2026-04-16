@@ -9,6 +9,9 @@ import BriefHistory from './BriefHistory'
 import ClarifyingQuestions, { type QAPair } from './ClarifyingQuestions'
 import WeeklyCalendarStrip from './WeeklyCalendarStrip'
 import GreetingWidget from './GreetingWidget'
+import AIInsightCard from './AIInsightCard'
+import PriorityCard from './PriorityCard'
+import { CATEGORY_COLORS } from './PriorityCard'
 
 type Props = {
   goals: Goal[]
@@ -22,13 +25,6 @@ type Props = {
   coverUrl?: string | null
 }
 
-const CATEGORY_COLORS: Record<string, { tag: string; border: string }> = {
-  work:     { tag: 'rgba(122,158,138,0.12)', border: 'var(--sage)' },
-  product:  { tag: 'rgba(122,158,138,0.12)', border: 'var(--sage)' },
-  health:   { tag: 'rgba(180,130,100,0.12)', border: '#c89060' },
-  personal: { tag: 'rgba(212,168,83,0.1)',   border: 'var(--gold)' },
-  learning: { tag: 'rgba(100,130,180,0.12)', border: '#6090c8' },
-}
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
@@ -323,35 +319,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
   )
 }
 
-function AIInsightCard({ text, onRegenerate, updating }: { text: string; onRegenerate?: () => void; updating?: boolean }) {
-  return (
-    <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '26px 28px', position: 'relative', overflow: 'hidden', marginBottom: '20px' }}>
-      <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(212,168,83,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '20px', padding: '3px 10px 3px 7px', fontSize: '10.5px', color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 2s ease-in-out infinite' }} />
-          Locus AI · Daily Insight
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {updating && (
-            <span style={{ fontSize: '11px', color: 'var(--text-3)', fontStyle: 'italic' }}>Refining brief…</span>
-          )}
-          {onRegenerate && !updating && (
-            <button
-              onClick={onRegenerate}
-              className="icon-btn"
-              style={{ background: 'none', border: '1px solid var(--border-md)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '11px', padding: '3px 9px', cursor: 'pointer', letterSpacing: '0.03em', flexShrink: 0 }}
-            >
-              Regenerate
-            </button>
-          )}
-        </div>
-      </div>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 300, color: 'var(--ai-card-text)', lineHeight: 1.6, letterSpacing: '0.01em', position: 'relative', zIndex: 1 }}>{text}</div>
-      <div style={{ marginTop: '16px', fontSize: '12px', color: 'var(--text-3)', position: 'relative', zIndex: 1 }}>Based on your check-ins and goal data · Updated today</div>
-    </div>
-  )
-}
 
 function NoBriefCard({ hasCheckin }: { hasCheckin: boolean }) {
   return (
@@ -589,86 +556,7 @@ function GoalCard({ goal, rank }: { goal: Goal; rank: number }) {
   )
 }
 
-function PriorityCard({
-  num, title, category, time, timeOfDay, reasoning, last
-}: {
-  num: number; title: string; category: string; time: string; timeOfDay?: string; reasoning?: string; last?: boolean
-}) {
-  const colors = CATEGORY_COLORS[category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
-  const rankStr = String(num).padStart(2, '0')
 
-  return (
-    <div style={{
-      display: 'flex',
-      gap: '20px',
-      alignItems: 'flex-start',
-      padding: '24px 0',
-      borderBottom: last ? 'none' : '1px solid var(--border)',
-    }}>
-      {/* Large serif rank */}
-      <div style={{
-        fontFamily: 'var(--font-serif)',
-        fontSize: '42px',
-        fontWeight: 300,
-        lineHeight: 1,
-        color: 'var(--text-3)',
-        opacity: 0.4,
-        flexShrink: 0,
-        width: '48px',
-        textAlign: 'right',
-        letterSpacing: '-0.02em',
-        paddingTop: '2px',
-      }}>
-        {rankStr}
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Title */}
-        <div style={{
-          fontSize: '16px',
-          fontWeight: 600,
-          color: 'var(--text-0)',
-          lineHeight: 1.3,
-          marginBottom: '6px',
-          letterSpacing: '-0.01em',
-        }}>
-          {title}
-        </div>
-
-        {/* Reasoning */}
-        {reasoning && (
-          <p style={{
-            margin: '0 0 12px',
-            fontSize: '13px',
-            color: 'var(--text-2)',
-            lineHeight: 1.65,
-            fontStyle: 'italic',
-          }}>
-            {reasoning}
-          </p>
-        )}
-
-        {/* Meta pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: '10px', padding: '2px 8px', borderRadius: '4px',
-            fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
-            background: colors.tag, color: colors.border,
-          }}>
-            {category}
-          </span>
-          {time && time !== '—' && (
-            <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>{time}</span>
-          )}
-          {timeOfDay && timeOfDay !== 'flexible' && timeOfDay !== 'anytime' && (
-            <span style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>· {timeOfDay}</span>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function StatCard({ value, label, delta }: { value: string; label: string; delta: string | null }) {
   return (

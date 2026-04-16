@@ -5,6 +5,7 @@ import ConversationalCheckin from './ConversationalCheckin'
 import JournalSection from './JournalSection'
 import CheckinHistory from './CheckinHistory'
 import type { CheckIn, JournalEntry } from '@/lib/types'
+import type { UserMemory } from '@/lib/ai/memory'
 
 type Tab = 'checkin' | 'journal'
 
@@ -12,9 +13,10 @@ type Props = {
   existingCheckin: CheckIn | null
   todayJournal:    JournalEntry | null
   recentJournals:  JournalEntry[]
+  memory?:         UserMemory | null
 }
 
-export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals }: Props) {
+export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory }: Props) {
   const [tab, setTab] = useState<Tab>('checkin')
 
   return (
@@ -79,7 +81,7 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
       {/* ── Content — both panels stay mounted; CSS hides the inactive one ── */}
       {/* Keeping both mounted preserves JournalSection's in-memory AI cache     */}
       <div style={{ display: tab === 'checkin' ? 'block' : 'none', animation: tab === 'checkin' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
-        <ConversationalCheckin existingCheckin={existingCheckin} />
+        <ConversationalCheckin existingCheckin={existingCheckin} memory={memory} />
       </div>
 
       <div style={{ display: tab === 'journal' ? 'block' : 'none', animation: tab === 'journal' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>

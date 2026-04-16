@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { submitCheckin } from '@/app/actions/checkin'
 import { localDateStr } from '@/lib/utils/date'
 import type { CheckIn } from '@/lib/types'
+import type { UserMemory } from '@/lib/ai/memory'
+import PostCheckinBrief from '@/components/brief/PostCheckinBrief'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
@@ -29,8 +31,10 @@ const CHECKIN_DATA_RE = /<checkin_data>\s*([\s\S]*?)\s*<\/checkin_data>/
 
 export default function ConversationalCheckin({
   existingCheckin,
+  memory,
 }: {
   existingCheckin: CheckIn | null
+  memory?: UserMemory | null
 }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -444,17 +448,10 @@ export default function ConversationalCheckin({
               >
                 ↺ Update
               </button>
-              <a
-                href="/brief"
-                style={{
-                  flex: 2, display: 'block', padding: '12px',
-                  background: 'var(--gold)', color: '#131110', borderRadius: '10px',
-                  fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', textAlign: 'center',
-                }}
-              >
-                View Daily Brief →
-              </a>
             </div>
+
+            {/* ── Full brief experience inline ── */}
+            <PostCheckinBrief memory={memory} />
           </div>
         )}
         </div>{/* end done wrapper */}
