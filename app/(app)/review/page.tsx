@@ -5,6 +5,8 @@ import { getActiveGoals } from '@/lib/db/goals'
 import { getWeeklyReflection, getPastWeeklyReflections } from '@/lib/db/weekly-reflections'
 import { buildPatternsContext } from '@/lib/ai/patterns-context'
 import { readUserMemory } from '@/lib/ai/memory'
+import { getWheelSnapshots, getTodayWheelSnapshot, computeWheelSuggestions } from '@/lib/db/wheel'
+import { getUserLocalDate } from '@/lib/db/users'
 import ReviewTabs from '@/components/review/ReviewTabs'
 
 export const dynamic = 'force-dynamic'
@@ -24,8 +26,10 @@ export default async function ReviewPage() {
   const today      = new Date()
   const weekNumber = getWeekNumber(today)
   const year       = today.getFullYear()
+  const localDate  = await getUserLocalDate(user.id)
 
-  const [checkins, habits, goals, savedReflection, patternsCtx, memory, pastReflections] = await Promise.all([
+  const [checkins, habits, goals, savedReflection, patternsCtx, memory, pastReflections,
+         wheelSnapshot, wheelHistory, wheelSuggested] = await Promise.all([
     getRecentCheckins(user.id, 60),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
@@ -33,6 +37,9 @@ export default async function ReviewPage() {
     buildPatternsContext(user.id),
     readUserMemory(user.id),
     getPastWeeklyReflections(user.id, weekNumber, year, 12),
+    getTodayWheelSnapshot(user.id, localDate),
+    getWheelSnapshots(user.id),
+    computeWheelSuggestions(user.id),
   ])
 
   return (
@@ -45,6 +52,10 @@ export default async function ReviewPage() {
       ctx={patternsCtx}
       cachedNarratives={memory?.pattern_narratives ?? null}
       cachedGeneratedAt={memory?.pattern_generated_at ?? null}
+      wheelToday={localDate}
+      wheelSnapshot={wheelSnapshot}
+      wheelSuggested={wheelSuggested}
+      wheelHistory={wheelHistory}
     />
   )
 }

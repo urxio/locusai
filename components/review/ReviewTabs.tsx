@@ -3,25 +3,34 @@
 import { useState } from 'react'
 import WeeklyReview from '@/components/weekly/WeeklyReview'
 import PatternsView from '@/components/patterns/PatternsView'
-import type { CheckIn, HabitWithLogs, Goal } from '@/lib/types'
+import WheelOfLife from '@/components/wheel/WheelOfLife'
+import type { CheckIn, HabitWithLogs, Goal, WheelSnapshot, WheelScores } from '@/lib/types'
 import type { WeeklyReflection } from '@/lib/ai/weekly-prompts'
 import type { PatternsContext } from '@/lib/ai/patterns-context'
 import type { StoredWeeklyReflection } from '@/lib/db/weekly-reflections'
 
-type Tab = 'reflection' | 'patterns'
+type Tab = 'reflection' | 'patterns' | 'wheel'
 
 type Props = {
-  /* weekly review */
   checkins:           CheckIn[]
   habits:             HabitWithLogs[]
   goals:              Goal[]
   initialReflection:  WeeklyReflection | null
   pastReflections:    StoredWeeklyReflection[]
-  /* patterns */
   ctx:                PatternsContext
   cachedNarratives:   string[] | null
   cachedGeneratedAt:  string | null
+  wheelToday:         string
+  wheelSnapshot:      WheelSnapshot | null
+  wheelSuggested:     Partial<WheelScores>
+  wheelHistory:       WheelSnapshot[]
 }
+
+const TABS: { id: Tab; label: string; icon: (active: boolean) => React.ReactNode }[] = [
+  { id: 'reflection', label: 'Reflection', icon: active => <ReflectionTabIcon active={active} /> },
+  { id: 'patterns',   label: 'Patterns',   icon: active => <PatternsTabIcon active={active} /> },
+  { id: 'wheel',      label: 'Wheel',      icon: active => <WheelTabIcon active={active} /> },
+]
 
 export default function ReviewTabs(props: Props) {
   const [tab, setTab] = useState<Tab>('reflection')
@@ -30,14 +39,13 @@ export default function ReviewTabs(props: Props) {
     <div>
       {/* ── Tab bar ── */}
       <div style={{
-        padding: '16px 20px 0',
+        padding: '16px 20px 12px',
         display: 'flex',
         justifyContent: 'center',
         position: 'sticky',
         top: 0,
         zIndex: 10,
         background: 'var(--bg-0)',
-        paddingBottom: '12px',
         borderBottom: '1px solid var(--border)',
         marginBottom: '4px',
       }}>
@@ -49,37 +57,30 @@ export default function ReviewTabs(props: Props) {
           border: '1px solid var(--border)',
           gap: '2px',
         }}>
-          {(['reflection', 'patterns'] as const).map(t => {
-            const active = tab === t
+          {TABS.map(({ id, label, icon }) => {
+            const active = tab === id
             return (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={id}
+                onClick={() => setTab(id)}
                 style={{
-                  background:  active ? 'var(--bg-0)' : 'transparent',
-                  border:      active ? '1px solid var(--border-md)' : '1px solid transparent',
-                  borderRadius: '8px',
-                  padding:     '7px 22px',
-                  fontSize:    '13px',
-                  fontWeight:  active ? 700 : 500,
-                  color:       active ? 'var(--text-0)' : 'var(--text-3)',
-                  cursor:      'pointer',
-                  transition:  'all 0.15s ease',
+                  background:    active ? 'var(--bg-0)' : 'transparent',
+                  border:        active ? '1px solid var(--border-md)' : '1px solid transparent',
+                  borderRadius:  '8px',
+                  padding:       '7px 20px',
+                  fontSize:      '13px',
+                  fontWeight:    active ? 700 : 500,
+                  color:         active ? 'var(--text-0)' : 'var(--text-3)',
+                  cursor:        'pointer',
+                  transition:    'all 0.15s ease',
                   letterSpacing: '0.02em',
-                  whiteSpace:  'nowrap',
+                  whiteSpace:    'nowrap',
                 }}
               >
-                {t === 'reflection' ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ReflectionTabIcon active={active} />
-                    Reflection
-                  </span>
-                ) : (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <PatternsTabIcon active={active} />
-                    Patterns
-                  </span>
-                )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {icon(active)}
+                  {label}
+                </span>
               </button>
             )
           })}
@@ -88,7 +89,7 @@ export default function ReviewTabs(props: Props) {
 
       {/* ── Content ── */}
       <div key={tab} style={{ animation: 'fadeUp 0.22s var(--ease) both' }}>
-        {tab === 'reflection' ? (
+        {tab === 'reflection' && (
           <WeeklyReview
             checkins={props.checkins}
             habits={props.habits}
@@ -96,11 +97,20 @@ export default function ReviewTabs(props: Props) {
             initialReflection={props.initialReflection}
             pastReflections={props.pastReflections}
           />
-        ) : (
+        )}
+        {tab === 'patterns' && (
           <PatternsView
             ctx={props.ctx}
             cachedNarratives={props.cachedNarratives}
             cachedGeneratedAt={props.cachedGeneratedAt}
+          />
+        )}
+        {tab === 'wheel' && (
+          <WheelOfLife
+            today={props.wheelToday}
+            existingSnapshot={props.wheelSnapshot}
+            suggested={props.wheelSuggested}
+            history={props.wheelHistory}
           />
         )}
       </div>
@@ -126,6 +136,17 @@ function PatternsTabIcon({ active }: { active: boolean }) {
       <circle cx="5" cy="7" r="1" fill="currentColor" stroke="none" />
       <circle cx="7.5" cy="9.5" r="1" fill="currentColor" stroke="none" />
       <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function WheelTabIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"
+      style={{ opacity: active ? 1 : 0.6 }}>
+      <circle cx="8" cy="8" r="6" />
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 2v2M8 12v2M2 8h2M12 8h2" strokeLinecap="round" />
     </svg>
   )
 }
