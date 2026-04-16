@@ -241,7 +241,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief: i
       ) : !generating && activeGoals.length > 0 ? (
         <div style={{ display: 'grid', gap: '10px', marginBottom: '12px' }}>
           {activeGoals.map((g, i) => (
-            <PriorityCard key={g.id} num={i + 1} title={g.next_action || g.title} category={g.category} time="—" />
+            <GoalCard key={g.id} goal={g} rank={i + 1} />
           ))}
         </div>
       ) : null}
@@ -479,6 +479,73 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
         Try again
       </button>
     </div>
+  )
+}
+
+function GoalCard({ goal, rank }: { goal: Goal; rank: number }) {
+  const colors = CATEGORY_COLORS[goal.category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
+  const accentColor = rank === 1 ? 'var(--gold)' : rank === 2 ? 'var(--sage)' : 'var(--text-3)'
+  const pct = Math.round(goal.progress_pct ?? 0)
+
+  return (
+    <a href="/goals" style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{
+        background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+        padding: '16px 18px', display: 'flex', alignItems: 'flex-start', gap: '14px',
+        position: 'relative', overflow: 'hidden',
+        transition: 'border-color 0.15s',
+      }}
+        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-md)'}
+        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}
+      >
+        {/* Left accent */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: accentColor }} />
+
+        {/* Rank number */}
+        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 300, color: accentColor, lineHeight: 1, flexShrink: 0, width: '22px', textAlign: 'right', opacity: 0.7, marginTop: '2px' }}>
+          {rank}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3, marginBottom: '4px' }}>
+            {goal.title}
+          </div>
+          {goal.next_action && (
+            <div style={{ fontSize: '12.5px', color: 'var(--text-2)', lineHeight: 1.4, marginBottom: '10px' }}>
+              Next: {goal.next_action}
+            </div>
+          )}
+
+          {/* Progress bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg-3)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: '2px',
+                width: `${pct}%`,
+                background: rank === 1 ? 'var(--gold)' : rank === 2 ? 'var(--sage)' : 'var(--text-3)',
+                transition: 'width 0.4s var(--ease)',
+              }} />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', flexShrink: 0 }}>{pct}%</span>
+          </div>
+
+          {/* Category */}
+          <div style={{ marginTop: '8px' }}>
+            <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', background: colors.tag, color: colors.border }}>
+              {goal.category}
+            </span>
+          </div>
+        </div>
+
+        {/* Arrow */}
+        <div style={{ color: 'var(--text-3)', flexShrink: 0, marginTop: '2px' }}>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 3l5 5-5 5" />
+          </svg>
+        </div>
+      </div>
+    </a>
   )
 }
 
