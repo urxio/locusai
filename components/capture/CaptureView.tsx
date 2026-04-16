@@ -102,25 +102,77 @@ function IdeaCard({ note, onResolve, onDelete }: { note: MemoryNote; onResolve: 
   )
 }
 
+// ── URL helpers ───────────────────────────────────────────────────────────────
+
+const URL_RE = /https?:\/\/[^\s]+/g
+
+function extractUrls(text: string): string[] {
+  return Array.from(new Set(text.match(URL_RE) ?? []))
+}
+
+function renderWithLinks(text: string) {
+  const parts = text.split(URL_RE)
+  const urls = text.match(URL_RE) ?? []
+  return parts.reduce<React.ReactNode[]>((acc, part, i) => {
+    acc.push(part)
+    if (urls[i]) {
+      acc.push(
+        <a key={i} href={urls[i]} target="_blank" rel="noopener noreferrer"
+          style={{ color: '#8a90b4', textDecoration: 'underline', textUnderlineOffset: '2px', wordBreak: 'break-all' }}>
+          {urls[i]}
+        </a>
+      )
+    }
+    return acc
+  }, [])
+}
+
+function UrlPill({ url }: { url: string }) {
+  let display = url
+  try { display = new URL(url).hostname.replace(/^www\./, '') } catch {}
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#8a90b4', background: 'rgba(138,144,180,0.12)', border: '1px solid rgba(138,144,180,0.2)', borderRadius: '6px', padding: '3px 8px', textDecoration: 'none', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+    >
+      <LinkIcon />
+      {display}
+    </a>
+  )
+}
+
 // ── Resource card ─────────────────────────────────────────────────────────────
 
 function ResourceCard({ note, onResolve, onDelete }: { note: MemoryNote; onResolve: () => void; onDelete: () => void }) {
+  const urls = extractUrls(note.content)
+  const textWithoutUrls = note.content.replace(URL_RE, '').trim()
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', background: 'var(--bg-2)', borderRadius: '11px', border: '1px solid var(--border)' }}>
-      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(138,144,180,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#8a90b4' }}>
-        <BookmarkIcon />
+    <div style={{ padding: '13px 14px', background: 'var(--bg-2)', borderRadius: '11px', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(138,144,180,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#8a90b4' }}>
+          <BookmarkIcon />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {textWithoutUrls && (
+            <p style={{ margin: '0 0 8px', fontSize: '13.5px', color: 'var(--text-0)', lineHeight: 1.4 }}>
+              {textWithoutUrls}
+            </p>
+          )}
+          {urls.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: note.ai_tags.length ? '8px' : 0 }}>
+              {urls.map(url => <UrlPill key={url} url={url} />)}
+            </div>
+          )}
+          {note.ai_tags.length > 0 && (
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {note.ai_tags.map(tag => (
+                <span key={tag} style={{ fontSize: '10px', color: '#8a90b4', background: 'rgba(138,144,180,0.1)', padding: '1px 6px', borderRadius: '4px' }}>{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+        <NoteActions id={note.id} onResolve={onResolve} onDelete={onDelete} />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: '0 0 4px', fontSize: '13.5px', color: 'var(--text-0)', lineHeight: 1.4 }}>{note.content}</p>
-        {note.ai_tags.length > 0 && (
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {note.ai_tags.map(tag => (
-              <span key={tag} style={{ fontSize: '10px', color: '#8a90b4', background: 'rgba(138,144,180,0.1)', padding: '1px 6px', borderRadius: '4px' }}>{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
-      <NoteActions id={note.id} onResolve={onResolve} onDelete={onDelete} />
     </div>
   )
 }
@@ -228,46 +280,71 @@ function Gallery({ notes, onResolve, onDelete }: {
 // ── Composer ──────────────────────────────────────────────────────────────────
 
 function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
+  type Classified = { type: MemoryNote['type']; trigger_date: string | null; ai_tags: string[]; clarifying_question: string | null }
+
   const [text, setText] = useState('')
   const [classifying, setClassifying] = useState(false)
-  const [preview, setPreview] = useState<{ type: MemoryNote['type']; trigger_date: string | null; ai_tags: string[] } | null>(null)
+  const [classified, setClassified] = useState<Classified | null>(null)
+  // When AI asks for clarification — user answers here before saving
+  const [clarifyAnswer, setClarifyAnswer] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, startSave] = useTransition()
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const clarifyRef = useRef<HTMLInputElement>(null)
+
+  const waitingForClarification = !!classified?.clarifying_question
+
+  async function classify(content: string): Promise<Classified> {
+    const res = await fetch('/api/memory-notes/classify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+    return res.json()
+  }
 
   async function handleSubmit() {
     if (!text.trim() || classifying || saving) return
     setError(null)
 
-    setClassifying(true)
-    let classified = { type: 'idea' as MemoryNote['type'], trigger_date: null as string | null, ai_tags: [] as string[] }
+    // If we already have classification and are waiting for a clarify answer,
+    // save immediately with the enriched content
+    if (waitingForClarification) {
+      const enriched = clarifyAnswer.trim()
+        ? `${text.trim()} — ${clarifyAnswer.trim()}`
+        : text.trim()
+      await save(enriched, classified!)
+      return
+    }
 
+    setClassifying(true)
+    let result: Classified = { type: 'idea', trigger_date: null, ai_tags: [], clarifying_question: null }
     try {
-      const res = await fetch('/api/memory-notes/classify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: text.trim() }),
-      })
-      classified = await res.json()
-      setPreview(classified)
+      result = await classify(text.trim())
+      setClassified(result)
+      // If a question was returned, pause and let the user answer
+      if (result.clarifying_question) {
+        setTimeout(() => clarifyRef.current?.focus(), 50)
+        return
+      }
     } catch {
-      // fallback: proceed with default classification
+      // fallback
     } finally {
       setClassifying(false)
     }
 
+    await save(text.trim(), result)
+  }
+
+  async function save(content: string, meta: Classified) {
     startSave(async () => {
       try {
-        const note = await createMemoryNote(
-          text.trim(),
-          classified.type,
-          classified.trigger_date,
-          classified.ai_tags
-        )
+        const note = await createMemoryNote(content, meta.type, meta.trigger_date, meta.ai_tags)
         if (note) {
           onAdded(note)
           setText('')
-          setPreview(null)
+          setClassified(null)
+          setClarifyAnswer('')
           taRef.current?.focus()
         } else {
           setError('Failed to save — make sure the memory_notes table has been created in Supabase.')
@@ -286,6 +363,11 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
     }
   }
 
+  function handleSkipClarification() {
+    if (!classified) return
+    save(text.trim(), { ...classified, clarifying_question: null })
+  }
+
   const loading = classifying || saving
 
   return (
@@ -293,23 +375,43 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
       <textarea
         ref={taRef}
         value={text}
-        onChange={e => { setText(e.target.value); setPreview(null) }}
+        onChange={e => { setText(e.target.value); setClassified(null); setClarifyAnswer('') }}
         onKeyDown={handleKeyDown}
         placeholder={'Jot something down…\n\n"Submit the project proposal before Friday"\n"Scott\'s Cheap Flights is great for deals"\n"Try cold plunges for recovery"'}
         rows={4}
         style={{
-          width: '100%',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          resize: 'none',
-          fontSize: '14px',
-          color: 'var(--text-0)',
-          lineHeight: 1.6,
-          fontFamily: 'var(--font-sans)',
-          boxSizing: 'border-box',
+          width: '100%', background: 'transparent', border: 'none', outline: 'none',
+          resize: 'none', fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.6,
+          fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
         }}
       />
+
+      {/* Clarification prompt */}
+      {waitingForClarification && (
+        <div style={{ margin: '10px 0 4px', padding: '12px 14px', background: 'var(--bg-2)', borderRadius: '10px', border: '1px solid color-mix(in srgb, var(--gold) 30%, var(--border))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <svg viewBox="0 0 12 12" width="11" height="11" fill="var(--gold)"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="1.5" r="1"/><circle cx="6" cy="10.5" r="1"/><circle cx="1.5" cy="6" r="1"/><circle cx="10.5" cy="6" r="1"/></svg>
+            <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Locus needs a bit more</span>
+          </div>
+          <p style={{ margin: '0 0 8px', fontSize: '13px', color: 'var(--text-1)' }}>{classified!.clarifying_question}</p>
+          <input
+            ref={clarifyRef}
+            value={clarifyAnswer}
+            onChange={e => setClarifyAnswer(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
+            placeholder="type your answer…"
+            style={{
+              width: '100%', background: 'var(--bg-1)', border: '1px solid var(--border)',
+              borderRadius: '8px', padding: '7px 10px', fontSize: '13px',
+              color: 'var(--text-0)', outline: 'none', boxSizing: 'border-box',
+              fontFamily: 'var(--font-sans)',
+            }}
+          />
+          <button onClick={handleSkipClarification} style={{ marginTop: '6px', background: 'none', border: 'none', fontSize: '11px', color: 'var(--text-3)', cursor: 'pointer', padding: 0 }}>
+            skip and save as-is
+          </button>
+        </div>
+      )}
 
       {error && (
         <div style={{ margin: '8px 0 0', fontSize: '12px', color: '#e05c4a', background: 'rgba(224,92,74,0.08)', border: '1px solid rgba(224,92,74,0.2)', borderRadius: '8px', padding: '8px 12px' }}>
@@ -317,24 +419,25 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-        {preview && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+        {/* Classification preview (when no question) */}
+        {classified && !waitingForClarification && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: TYPE_META[preview.type].color, background: TYPE_META[preview.type].bg, padding: '2px 8px', borderRadius: '5px' }}>
-              {TYPE_META[preview.type].label.slice(0, -1)}
+            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: TYPE_META[classified.type].color, background: TYPE_META[classified.type].bg, padding: '2px 8px', borderRadius: '5px' }}>
+              {TYPE_META[classified.type].label.slice(0, -1)}
             </span>
-            {preview.trigger_date && (
+            {classified.trigger_date && (
               <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>
-                {new Date(preview.trigger_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {new Date(classified.trigger_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             )}
-            {preview.ai_tags.map(tag => (
+            {classified.ai_tags.map(tag => (
               <span key={tag} style={{ fontSize: '10px', color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 7px', borderRadius: '4px' }}>{tag}</span>
             ))}
           </div>
         )}
-        <div style={{ marginLeft: preview ? undefined : 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>⌘↵</span>
+        <div style={{ marginLeft: classified && !waitingForClarification ? undefined : 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {!waitingForClarification && <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>⌘↵</span>}
           <button
             onClick={handleSubmit}
             disabled={!text.trim() || loading}
@@ -347,7 +450,7 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
               transition: 'all 0.15s', minWidth: '80px',
             }}
           >
-            {loading ? '…' : 'Capture'}
+            {loading ? '…' : waitingForClarification ? 'Save' : 'Capture'}
           </button>
         </div>
       </div>
@@ -424,6 +527,9 @@ function ResourceIcon() {
 }
 function BookmarkIcon() {
   return <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 1h8v12L7 9.5 3 13V1z"/></svg>
+}
+function LinkIcon() {
+  return <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 6.5a2.5 2.5 0 003.5 0l1.5-1.5a2.5 2.5 0 00-3.5-3.5L5.5 3"/><path d="M7 5.5a2.5 2.5 0 00-3.5 0L2 7a2.5 2.5 0 003.5 3.5L6.5 9"/></svg>
 }
 function CheckIcon() {
   return <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3 3 7-6"/></svg>
