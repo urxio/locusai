@@ -197,10 +197,16 @@ export default function ConversationalCheckin({
         </div>
       </div>
 
-      <div style={{ maxWidth: '580px' }}>
+      <div style={{ maxWidth: '580px', position: 'relative', minHeight: step === 'done' ? '360px' : undefined }}>
 
         {/* ── CHAT ── */}
-        {(step === 'chat' || step === 'saving') && (
+        <div style={{
+          transition: 'opacity 0.4s var(--ease), transform 0.4s var(--ease)',
+          opacity: step === 'done' ? 0 : 1,
+          transform: step === 'done' ? 'translateY(-10px)' : 'translateY(0)',
+          pointerEvents: step === 'done' ? 'none' : 'auto',
+        }}>
+        {true && (
           <div style={{ animation: 'fadeUp 0.25s var(--ease) both' }}>
 
             {/* Chat card */}
@@ -358,11 +364,18 @@ export default function ConversationalCheckin({
               Enter to send · Shift+Enter for new line
             </div>
           </div>
-        )}
+        )}</div>{/* end chat wrapper */}
 
         {/* ── DONE ── */}
-        {step === 'done' && checkinData && (
-          <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          transition: 'opacity 0.4s var(--ease), transform 0.4s var(--ease)',
+          opacity: step === 'done' ? 1 : 0,
+          transform: step === 'done' ? 'translateY(0)' : 'translateY(16px)',
+          pointerEvents: step === 'done' ? 'auto' : 'none',
+        }}>
+        {checkinData && (
+          <div>
             <div style={{
               background: 'var(--bg-1)', border: '1px solid var(--border-md)',
               borderRadius: '18px', padding: '28px', marginBottom: '16px',
@@ -444,6 +457,7 @@ export default function ConversationalCheckin({
             </div>
           </div>
         )}
+        </div>{/* end done wrapper */}
       </div>
     </div>
   )
