@@ -7,6 +7,7 @@ import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import WeeklyCalendarStrip from './WeeklyCalendarStrip'
 import GreetingWidget from './GreetingWidget'
+import StatusStrip from './StatusStrip'
 
 type Props = {
   goals: Goal[]
@@ -21,7 +22,7 @@ type Props = {
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, habits, brief, coverUrl, userName }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, coverUrl, userName }: Props) {
   const router = useRouter()
   const cover  = coverUrl || DEFAULT_COVER
   const now    = new Date()
@@ -55,6 +56,14 @@ export default function DailyBrief({ goals, checkin, habits, brief, coverUrl, us
 
       <div className="page-pad" style={{ paddingTop: '20px' }}>
         <WeeklyCalendarStrip />
+
+        {/* ── Today's Status Strip ── */}
+        <StatusStrip
+          goals={goals}
+          checkin={checkin}
+          avgEnergy={avgEnergy}
+          habits={habits}
+        />
 
         {/* Greeting + pulse summary (uses brief insight for the AI pulse card) */}
         <GreetingWidget
