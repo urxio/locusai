@@ -95,7 +95,7 @@ function DayCell({
       {/* Cell block */}
       <div style={{
         width:        '100%',
-        height:       '16px',
+        height:       '10px',
         borderRadius: '5px',
         background:   cellBg,
         boxShadow:    glow,
