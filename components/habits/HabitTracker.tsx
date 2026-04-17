@@ -631,6 +631,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
 }) {
   const [name,       setName]       = useState(habit?.name ?? '')
   const [emoji,      setEmoji]      = useState(habit?.emoji ?? '✨')
+  const [motivation, setMotivation] = useState(habit?.motivation ?? '')
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
     habit?.days_of_week && habit.days_of_week.length > 0 ? habit.days_of_week : []
   )
@@ -663,7 +664,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
     if (!name.trim()) { setError('Give your habit a name.'); return }
     setError('')
     const linkedGoalObj = activeGoals.find(g => g.id === goalId) ?? null
-    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null, goal_id: goalId || null }
+    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null, goal_id: goalId || null, motivation: motivation.trim() || null }
     const { target_count } = deriveFrequencyMeta(daysOfWeek)
     const todayDow = new Date(today + 'T12:00:00').getDay()
     const isScheduledToday = daysOfWeek.length === 0 || daysOfWeek.includes(todayDow)
@@ -677,6 +678,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
             days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
             ends_at: endsAt || null,
             goal_id: goalId || null,
+            motivation: motivation.trim() || null,
             target_count,
             logs: [],
             streak: 0,
@@ -693,6 +695,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
             days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
             ends_at: endsAt || null,
             goal_id: goalId || null,
+            motivation: motivation.trim() || null,
             target_count,
             isScheduledToday,
             linkedGoal: linkedGoalObj ? { id: linkedGoalObj.id, title: linkedGoalObj.title, category: linkedGoalObj.category } : null,
@@ -743,6 +746,26 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
               <label style={labelStyle}>Habit name</label>
               <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} placeholder="e.g. Morning run" autoFocus style={inputStyle} />
             </div>
+          </div>
+
+          {/* ── Why field ── */}
+          <div>
+            <label style={labelStyle}>
+              Why do you want this habit?
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)', fontSize: '10px' }}> (optional — helps the AI coach you)</span>
+            </label>
+            <textarea
+              value={motivation}
+              onChange={e => setMotivation(e.target.value)}
+              placeholder="e.g. To have more energy in the mornings and feel less sluggish"
+              rows={2}
+              style={{
+                ...inputStyle,
+                resize: 'none',
+                lineHeight: 1.5,
+                fontFamily: 'inherit',
+              }}
+            />
           </div>
 
           <div>

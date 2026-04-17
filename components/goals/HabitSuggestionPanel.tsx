@@ -44,6 +44,7 @@ export default function HabitSuggestionPanel({ goalId, existingHabitNames, onHab
           days_of_week: [],
           ends_at: null,
           goal_id: goalId,
+          motivation: null,
         })
         onHabitAdded(s.name, habit as Habit)
       } catch (err) {

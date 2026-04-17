@@ -9,6 +9,8 @@ import WeeklyCalendarStrip from './WeeklyCalendarStrip'
 import GreetingWidget from './GreetingWidget'
 import StatusStrip from './StatusStrip'
 import HabitsWeekStrip from './HabitsWeekStrip'
+import HabitAuditStrip from './HabitAuditStrip'
+import type { MissedHabit } from './HabitAuditStrip'
 
 type Props = {
   goals: Goal[]
@@ -20,11 +22,12 @@ type Props = {
   todayDate?: string
   coverUrl?: string | null
   userName?: string | null
+  missedYesterday?: MissedHabit[]
 }
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, coverUrl, userName }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, coverUrl, userName, missedYesterday = [] }: Props) {
   const router = useRouter()
   const cover  = coverUrl || DEFAULT_COVER
   const now    = new Date()
@@ -79,6 +82,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, t
 
         {/* ── Habits This Week ── */}
         <HabitsWeekStrip habits={habits} />
+
+        {/* ── Yesterday's missed habits audit ── */}
+        <HabitAuditStrip missed={missedYesterday} />
 
         {/* Weekly review link */}
         <a

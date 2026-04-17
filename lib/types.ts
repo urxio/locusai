@@ -32,6 +32,7 @@ export type Habit = {
   ends_at: string | null      // ISO date — optional end date
   time_of_day: 'morning' | 'afternoon' | 'evening' | null
   goal_id: string | null      // optional link to a goal
+  motivation: string | null   // why the user wants this habit — used by AI audit
   created_at: string
 }
 

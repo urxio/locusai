@@ -42,7 +42,7 @@ export async function GET() {
       ? `Already checked in — energy ${checkin.energy_level}/10${checkin.mood_note ? `, mood: "${checkin.mood_note}"` : ''}`
       : 'Has not checked in yet today',
     scheduledToday.length > 0
-      ? `Habits today: ${scheduledToday.map(h => `${h.emoji} ${h.name}`).join(', ')} (${doneToday.length}/${scheduledToday.length} done)`
+      ? `Habits today: ${scheduledToday.map(h => `${h.emoji} ${h.name}${h.motivation ? ` (why: ${h.motivation})` : ''}`).join('; ')} (${doneToday.length}/${scheduledToday.length} done)`
       : 'No habits scheduled today',
     active.length > 0
       ? `Active goals: ${active.map(g => `${g.title} (${g.progress_pct}%)`).join(', ')}`
