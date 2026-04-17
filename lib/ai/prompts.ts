@@ -31,7 +31,7 @@ INTELLIGENCE RULES
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
 {
-  "insight_text": "<2-4 sentences. Must reference specific goals, habits, or energy patterns by name. Should feel like it was written knowing this exact person today — not a generic observation.>",
+  "insight_text": "<2-4 short paragraphs written in markdown. Use **bold** for key habit names, goal titles, or the single most important action. Use *italics* for energy framing, emotional tone, or the 'why'. Separate distinct thoughts with a blank line (paragraph break). Use emojis sparingly — max 1 per paragraph, only when they add meaning. No bullet lists, no headers. Must reference specific goals, habits, or energy patterns by name. Should feel like it was written knowing this exact person today — not a generic observation.>",
   "priorities": [
     {
       "title": "<specific, actionable task — max 12 words>",
