@@ -1,8 +1,6 @@
 'use client'
 
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import type { Components } from 'react-markdown'
+import React from 'react'
 
 type Props = {
   text: string
@@ -10,59 +8,48 @@ type Props = {
   updating?: boolean
 }
 
-const mdComponents: Components = {
-  // Paragraphs
-  p: ({ children }) => (
-    <p style={{
-      fontFamily:    'var(--font-serif)',
-      fontSize:      '17px',
-      fontWeight:    300,
-      color:         'var(--ai-card-text)',
-      lineHeight:    1.7,
-      letterSpacing: '0.01em',
-      margin:        '0 0 14px',
-    }}>
-      {children}
-    </p>
-  ),
-  // Bold
-  strong: ({ children }) => (
-    <strong style={{ fontWeight: 600, color: 'var(--text-0)' }}>
-      {children}
-    </strong>
-  ),
-  // Italics
-  em: ({ children }) => (
-    <em style={{ fontStyle: 'italic', color: 'var(--text-2)', fontWeight: 300 }}>
-      {children}
-    </em>
-  ),
-  // No headers — fallback to bold paragraph text if AI hallucinates one
-  h1: ({ children }) => (
-    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.6, margin: '0 0 12px' }}>
-      {children}
-    </p>
-  ),
-  h2: ({ children }) => (
-    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.6, margin: '0 0 12px' }}>
-      {children}
-    </p>
-  ),
-  h3: ({ children }) => (
-    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.6, margin: '0 0 12px' }}>
-      {children}
-    </p>
-  ),
-  // Strip any links (nothing useful to link to in a personal brief)
-  a: ({ children }) => <span>{children}</span>,
-  // No bullet lists — strip wrapper, keep text
-  ul: ({ children }) => <div style={{ margin: '0 0 12px' }}>{children}</div>,
-  ol: ({ children }) => <div style={{ margin: '0 0 12px' }}>{children}</div>,
-  li: ({ children }) => (
-    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 300, color: 'var(--ai-card-text)', lineHeight: 1.7, margin: '0 0 6px' }}>
-      {children}
-    </p>
-  ),
+/* ── Tiny inline markdown renderer ─────────────────────────────────────────
+   Handles: **bold**, *italic*, paragraphs (blank line), plain text + emojis.
+   No dependency needed — avoids ESM issues with react-markdown v9+.
+─────────────────────────────────────────────────────────────────────────── */
+
+function renderInline(raw: string, key: string): React.ReactNode {
+  // Split on **bold** and *italic* tokens
+  const parts = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={`${key}-b${i}`} style={{ fontWeight: 600, color: 'var(--text-0)' }}>{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={`${key}-i${i}`} style={{ fontStyle: 'italic', color: 'var(--text-2)', fontWeight: 300 }}>{part.slice(1, -1)}</em>
+    }
+    return part
+  })
+}
+
+function MarkdownInsight({ text }: { text: string }) {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map(p => p.replace(/\n/g, ' ').trim())
+    .filter(Boolean)
+
+  return (
+    <div>
+      {paragraphs.map((para, i) => (
+        <p key={i} style={{
+          fontFamily:    'var(--font-serif)',
+          fontSize:      '17px',
+          fontWeight:    300,
+          color:         'var(--ai-card-text)',
+          lineHeight:    1.7,
+          letterSpacing: '0.01em',
+          margin:        i < paragraphs.length - 1 ? '0 0 16px' : '0',
+        }}>
+          {renderInline(para, String(i))}
+        </p>
+      ))}
+    </div>
+  )
 }
 
 export default function AIInsightCard({ text, onRegenerate, updating }: Props) {
@@ -116,17 +103,12 @@ export default function AIInsightCard({ text, onRegenerate, updating }: Props) {
         </div>
       </div>
 
-      {/* Markdown insight */}
+      {/* Rendered insight */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={mdComponents}
-        >
-          {text}
-        </ReactMarkdown>
+        <MarkdownInsight text={text} />
       </div>
 
-      <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-3)', position: 'relative', zIndex: 1 }}>
+      <div style={{ marginTop: '18px', fontSize: '12px', color: 'var(--text-3)', position: 'relative', zIndex: 1 }}>
         Based on your check-ins and goal data · Updated today
       </div>
     </div>
