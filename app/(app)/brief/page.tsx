@@ -44,6 +44,11 @@ async function BriefContent() {
   })()
   const yesterdayDow = new Date(yesterday + 'T12:00:00').getDay() // 0=Sun…6=Sat
 
+  // Already-dismissed habit IDs for yesterday (stored in user_memory for cross-device sync)
+  const alreadyDismissed: string[] = (
+    (memory?.audit_dismissals as Record<string, string[]> | undefined)?.[yesterday] ?? []
+  )
+
   const missedYesterday: MissedHabit[] = habits
     .filter(h => {
       // Was it scheduled yesterday?
@@ -52,7 +57,10 @@ async function BriefContent() {
         : h.days_of_week.includes(yesterdayDow)
       if (!scheduled) return false
       // Was it NOT logged yesterday?
-      return !h.logs.some(l => l.logged_date === yesterday)
+      if (h.logs.some(l => l.logged_date === yesterday)) return false
+      // Was it already audited/dismissed today?
+      if (alreadyDismissed.includes(h.id)) return false
+      return true
     })
     .map(h => ({ id: h.id, name: h.name, emoji: h.emoji, motivation: h.motivation }))
 
@@ -80,6 +88,7 @@ async function BriefContent() {
       brief={brief}
       memory={memory}
       todayDate={todayDate}
+      yesterday={yesterday}
       coverUrl={profile.data?.cover_url ?? null}
       userName={userName}
       missedYesterday={missedYesterday}

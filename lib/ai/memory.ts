@@ -67,6 +67,8 @@ export type UserMemory = {
     brief_date: string
     questions: string[]
   }
+  // Habit audit dismissals — { 'YYYY-MM-DD': ['habitId', ...] } — cross-device sync
+  audit_dismissals?: Record<string, string[]>
 }
 
 /* ── READ ────────────────────────────────────────────── */

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
@@ -20,6 +20,7 @@ type Props = {
   brief?: Brief | null
   memory?: UserMemory | null
   todayDate?: string
+  yesterday?: string
   coverUrl?: string | null
   userName?: string | null
   missedYesterday?: MissedHabit[]
@@ -27,7 +28,7 @@ type Props = {
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, coverUrl, userName, missedYesterday = [] }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, yesterday = '', coverUrl, userName, missedYesterday = [] }: Props) {
   const router = useRouter()
   const cover  = coverUrl || DEFAULT_COVER
   const now    = new Date()
@@ -72,6 +73,11 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, t
           userName={userName}
         />
 
+        {/* ── Yesterday's missed habits audit — shown right after greeting ── */}
+        {missedYesterday.length > 0 && (
+          <HabitAuditStrip missed={missedYesterday} yesterday={yesterday} />
+        )}
+
         {/* ── Today's Status Strip ── */}
         <StatusStrip
           goals={goals}
@@ -82,9 +88,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, t
 
         {/* ── Habits This Week ── */}
         <HabitsWeekStrip habits={habits} />
-
-        {/* ── Yesterday's missed habits audit ── */}
-        <HabitAuditStrip missed={missedYesterday} />
 
         {/* Weekly review link */}
         <a

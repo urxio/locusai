@@ -10,17 +10,24 @@ export type MissedHabit = {
 }
 
 type Props = {
-  missed: MissedHabit[]
+  missed:    MissedHabit[]
+  yesterday: string   // YYYY-MM-DD — passed from server so it matches DB dates
 }
 
-/* ── session storage key — one audit per habit per day ── */
-function auditKey(habitId: string, yesterday: string) {
-  return `locus_audit_${habitId}_${yesterday}`
+/* ── session storage key — fast local cache only ── */
+function auditKey(habitId: string, date: string) {
+  return `locus_audit_${habitId}_${date}`
 }
-function getYesterday(): string {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/* ── persist dismissal to DB (cross-device) ── */
+async function persistDismiss(habitId: string, auditDate: string) {
+  try {
+    await fetch('/api/habit-audit/dismiss', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ habitId, auditDate }),
+    })
+  } catch { /* non-fatal */ }
 }
 
 /* ── single audit card ───────────────────────────────── */
@@ -39,6 +46,12 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
     } catch { /* no-op */ }
   }, [habit.id, yesterday])
 
+  const dismiss = () => {
+    try { sessionStorage.setItem(auditKey(habit.id, yesterday), 'done') } catch { /* no-op */ }
+    persistDismiss(habit.id, yesterday)
+    setDismissed(true)
+  }
+
   const handleSubmit = async () => {
     if (!reason.trim() || streaming) return
     setStreaming(true)
@@ -47,10 +60,12 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
+          habitId:    habit.id,
           habitName:  habit.name,
           habitEmoji: habit.emoji,
           motivation: habit.motivation,
           reason:     reason.trim(),
+          auditDate:  yesterday,
         }),
       })
       if (!res.ok || !res.body) return
@@ -103,10 +118,7 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
           </div>
         </div>
         <button
-          onClick={() => {
-            try { sessionStorage.setItem(auditKey(habit.id, yesterday), 'done') } catch { /* no-op */ }
-            setDismissed(true)
-          }}
+          onClick={dismiss}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text-3)', fontSize: '18px', lineHeight: 1,
@@ -211,7 +223,7 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
       {/* Done state */}
       {done && !streaming && (
         <button
-          onClick={() => setDismissed(true)}
+          onClick={dismiss}
           style={{
             width:        '100%',
             marginTop:    '4px',
@@ -234,15 +246,14 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
 
 /* ── main section ────────────────────────────────────── */
 
-export default function HabitAuditStrip({ missed }: Props) {
-  const yesterday = getYesterday()
+export default function HabitAuditStrip({ missed, yesterday }: Props) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
   // Before mount, render nothing to avoid SSR/client sessionStorage mismatch
   if (!mounted) return null
 
-  // Filter out already-dismissed habits (sessionStorage)
+  // Filter out habits already dismissed in this session (local cache)
   const pending = missed.filter(h => {
     try { return sessionStorage.getItem(auditKey(h.id, yesterday)) !== 'done' } catch { return true }
   })
@@ -250,7 +261,7 @@ export default function HabitAuditStrip({ missed }: Props) {
   if (pending.length === 0) return null
 
   return (
-    <div style={{ marginTop: '24px' }}>
+    <div style={{ marginBottom: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
         <span style={{
