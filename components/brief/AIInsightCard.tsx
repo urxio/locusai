@@ -14,14 +14,17 @@ type Props = {
 ─────────────────────────────────────────────────────────────────────────── */
 
 function renderInline(raw: string, key: string): React.ReactNode {
-  // Split on **bold**, *italic*, and <<highlight>> tokens
-  const parts = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|<<.+?>>)/g)
+  // Split on **bold**, *italic*, __underline__, and <<highlight>> tokens
+  const parts = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|__[^_]+__|<<.+?>>)/g)
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={`${key}-b${i}`} style={{ fontWeight: 600, color: 'var(--text-0)' }}>{part.slice(2, -2)}</strong>
     }
     if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={`${key}-i${i}`} style={{ fontStyle: 'italic', color: 'var(--text-2)', fontWeight: 300 }}>{part.slice(1, -1)}</em>
+      return <em key={`${key}-i${i}`} style={{ fontStyle: 'italic', color: 'var(--text-3)', fontWeight: 300 }}>{part.slice(1, -1)}</em>
+    }
+    if (part.startsWith('__') && part.endsWith('__')) {
+      return <span key={`${key}-u${i}`} style={{ textDecoration: 'underline', textUnderlineOffset: '3px', textDecorationColor: 'rgba(242,235,224,0.35)' }}>{part.slice(2, -2)}</span>
     }
     if (part.startsWith('<<') && part.endsWith('>>')) {
       return (
