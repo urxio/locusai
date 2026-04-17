@@ -57,14 +57,6 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, c
       <div className="page-pad" style={{ paddingTop: '20px' }}>
         <WeeklyCalendarStrip />
 
-        {/* ── Today's Status Strip ── */}
-        <StatusStrip
-          goals={goals}
-          checkin={checkin}
-          avgEnergy={avgEnergy}
-          habits={habits}
-        />
-
         {/* Greeting + pulse summary (uses brief insight for the AI pulse card) */}
         <GreetingWidget
           checkin={checkin}
@@ -72,6 +64,14 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, c
           goals={goals}
           brief={brief}
           userName={userName}
+        />
+
+        {/* ── Today's Status Strip ── */}
+        <StatusStrip
+          goals={goals}
+          checkin={checkin}
+          avgEnergy={avgEnergy}
+          habits={habits}
         />
 
         {/* Weekly review link */}
