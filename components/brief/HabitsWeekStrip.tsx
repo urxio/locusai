@@ -23,7 +23,8 @@ type Props = {
 
 /* ── constants ───────────────────────────────────────── */
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+// Week starts Monday — Mon Tue Wed Thu Fri Sat Sun
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 const HABIT_COLORS = [
   '#7a9e8a', '#d4a853', '#7090c0', '#c09040',
@@ -38,14 +39,28 @@ function habitColor(id: string): string {
   return HABIT_COLORS[hash % HABIT_COLORS.length]
 }
 
+/** Local date string (YYYY-MM-DD) — never use toISOString() which gives UTC */
+function localDateStr(d: Date): string {
+  const y  = d.getFullYear()
+  const m  = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+/**
+ * Returns 7 days Mon→Sun for the current local week.
+ * dow values follow JS convention: 0=Sun, 1=Mon … 6=Sat.
+ */
 function getWeekDays(): { date: string; dow: number }[] {
-  const now   = new Date()
-  const today = now.getDay()
+  const now            = new Date()
+  const dayOfWeek      = now.getDay()                  // 0=Sun … 6=Sat (local)
+  const daysSinceMonday = (dayOfWeek + 6) % 7          // 0=Mon … 6=Sun
   const days: { date: string; dow: number }[] = []
   for (let i = 0; i < 7; i++) {
     const d = new Date(now)
-    d.setDate(now.getDate() - today + i)
-    days.push({ date: d.toISOString().split('T')[0], dow: i })
+    d.setDate(now.getDate() - daysSinceMonday + i)
+    const dow = (1 + i) % 7                            // 1=Mon…6=Sat, 0=Sun
+    days.push({ date: localDateStr(d), dow })
   }
   return days
 }
@@ -233,7 +248,7 @@ export default function HabitsWeekStrip({ habits }: Props) {
   if (data.length === 0) return null
 
   const weekDays  = getWeekDays()
-  const todayDate = new Date().toISOString().split('T')[0]
+  const todayDate = localDateStr(new Date())
 
   return (
     <div style={{ marginTop: '24px' }}>

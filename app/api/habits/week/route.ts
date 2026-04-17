@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
+import { getUserLocalDate } from '@/lib/db/users'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,23 +9,27 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Use user's local date — same source as logHabitAction on the habits page
+  const today = await getUserLocalDate(user.id)
+
+  // Cutoff = Monday of this week (at most 6 days back)
+  const todayDate        = new Date(today + 'T12:00:00')
+  const daysSinceMonday  = (todayDate.getDay() + 6) % 7
+  const monday           = new Date(todayDate)
+  monday.setDate(todayDate.getDate() - daysSinceMonday)
+  const cutoffStr = monday.toISOString().split('T')[0]
+
   const habits = await getUserHabitsWithLogs(user.id)
 
-  // Return only what HabitsWeekStrip needs — keep payload small
   const payload = habits.map(h => ({
-    id:          h.id,
-    name:        h.name,
-    emoji:       h.emoji,
-    frequency:   h.frequency,
+    id:           h.id,
+    name:         h.name,
+    emoji:        h.emoji,
+    frequency:    h.frequency,
     days_of_week: h.days_of_week,
-    streak:      h.streak,
-    // Only send logs from the past 7 days
-    logs:        h.logs
-      .filter(l => {
-        const cutoff = new Date()
-        cutoff.setDate(cutoff.getDate() - 6)
-        return l.logged_date >= cutoff.toISOString().split('T')[0]
-      })
+    streak:       h.streak,
+    logs:         h.logs
+      .filter(l => l.logged_date >= cutoffStr)
       .map(l => ({ logged_date: l.logged_date })),
   }))
 
