@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import type { CheckIn, HabitWithLogs, Brief, Goal } from '@/lib/types'
 
 type Props = {
@@ -181,6 +182,35 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
   // Use server-authoritative date (same source as logged_date in DB); fall back to browser local
   const today      = todayDate ?? browserLocalDate()
   const scheduled  = habits.filter(h => h.isScheduledToday)
+
+  // ── AI opener — streamed on mount ───────────────────────
+  const [aiOpener, setAiOpener]   = useState('')
+  const [openerDone, setDone]     = useState(false)
+  const fetchedRef                = useRef(false)
+
+  useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/pulse', { cache: 'no-store' })
+        if (!res.ok || !res.body) return
+        const reader = res.body.getReader()
+        const dec    = new TextDecoder()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done || cancelled) break
+          setAiOpener(prev => prev + dec.decode(value, { stream: true }))
+        }
+      } catch { /* non-fatal */ } finally {
+        if (!cancelled) setDone(true)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [])
   const doneToday  = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
   const active     = goals.filter(g => g.status === 'active')
 
@@ -293,22 +323,52 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
             </span>
           </div>
 
-          {/* Main text */}
+          {/* AI opener — streams in first */}
+          {(aiOpener || !openerDone) && (
+            <p style={{
+              fontFamily:   'var(--font-serif)',
+              fontSize:     '15px',
+              fontWeight:   300,
+              color:        'var(--ai-card-text)',
+              lineHeight:   1.65,
+              margin:       0,
+              marginBottom: '10px',
+              opacity:      aiOpener ? 1 : 0,
+              transition:   'opacity 0.4s',
+            }}>
+              {aiOpener}
+              {!openerDone && (
+                <span style={{
+                  display:      'inline-block',
+                  width:        '2px',
+                  height:       '1em',
+                  background:   'var(--gold)',
+                  marginLeft:   '2px',
+                  verticalAlign:'middle',
+                  animation:    'statusPulse 0.9s ease-in-out infinite',
+                }} />
+              )}
+            </p>
+          )}
+
+          {/* Data summary (habits + goals) */}
           <p style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize:   '15px',
-            fontWeight: 300,
-            color:      'var(--ai-card-text)',
-            lineHeight: 1.65,
-            margin:     0,
+            fontFamily:   'var(--font-serif)',
+            fontSize:     '14px',
+            fontWeight:   300,
+            color:        'var(--text-2)',
+            lineHeight:   1.65,
+            margin:       0,
             marginBottom: pulse.items?.length ? '14px' : 0,
+            opacity:      openerDone ? 1 : 0,
+            transition:   'opacity 0.5s 0.1s',
           }}>
             {pulse.text}
           </p>
 
           {/* Structured items — habits + goals (no check-in state) */}
           {pulse.items && pulse.items.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', opacity: openerDone ? 1 : 0, transition: 'opacity 0.5s 0.2s' }}>
               {pulse.items.map((item, i) => (
                 <div key={i} style={{
                   display:       'flex',

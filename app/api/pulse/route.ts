@@ -1,0 +1,98 @@
+import { createClient } from '@/lib/supabase/server'
+import { getAnthropicClient } from '@/lib/ai/client'
+import { readUserMemory, formatMemoryForPrompt, formatSelfProfileForPrompt, formatClarifyingQAForPrompt } from '@/lib/ai/memory'
+import { getTodayCheckin } from '@/lib/db/checkins'
+import { getUserHabitsWithLogs } from '@/lib/db/habits'
+import { getActiveGoals } from '@/lib/db/goals'
+import { getUserLocalDate } from '@/lib/db/users'
+
+export const runtime  = 'nodejs'
+export const dynamic  = 'force-dynamic'
+export const maxDuration = 20
+
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return new Response('Unauthorized', { status: 401 })
+
+  const [memory, checkin, habits, goals, todayDate] = await Promise.all([
+    readUserMemory(user.id),
+    getTodayCheckin(user.id),
+    getUserHabitsWithLogs(user.id),
+    getActiveGoals(user.id),
+    getUserLocalDate(user.id),
+  ])
+
+  const dayName   = new Date(todayDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })
+  const hour      = new Date().getHours()
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
+
+  const scheduledToday  = habits.filter(h => h.isScheduledToday)
+  const doneToday       = scheduledToday.filter(h => h.logs.some(l => l.logged_date === todayDate))
+  const active          = goals.filter(g => g.status === 'active')
+
+  // ── Context blocks ──────────────────────────────────────────────────────
+  const memoryBlock      = formatMemoryForPrompt(memory)
+  const profileBlock     = formatSelfProfileForPrompt(memory)
+  const clarifyingBlock  = formatClarifyingQAForPrompt(memory)
+
+  const todayBlock = [
+    `Today: ${dayName} ${timeOfDay}`,
+    checkin
+      ? `Already checked in — energy ${checkin.energy_level}/10${checkin.mood_note ? `, mood: "${checkin.mood_note}"` : ''}`
+      : 'Has not checked in yet today',
+    scheduledToday.length > 0
+      ? `Habits today: ${scheduledToday.map(h => `${h.emoji} ${h.name}`).join(', ')} (${doneToday.length}/${scheduledToday.length} done)`
+      : 'No habits scheduled today',
+    active.length > 0
+      ? `Active goals: ${active.map(g => `${g.title} (${g.progress_pct}%)`).join(', ')}`
+      : 'No active goals',
+    habits.length > 0
+      ? `Top streaks: ${habits.filter(h => h.streak > 0).sort((a, b) => b.streak - a.streak).slice(0, 2).map(h => `${h.emoji} ${h.name} – ${h.streak} day streak`).join(', ')}`
+      : '',
+  ].filter(Boolean).join('\n')
+
+  const contextParts = [profileBlock, memoryBlock, clarifyingBlock, todayBlock].filter(Boolean)
+  const context = contextParts.join('\n\n')
+
+  const system = `You are Locus, a warm and perceptive AI life companion. Your job is to write ONE short, specific, interesting observation about the user to open their home page pulse.
+
+Rules:
+- Exactly 1–2 sentences. No more.
+- Be genuinely specific — reference an actual data point (a streak, a pattern, a goal, their energy trend, a day of week, their personality, their life context). Never be generic.
+- Sound like a thoughtful friend who has been paying attention, not a productivity app.
+- No filler words like "It looks like..." or "I noticed that..." — just say the thing.
+- No emoji. No exclamation marks. No questions.
+- If you have no meaningful data yet, say something warm and brief about the day ahead.
+- Do NOT mention the check-in, habits list, or goals — those are shown separately below.`
+
+  const client = getAnthropicClient()
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const response = await client.messages.create({
+          model:      'claude-haiku-4-5',
+          max_tokens: 120,
+          system,
+          messages: [{ role: 'user', content: context || 'New user, no data yet.' }],
+          stream: true,
+        })
+        for await (const event of response) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            controller.enqueue(encoder.encode(event.delta.text))
+          }
+        }
+      } catch (err) {
+        console.error('[pulse] stream error:', err)
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}
