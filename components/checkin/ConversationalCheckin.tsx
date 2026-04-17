@@ -69,18 +69,20 @@ export default function ConversationalCheckin({
   // chat is active for fresh check-ins or redo mode
   const chatActive = !existingCheckin || isRedo
 
-  const router         = useRouter()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef       = useRef<HTMLTextAreaElement>(null)
-  const briefCTARef    = useRef<HTMLDivElement>(null)
-  const initFetched    = useRef(false)
-  const savedRef       = useRef(false)
+  const router            = useRouter()
+  const messagesEndRef    = useRef<HTMLDivElement>(null)
+  const messagesBoxRef    = useRef<HTMLDivElement>(null)
+  const inputRef          = useRef<HTMLTextAreaElement>(null)
+  const briefCTARef       = useRef<HTMLDivElement>(null)
+  const initFetched       = useRef(false)
+  const savedRef          = useRef(false)
 
   // Keep sessionStorage in sync whenever showBrief toggles
   useEffect(() => { storeShowBrief(showBrief) }, [showBrief])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const box = messagesBoxRef.current
+    if (box) box.scrollTop = box.scrollHeight
   }, [messages])
 
   // Scroll the CTA into view once check-in is saved
@@ -329,7 +331,7 @@ export default function ConversationalCheckin({
                   overflow: 'hidden', background: 'var(--bg-1)',
                 }}>
                   {/* Messages */}
-                  <div style={{
+                  <div ref={messagesBoxRef} style={{
                     height: '300px', overflowY: 'auto',
                     display: 'flex', flexDirection: 'column',
                     background: 'var(--bg-0)', scrollbarWidth: 'none',
