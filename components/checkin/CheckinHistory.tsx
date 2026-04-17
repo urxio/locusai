@@ -232,6 +232,28 @@ function DayCard({ day }: { day: DayEntry }) {
                 </span>
               </div>
             )}
+
+            {/* Highlight / win */}
+            {day.checkin.highlight && (
+              <div style={{ width: '100%' }}>
+                <div style={{
+                  fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase',
+                  letterSpacing: '0.07em', fontWeight: 600, marginBottom: '6px',
+                }}>Highlight</div>
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '8px',
+                  padding: '9px 13px',
+                  background: 'rgba(122,158,138,0.07)',
+                  border: '1px solid rgba(122,158,138,0.18)',
+                  borderRadius: '9px',
+                }}>
+                  <span style={{ color: 'var(--sage)', flexShrink: 0, fontSize: '13px' }}>★</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-1)', lineHeight: 1.55 }}>
+                    {day.checkin.highlight}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
