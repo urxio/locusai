@@ -247,7 +247,7 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
           </p>
         ) : (
           <p style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text-2)', margin: '4px 0 0', lineHeight: 1.4 }}>
-            {checkin ? 'Check your brief for today's focus.' : 'Check in to get started.'}
+            {checkin ? "Check your brief for today\u2019s focus." : 'Check in to get started.'}
           </p>
         )}
       </div>
