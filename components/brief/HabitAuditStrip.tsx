@@ -271,7 +271,6 @@ export default function HabitAuditStrip({ missed, yesterday }: Props) {
     }}>
       {/* Card header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-        <span style={{ fontSize: '15px', lineHeight: 1 }}>🔁</span>
         <span style={{
           fontSize:      '13px',
           fontWeight:    700,
