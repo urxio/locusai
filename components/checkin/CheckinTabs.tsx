@@ -4,7 +4,8 @@ import { useState } from 'react'
 import ConversationalCheckin from './ConversationalCheckin'
 import JournalSection from './JournalSection'
 import CheckinHistory from './CheckinHistory'
-import type { CheckIn, JournalEntry } from '@/lib/types'
+import BriefHistory from '@/components/brief/BriefHistory'
+import type { CheckIn, JournalEntry, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 
 type Tab = 'checkin' | 'journal'
@@ -15,9 +16,10 @@ type Props = {
   recentJournals:  JournalEntry[]
   memory?:         UserMemory | null
   hasBrief?:       boolean
+  pastBriefs?:     Brief[]
 }
 
-export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false }: Props) {
+export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false, pastBriefs = [] }: Props) {
   const [tab, setTab] = useState<Tab>('checkin')
 
   return (
@@ -83,6 +85,11 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
       {/* Keeping both mounted preserves JournalSection's in-memory AI cache     */}
       <div style={{ display: tab === 'checkin' ? 'block' : 'none', animation: tab === 'checkin' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
         <ConversationalCheckin existingCheckin={existingCheckin} memory={memory} hasBrief={hasBrief} />
+        {pastBriefs.length > 0 && (
+          <div className="page-pad" style={{ maxWidth: '860px', paddingTop: 0 }}>
+            <BriefHistory briefs={pastBriefs} />
+          </div>
+        )}
       </div>
 
       <div style={{ display: tab === 'journal' ? 'block' : 'none', animation: tab === 'journal' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
