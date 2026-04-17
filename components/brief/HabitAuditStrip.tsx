@@ -87,10 +87,10 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
 
   return (
     <div style={{
-      background:    'var(--bg-1)',
+      background:    'var(--bg-2)',
       border:        '1px solid var(--border)',
-      borderRadius:  '16px',
-      padding:       '16px',
+      borderRadius:  '14px',
+      padding:       '14px',
       animation:     'fadeUp 0.25s var(--ease) both',
     }}>
       {/* Header */}
@@ -261,15 +261,22 @@ export default function HabitAuditStrip({ missed, yesterday }: Props) {
   if (pending.length === 0) return null
 
   return (
-    <div style={{ marginBottom: '20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
+    <div style={{
+      background:    'var(--bg-1)',
+      border:        '1px solid var(--border)',
+      borderRadius:  '20px',
+      padding:       '20px',
+      marginBottom:  '20px',
+      animation:     'fadeUp 0.3s var(--ease) both',
+    }}>
+      {/* Card header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+        <span style={{ fontSize: '15px', lineHeight: 1 }}>🔁</span>
         <span style={{
-          fontSize:      '10px',
+          fontSize:      '13px',
           fontWeight:    700,
-          color:         'var(--text-3)',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
+          color:         'var(--text-1)',
+          letterSpacing: '-0.01em',
         }}>
           Yesterday&apos;s misses
         </span>
@@ -277,6 +284,7 @@ export default function HabitAuditStrip({ missed, yesterday }: Props) {
           width: '5px', height: '5px', borderRadius: '50%',
           background: 'rgba(192,112,80,0.7)',
           boxShadow:  '0 0 5px rgba(192,112,80,0.5)',
+          marginLeft: '2px',
         }} />
       </div>
 
