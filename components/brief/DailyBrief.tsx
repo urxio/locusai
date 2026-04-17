@@ -8,6 +8,7 @@ import type { UserMemory } from '@/lib/ai/memory'
 import WeeklyCalendarStrip from './WeeklyCalendarStrip'
 import GreetingWidget from './GreetingWidget'
 import StatusStrip from './StatusStrip'
+import HabitsWeekStrip from './HabitsWeekStrip'
 
 type Props = {
   goals: Goal[]
@@ -73,6 +74,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, c
           avgEnergy={avgEnergy}
           habits={habits}
         />
+
+        {/* ── Habits This Week ── */}
+        <HabitsWeekStrip habits={habits} />
 
         {/* Weekly review link */}
         <a
