@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export type MissedHabit = {
   id:         string
@@ -30,9 +30,14 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
   const [aiReply,   setAiReply]   = useState('')
   const [streaming, setStreaming] = useState(false)
   const [done,      setDone]      = useState(false)
-  const [dismissed, setDismissed] = useState(() => {
-    try { return sessionStorage.getItem(auditKey(habit.id, yesterday)) === 'done' } catch { return false }
-  })
+  const [dismissed, setDismissed] = useState(false)
+
+  // Read sessionStorage only after mount to avoid SSR hydration mismatch
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(auditKey(habit.id, yesterday)) === 'done') setDismissed(true)
+    } catch { /* no-op */ }
+  }, [habit.id, yesterday])
 
   const handleSubmit = async () => {
     if (!reason.trim() || streaming) return
@@ -231,6 +236,11 @@ function AuditCard({ habit, yesterday }: { habit: MissedHabit; yesterday: string
 
 export default function HabitAuditStrip({ missed }: Props) {
   const yesterday = getYesterday()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  // Before mount, render nothing to avoid SSR/client sessionStorage mismatch
+  if (!mounted) return null
 
   // Filter out already-dismissed habits (sessionStorage)
   const pending = missed.filter(h => {
