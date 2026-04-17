@@ -48,21 +48,21 @@ export default function ConversationalCheckin({
   )
   const [previousCheckin, setPreviousCheckin] = useState<CheckinData | null>(null)
 
-  // Whether the chat interface should be active
+  // chat is active for fresh check-ins or redo mode
   const chatActive = !existingCheckin || isRedo
 
-  const router        = useRouter()
+  const router         = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef      = useRef<HTMLTextAreaElement>(null)
-  const briefCTARef   = useRef<HTMLDivElement>(null)
-  const initFetched   = useRef(false)
-  const savedRef      = useRef(false) // prevent double-save
+  const inputRef       = useRef<HTMLTextAreaElement>(null)
+  const briefCTARef    = useRef<HTMLDivElement>(null)
+  const initFetched    = useRef(false)
+  const savedRef       = useRef(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Scroll "See daily insights" button into view after it appears
+  // Scroll the CTA into view once check-in is saved
   useEffect(() => {
     if (checkinSaved && !showBrief) {
       setTimeout(() => {
@@ -87,7 +87,7 @@ export default function ConversationalCheckin({
       router.refresh()
     } catch (err) {
       console.error('[saveCheckin]', err)
-      savedRef.current = false // allow retry
+      savedRef.current = false
     } finally {
       setIsSaving(false)
     }
@@ -107,7 +107,6 @@ export default function ConversationalCheckin({
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ messages: msgs, previousCheckin: prevCheckin }),
         })
-
         if (!res.ok || !res.body) throw new Error('Request failed')
 
         const reader  = res.body.getReader()
@@ -118,7 +117,6 @@ export default function ConversationalCheckin({
           if (done) break
           fullText += decoder.decode(value, { stream: true })
 
-          // Strip hidden tags before displaying
           const display = fullText
             .replace(CHECKIN_DATA_RE, '')
             .replace(SHOW_BRIEF_RE, '')
@@ -131,7 +129,7 @@ export default function ConversationalCheckin({
           })
         }
 
-        // Detect and save check-in data as soon as stream ends
+        // Save check-in immediately on detection
         const dataMatch = fullText.match(CHECKIN_DATA_RE)
         if (dataMatch && !savedRef.current) {
           const data: CheckinData = JSON.parse(dataMatch[1])
@@ -139,7 +137,7 @@ export default function ConversationalCheckin({
           await saveCheckin(data)
         }
 
-        // Detect user request to show brief
+        // AI confirmed user wants to see brief
         if (SHOW_BRIEF_RE.test(fullText)) {
           setShowBrief(true)
         }
@@ -155,7 +153,6 @@ export default function ConversationalCheckin({
     [saveCheckin]
   )
 
-  // Start fresh chat when chat becomes active
   useEffect(() => {
     if (!chatActive || initFetched.current) return
     initFetched.current = true
@@ -172,10 +169,7 @@ export default function ConversationalCheckin({
   }, [input, messages, streaming, isSaving, fetchReply, previousCheckin])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -192,7 +186,7 @@ export default function ConversationalCheckin({
     setCheckinSaved(false)
     setShowBrief(false)
     setError(null)
-    savedRef.current = false
+    savedRef.current  = false
     initFetched.current = false
   }
 
@@ -203,6 +197,9 @@ export default function ConversationalCheckin({
     checkinData.energy_level >= 7 ? 'High' :
     checkinData.energy_level >= 5 ? 'Moderate' :
     checkinData.energy_level >= 3 ? 'Low' : 'Depleted'
+
+  // ── Whether the summary card should be shown (crossfade target) ──
+  const showSummary = showBrief && !!checkinData
 
   return (
     <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
@@ -232,74 +229,22 @@ export default function ConversationalCheckin({
 
       <div style={{ maxWidth: '580px' }}>
 
-        {/* ── EXISTING CHECK-IN: compact summary + actions (no chat) ── */}
+        {/* ── EXISTING CHECK-IN (non-redo): static summary + actions ── */}
         {existingCheckin && !isRedo && checkinData && (
           <div style={{ animation: 'fadeUp 0.25s var(--ease) both' }}>
-
-            {/* Summary card */}
-            <div style={{
-              background: 'var(--bg-1)', border: '1px solid var(--border-md)',
-              borderRadius: '16px', padding: '20px', marginBottom: '12px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                  background: 'linear-gradient(135deg, rgba(122,158,138,0.25), rgba(122,158,138,0.08))',
-                  border: '1px solid rgba(122,158,138,0.25)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--sage)" strokeWidth="2.2">
-                    <path d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.2 }}>
-                    Check-in complete
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '1px' }}>
-                    Logged for today
-                  </div>
-                </div>
-              </div>
-
-              <div className="stats-grid-3">
-                <SummaryTile label="Energy" value={`${checkinData.energy_level}/10`} sub={energyLabel} />
-                <SummaryTile
-                  label="Mood"
-                  value={checkinData.mood_note ? '✓' : '—'}
-                  sub={checkinData.mood_note ? checkinData.mood_note.slice(0, 24) + (checkinData.mood_note.length > 24 ? '…' : '') : 'skipped'}
-                />
-                <SummaryTile
-                  label="Blockers"
-                  value={`${checkinData.blockers.filter(b => b !== 'No blockers today').length}`}
-                  sub={checkinData.blockers.length === 0 || checkinData.blockers[0] === 'No blockers today'
-                    ? 'none today'
-                    : checkinData.blockers[0]?.slice(0, 22)}
-                />
-              </div>
-
-              {checkinData.highlight && (
-                <div style={{
-                  marginTop: '12px', padding: '9px 13px',
-                  background: 'rgba(122,158,138,0.07)', border: '1px solid rgba(122,158,138,0.18)',
-                  borderRadius: '9px', fontSize: '13px', color: 'var(--text-1)',
-                  display: 'flex', alignItems: 'flex-start', gap: '7px',
-                }}>
-                  <span style={{ color: 'var(--sage)', flexShrink: 0 }}>★</span>
-                  <span>{checkinData.highlight}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <CheckinSummaryCard
+              checkinData={checkinData}
+              isRedo={false}
+              energyLabel={energyLabel}
+            />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
               {!showBrief && (
                 <button
                   onClick={() => setShowBrief(true)}
                   style={{
                     flex: 1, background: 'var(--gold)', color: '#131110', border: 'none',
-                    borderRadius: '10px', padding: '13px', fontSize: '13.5px', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit',
+                    borderRadius: '10px', padding: '13px', fontSize: '13.5px',
+                    fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
                   See daily insights →
@@ -319,12 +264,11 @@ export default function ConversationalCheckin({
           </div>
         )}
 
-        {/* ── CHAT (new check-in or redo mode) ── */}
+        {/* ── CHAT + SUMMARY CROSSFADE (new or redo) ── */}
         {chatActive && (
-          <div style={{ animation: 'fadeUp 0.25s var(--ease) both' }}>
-
-            {/* "Saved" status badge — appears after check-in is logged */}
-            {checkinSaved && (
+          <>
+            {/* Saved badge — above the card */}
+            {checkinSaved && !showSummary && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '7px',
                 padding: '8px 14px', marginBottom: '10px',
@@ -339,180 +283,228 @@ export default function ConversationalCheckin({
               </div>
             )}
 
-            {/* Chat card — stays in place, never moves */}
+            {/* ── Crossfade container ── */}
             <div style={{
-              border: '1px solid var(--border-md)', borderRadius: '18px',
-              overflow: 'hidden', background: 'var(--bg-1)',
+              position: 'relative',
+              // Hold chat height while transitioning; shrink once summary is in
+              minHeight: showSummary ? '0px' : '362px',
+              transition: 'min-height 0.45s var(--ease)',
             }}>
-              {/* Messages — fixed height, scrolls internally */}
+
+              {/* ── Chat panel ── */}
               <div style={{
-                height: '300px', overflowY: 'auto',
-                display: 'flex', flexDirection: 'column',
-                background: 'var(--bg-0)', scrollbarWidth: 'none',
+                // When summary takes over, float chat out of flow so container height is driven by summary
+                position: showSummary ? 'absolute' : 'relative',
+                top: 0, left: 0, right: 0,
+                opacity: showSummary ? 0 : 1,
+                transform: showSummary ? 'translateY(-10px)' : 'translateY(0)',
+                pointerEvents: showSummary ? 'none' : 'auto',
+                transition: 'opacity 0.35s var(--ease), transform 0.35s var(--ease)',
               }}>
-                <div style={{ flex: 1 }} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 20px 16px' }}>
+                {/* Chat card */}
+                <div style={{
+                  border: '1px solid var(--border-md)', borderRadius: '18px',
+                  overflow: 'hidden', background: 'var(--bg-1)',
+                }}>
+                  {/* Messages */}
+                  <div style={{
+                    height: '300px', overflowY: 'auto',
+                    display: 'flex', flexDirection: 'column',
+                    background: 'var(--bg-0)', scrollbarWidth: 'none',
+                  }}>
+                    <div style={{ flex: 1 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 20px 16px' }}>
+                      {messages.map((msg, i) => {
+                        const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant'
+                        const showCursor = isLastAssistant && streaming && !msg.content
 
-                  {messages.map((msg, i) => {
-                    const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant'
-                    const showCursor = isLastAssistant && streaming && !msg.content
+                        if (msg.role === 'assistant') {
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <div style={{
+                                width: '26px', height: '26px', borderRadius: '8px', flexShrink: 0,
+                                background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 1px 8px rgba(212,168,83,0.2)', marginTop: '1px',
+                              }}>
+                                <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
+                                  <circle cx="8" cy="8" r="3"/>
+                                  <circle cx="8" cy="2" r="1.2"/>
+                                  <circle cx="8" cy="14" r="1.2"/>
+                                  <circle cx="2" cy="8" r="1.2"/>
+                                  <circle cx="14" cy="8" r="1.2"/>
+                                </svg>
+                              </div>
+                              <div style={{
+                                fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.65,
+                                paddingTop: '3px', maxWidth: 'calc(100% - 36px)',
+                              }}>
+                                {showCursor ? (
+                                  <span style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', paddingTop: '6px' }}>
+                                    {[0, 180, 360].map(delay => (
+                                      <span key={delay} style={{
+                                        width: '5px', height: '5px', borderRadius: '50%',
+                                        background: 'var(--text-3)',
+                                        animation: 'pulse 1.4s ease-in-out infinite',
+                                        animationDelay: `${delay}ms`,
+                                      }} />
+                                    ))}
+                                  </span>
+                                ) : msg.content}
+                              </div>
+                            </div>
+                          )
+                        }
 
-                    if (msg.role === 'assistant') {
-                      return (
-                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <div style={{
-                            width: '26px', height: '26px', borderRadius: '8px', flexShrink: 0,
-                            background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 1px 8px rgba(212,168,83,0.2)', marginTop: '1px',
-                          }}>
-                            <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
-                              <circle cx="8" cy="8" r="3"/>
-                              <circle cx="8" cy="2" r="1.2"/>
-                              <circle cx="8" cy="14" r="1.2"/>
-                              <circle cx="2" cy="8" r="1.2"/>
-                              <circle cx="14" cy="8" r="1.2"/>
-                            </svg>
+                        return (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <div style={{
+                              maxWidth: '75%', padding: '9px 14px',
+                              borderRadius: '16px 16px 4px 16px',
+                              background: 'var(--gold-dim)',
+                              border: '1px solid rgba(212,168,83,0.18)',
+                              fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.6,
+                            }}>
+                              {msg.content}
+                            </div>
                           </div>
-                          <div style={{
-                            fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.65,
-                            paddingTop: '3px', maxWidth: 'calc(100% - 36px)',
-                          }}>
-                            {showCursor ? (
-                              <span style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', paddingTop: '6px' }}>
-                                {[0, 180, 360].map(delay => (
-                                  <span key={delay} style={{
-                                    width: '5px', height: '5px', borderRadius: '50%',
-                                    background: 'var(--text-3)',
-                                    animation: 'pulse 1.4s ease-in-out infinite',
-                                    animationDelay: `${delay}ms`,
-                                  }} />
-                                ))}
-                              </span>
-                            ) : msg.content}
-                          </div>
-                        </div>
-                      )
-                    }
+                        )
+                      })}
 
-                    return (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <div style={{
-                          maxWidth: '75%', padding: '9px 14px',
-                          borderRadius: '16px 16px 4px 16px',
-                          background: 'var(--gold-dim)',
-                          border: '1px solid rgba(212,168,83,0.18)',
-                          fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.6,
-                        }}>
-                          {msg.content}
+                      {isSaving && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', padding: '2px 0' }}>
+                          Saving check-in…
                         </div>
-                      </div>
-                    )
-                  })}
-
-                  {isSaving && (
-                    <div style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', padding: '2px 0' }}>
-                      Saving check-in…
+                      )}
+                      <div ref={messagesEndRef} />
                     </div>
-                  )}
+                  </div>
 
-                  <div ref={messagesEndRef} />
+                  <div style={{ height: '1px', background: 'var(--border)' }} />
+
+                  {/* Input */}
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-end', gap: '10px',
+                    padding: '12px 14px', background: 'var(--bg-1)',
+                  }}>
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={handleInput}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        streaming    ? '' :
+                        checkinSaved ? 'Reply to Locus…' :
+                        'Share how you\'re doing…'
+                      }
+                      disabled={streaming || isSaving}
+                      rows={1}
+                      style={{
+                        flex: 1, background: 'none', border: 'none', outline: 'none',
+                        fontFamily: 'var(--font-sans)', fontSize: '14px',
+                        color: 'var(--text-0)', resize: 'none', lineHeight: 1.5,
+                        overflow: 'hidden', paddingTop: '2px',
+                      }}
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={!canSend}
+                      aria-label="Send"
+                      style={{
+                        width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
+                        background: canSend ? 'var(--gold)' : 'var(--bg-4)', border: 'none',
+                        color: canSend ? '#131110' : 'var(--text-3)',
+                        cursor: canSend ? 'pointer' : 'default',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'background 0.15s, color 0.15s',
+                        fontSize: '15px', fontWeight: 700, fontFamily: 'inherit',
+                      }}
+                    >↑</button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Divider */}
-              <div style={{ height: '1px', background: 'var(--border)' }} />
+                {error && (
+                  <div style={{
+                    fontSize: '13px', color: '#c08060', marginTop: '10px',
+                    padding: '10px 14px', background: 'rgba(192,128,96,0.08)',
+                    border: '1px solid rgba(192,128,96,0.2)', borderRadius: '10px',
+                  }}>
+                    {error}
+                  </div>
+                )}
 
-              {/* Input */}
-              <div style={{
-                display: 'flex', alignItems: 'flex-end', gap: '10px',
-                padding: '12px 14px', background: 'var(--bg-1)',
-              }}>
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={handleInput}
-                  onKeyDown={handleKeyDown}
-                  placeholder={
-                    streaming ? '' :
-                    checkinSaved ? 'Reply to Locus…' :
-                    'Share how you\'re doing…'
-                  }
-                  disabled={streaming || isSaving}
-                  rows={1}
-                  style={{
-                    flex: 1, background: 'none', border: 'none', outline: 'none',
-                    fontFamily: 'var(--font-sans)', fontSize: '14px',
-                    color: 'var(--text-0)', resize: 'none', lineHeight: 1.5,
-                    overflow: 'hidden', paddingTop: '2px',
-                  }}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  aria-label="Send"
-                  style={{
-                    width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
-                    background: canSend ? 'var(--gold)' : 'var(--bg-4)', border: 'none',
-                    color: canSend ? '#131110' : 'var(--text-3)',
-                    cursor: canSend ? 'pointer' : 'default',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.15s, color 0.15s',
-                    fontSize: '15px', fontWeight: 700, fontFamily: 'inherit',
-                  }}
-                >↑</button>
-              </div>
-            </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '10px' }}>
+                  Enter to send · Shift+Enter for new line
+                </div>
 
-            {error && (
-              <div style={{
-                fontSize: '13px', color: '#c08060', marginTop: '10px',
-                padding: '10px 14px', background: 'rgba(192,128,96,0.08)',
-                border: '1px solid rgba(192,128,96,0.2)', borderRadius: '10px',
-              }}>
-                {error}
-              </div>
-            )}
+                {/* CTA buttons — appear after save, disappear when summary shows */}
+                {checkinSaved && (
+                  <div
+                    ref={briefCTARef}
+                    style={{
+                      marginTop: '16px', display: 'flex', gap: '10px',
+                      animation: 'fadeUp 0.35s var(--ease) both',
+                    }}
+                  >
+                    <button
+                      onClick={() => setShowBrief(true)}
+                      style={{
+                        flex: 1, background: 'var(--gold)', color: '#131110', border: 'none',
+                        borderRadius: '10px', padding: '13px', fontSize: '13.5px',
+                        fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      See daily insights →
+                    </button>
+                    <button
+                      onClick={handleRedo}
+                      style={{
+                        background: 'none', border: '1px solid var(--border-md)', color: 'var(--text-2)',
+                        borderRadius: '10px', padding: '13px 16px', fontSize: '13px', fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ↺ Update
+                    </button>
+                  </div>
+                )}
+              </div>{/* end chat panel */}
 
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '10px' }}>
-              Enter to send · Shift+Enter for new line
-            </div>
+              {/* ── Summary card — fades in when user opens daily insights ── */}
+              {checkinData && (
+                <div style={{
+                  // Before transition: absolute (out of flow), hidden
+                  // After transition: relative (in flow), visible
+                  position: showSummary ? 'relative' : 'absolute',
+                  top: 0, left: 0, right: 0,
+                  opacity: showSummary ? 1 : 0,
+                  transform: showSummary ? 'translateY(0)' : 'translateY(14px)',
+                  pointerEvents: showSummary ? 'auto' : 'none',
+                  transition: 'opacity 0.4s var(--ease), transform 0.4s var(--ease)',
+                }}>
+                  <CheckinSummaryCard
+                    checkinData={checkinData}
+                    isRedo={isRedo}
+                    energyLabel={energyLabel}
+                  />
+                  <button
+                    onClick={handleRedo}
+                    style={{
+                      marginTop: '10px', background: 'none', border: 'none',
+                      color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer',
+                      padding: '4px 0', fontFamily: 'inherit', letterSpacing: '0.02em',
+                    }}
+                  >
+                    ↺ Update check-in
+                  </button>
+                </div>
+              )}
 
-            {/* ── CTA: See daily insights — slides in after check-in is saved ── */}
-            {checkinSaved && !showBrief && (
-              <div
-                ref={briefCTARef}
-                style={{
-                  marginTop: '16px', display: 'flex', gap: '10px',
-                  animation: 'fadeUp 0.35s var(--ease) both',
-                }}
-              >
-                <button
-                  onClick={() => setShowBrief(true)}
-                  style={{
-                    flex: 1, background: 'var(--gold)', color: '#131110', border: 'none',
-                    borderRadius: '10px', padding: '13px', fontSize: '13.5px', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  See daily insights →
-                </button>
-                <button
-                  onClick={handleRedo}
-                  style={{
-                    background: 'none', border: '1px solid var(--border-md)', color: 'var(--text-2)',
-                    borderRadius: '10px', padding: '13px 16px', fontSize: '13px', fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  }}
-                >
-                  ↺ Update
-                </button>
-              </div>
-            )}
-          </div>
+            </div>{/* end crossfade container */}
+          </>
         )}
 
-        {/* ── BRIEF — grows below, never displaces chat ── */}
+        {/* ── BRIEF — always grows below, no layout disruption ── */}
         {showBrief && (
           <div style={{ marginTop: '12px' }}>
             <PostCheckinBrief memory={memory} />
@@ -524,8 +516,84 @@ export default function ConversationalCheckin({
   )
 }
 
-/* ── Small components ── */
+/* ── Check-in summary card (shared by both paths) ── */
+function CheckinSummaryCard({
+  checkinData,
+  isRedo,
+  energyLabel,
+}: {
+  checkinData: { energy_level: number; mood_note: string | null; blockers: string[]; highlight: string | null }
+  isRedo: boolean
+  energyLabel: string
+}) {
+  const blockerCount = checkinData.blockers.filter(b => b !== 'No blockers today').length
 
+  return (
+    <div style={{
+      background: 'var(--bg-1)', border: '1px solid var(--border-md)',
+      borderRadius: '16px', padding: '20px',
+    }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+        <div style={{
+          width: '38px', height: '38px', borderRadius: '11px', flexShrink: 0,
+          background: 'linear-gradient(135deg, rgba(122,158,138,0.28), rgba(122,158,138,0.08))',
+          border: '1px solid rgba(122,158,138,0.28)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--sage)" strokeWidth="2.2">
+            <path d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.2 }}>
+            {isRedo ? 'Check-in updated.' : 'Check-in complete.'}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '2px' }}>
+            {isRedo ? 'Your brief will regenerate with the new data.' : 'Locus has noted everything for today.'}
+          </div>
+        </div>
+      </div>
+
+      {/* Stat tiles */}
+      <div className="stats-grid-3">
+        <SummaryTile
+          label="Energy"
+          value={`${checkinData.energy_level}/10`}
+          sub={energyLabel}
+        />
+        <SummaryTile
+          label="Mood note"
+          value={checkinData.mood_note ? '✓ logged' : '—'}
+          sub={checkinData.mood_note
+            ? checkinData.mood_note.slice(0, 24) + (checkinData.mood_note.length > 24 ? '…' : '')
+            : 'skipped'}
+        />
+        <SummaryTile
+          label="Blockers"
+          value={`${blockerCount}`}
+          sub={blockerCount === 0
+            ? 'none today'
+            : checkinData.blockers.filter(b => b !== 'No blockers today')[0]?.slice(0, 20)}
+        />
+      </div>
+
+      {checkinData.highlight && (
+        <div style={{
+          marginTop: '12px', padding: '9px 13px',
+          background: 'rgba(122,158,138,0.07)', border: '1px solid rgba(122,158,138,0.18)',
+          borderRadius: '9px', fontSize: '13px', color: 'var(--text-1)',
+          display: 'flex', alignItems: 'flex-start', gap: '7px',
+        }}>
+          <span style={{ color: 'var(--sage)', flexShrink: 0 }}>★</span>
+          <span>{checkinData.highlight}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Tile ── */
 function SummaryTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{ background: 'var(--bg-2)', borderRadius: '10px', padding: '12px 14px' }}>
