@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
+import type { Goal, CheckIn, HabitWithLogs, Brief, GoalWithSteps } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import WeeklyCalendarStrip from './WeeklyCalendarStrip'
 import GreetingWidget from './GreetingWidget'
@@ -11,6 +11,7 @@ import StatusStrip from './StatusStrip'
 import HabitsWeekStrip from './HabitsWeekStrip'
 import HabitAuditStrip from './HabitAuditStrip'
 import type { MissedHabit } from './HabitAuditStrip'
+import GoalsWeekStrip from './GoalsWeekStrip'
 
 type Props = {
   goals: Goal[]
@@ -24,11 +25,12 @@ type Props = {
   coverUrl?: string | null
   userName?: string | null
   missedYesterday?: MissedHabit[]
+  goalsWithSteps?: GoalWithSteps[]
 }
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, yesterday = '', coverUrl, userName, missedYesterday = [] }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, yesterday = '', coverUrl, userName, missedYesterday = [], goalsWithSteps = [] }: Props) {
   const router = useRouter()
   const cover  = coverUrl || DEFAULT_COVER
   const now    = new Date()
@@ -88,6 +90,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, t
 
         {/* ── Habits This Week ── */}
         <HabitsWeekStrip habits={habits} />
+
+        {/* ── Goals This Week ── */}
+        <GoalsWeekStrip goals={goalsWithSteps} />
 
         {/* Weekly review link */}
         <a

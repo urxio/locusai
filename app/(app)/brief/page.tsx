@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { getActiveGoals } from '@/lib/db/goals'
+import { getActiveGoals, getActiveGoalsWithSteps } from '@/lib/db/goals'
 import { getTodayCheckin, getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getTodayBrief } from '@/lib/db/briefs'
@@ -20,8 +20,9 @@ async function BriefContent() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [goals, checkin, recentCheckins, habits, brief, memory, todayDate, profile] = await Promise.all([
+  const [goals, goalsWithSteps, checkin, recentCheckins, habits, brief, memory, todayDate, profile] = await Promise.all([
     getActiveGoals(user.id),
+    getActiveGoalsWithSteps(user.id),
     getTodayCheckin(user.id),
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
@@ -92,6 +93,7 @@ async function BriefContent() {
       coverUrl={profile.data?.cover_url ?? null}
       userName={userName}
       missedYesterday={missedYesterday}
+      goalsWithSteps={goalsWithSteps}
     />
   )
 }
