@@ -17,13 +17,14 @@ type Props = {
   habits: HabitWithLogs[]
   brief?: Brief | null
   memory?: UserMemory | null
+  todayDate?: string
   coverUrl?: string | null
   userName?: string | null
 }
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, coverUrl, userName }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, coverUrl, userName }: Props) {
   const router = useRouter()
   const cover  = coverUrl || DEFAULT_COVER
   const now    = new Date()
@@ -64,6 +65,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, c
           habits={habits}
           goals={goals}
           brief={brief}
+          todayDate={todayDate}
           userName={userName}
         />
 

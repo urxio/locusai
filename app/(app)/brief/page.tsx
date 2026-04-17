@@ -5,6 +5,7 @@ import { getTodayCheckin, getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getTodayBrief } from '@/lib/db/briefs'
 import { readUserMemory } from '@/lib/ai/memory'
+import { getUserLocalDate } from '@/lib/db/users'
 import DailyBrief from '@/components/brief/DailyBrief'
 import BriefSkeleton from '@/components/brief/BriefSkeleton'
 import type { Metadata } from 'next'
@@ -18,13 +19,14 @@ async function BriefContent() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [goals, checkin, recentCheckins, habits, brief, memory, profile] = await Promise.all([
+  const [goals, checkin, recentCheckins, habits, brief, memory, todayDate, profile] = await Promise.all([
     getActiveGoals(user.id),
     getTodayCheckin(user.id),
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
     getTodayBrief(user.id),
     readUserMemory(user.id),
+    getUserLocalDate(user.id),
     // cover_url only — safest query that always works
     supabase.from('users').select('cover_url').eq('id', user.id).single(),
   ])
@@ -56,6 +58,7 @@ async function BriefContent() {
       habits={habits}
       brief={brief}
       memory={memory}
+      todayDate={todayDate}
       coverUrl={profile.data?.cover_url ?? null}
       userName={userName}
     />

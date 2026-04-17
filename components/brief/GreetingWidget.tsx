@@ -7,6 +7,7 @@ type Props = {
   habits:     HabitWithLogs[]
   goals:      Goal[]
   brief?:     Brief | null
+  todayDate?: string   // server-authoritative local date (YYYY-MM-DD) — same source as logged_date
   userName?:  string | null
 }
 
@@ -38,8 +39,8 @@ function HabitsIcon() {
 
 /* ── Helpers ─────────────────────────────────────────── */
 
-/** Local date string — avoids UTC offset bug */
-function todayLocal(): string {
+/** Fallback: browser local date — only used if server didn't supply todayDate */
+function browserLocalDate(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -62,12 +63,13 @@ type PulseResult = {
 }
 
 function buildPulse(
-  checkin:  CheckIn | null,
-  brief:    Brief | null | undefined,
-  habits:   HabitWithLogs[],
-  goals:    Goal[],
+  checkin:   CheckIn | null,
+  brief:     Brief | null | undefined,
+  habits:    HabitWithLogs[],
+  goals:     Goal[],
+  todayDate: string,
 ): PulseResult | null {
-  const today       = todayLocal()
+  const today = todayDate
   const active      = goals.filter(g => g.status === 'active')
   const scheduled   = habits.filter(h => h.isScheduledToday)
   const doneToday   = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
@@ -171,12 +173,13 @@ function getMoodPills(checkin: CheckIn): { label: string; icon: string }[] {
 
 /* ── Main component ──────────────────────────────────── */
 
-export default function GreetingWidget({ checkin, habits, goals, brief, userName }: Props) {
+export default function GreetingWidget({ checkin, habits, goals, brief, todayDate, userName }: Props) {
   const hour     = new Date().getHours()
   const greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening')
     + (userName ? `, ${userName.split(' ')[0]}` : '')
 
-  const today      = todayLocal()
+  // Use server-authoritative date (same source as logged_date in DB); fall back to browser local
+  const today      = todayDate ?? browserLocalDate()
   const scheduled  = habits.filter(h => h.isScheduledToday)
   const doneToday  = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
   const active     = goals.filter(g => g.status === 'active')
@@ -184,7 +187,7 @@ export default function GreetingWidget({ checkin, habits, goals, brief, userName
   const habitCount = scheduled.length
   const goalCount  = active.length
   const moodPills  = checkin ? getMoodPills(checkin) : []
-  const pulse      = buildPulse(checkin, brief, habits, goals)
+  const pulse      = buildPulse(checkin, brief, habits, goals, today)
 
   return (
     <div style={{
