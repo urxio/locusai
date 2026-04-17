@@ -245,10 +245,15 @@ export default function HabitsWeekStrip({ habits }: Props) {
     }
   }, [refresh])
 
+  const [expanded, setExpanded] = useState(false)
+
   if (data.length === 0) return null
 
-  const weekDays  = getWeekDays()
-  const todayDate = localDateStr(new Date())
+  const weekDays   = getWeekDays()
+  const todayDate  = localDateStr(new Date())
+  const PREVIEW    = 3
+  const visible    = expanded ? data : data.slice(0, PREVIEW)
+  const hasMore    = data.length > PREVIEW
 
   return (
     <div style={{ marginTop: '24px' }}>
@@ -261,7 +266,6 @@ export default function HabitsWeekStrip({ habits }: Props) {
           }}>
             Habits This Week
           </span>
-          {/* Live dot */}
           <div style={{
             width: '5px', height: '5px', borderRadius: '50%',
             background:  refreshing ? 'var(--gold)' : 'var(--sage)',
@@ -277,10 +281,51 @@ export default function HabitsWeekStrip({ habits }: Props) {
 
       {/* Rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: refreshing ? 0.7 : 1, transition: 'opacity 0.3s' }}>
-        {data.map(h => (
+        {visible.map(h => (
           <HabitRow key={h.id} habit={h} weekDays={weekDays} todayDate={todayDate} />
         ))}
       </div>
+
+      {/* Expand / collapse toggle */}
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{
+            display:        'flex',
+            alignItems:     'center',
+            justifyContent: 'center',
+            gap:            '6px',
+            width:          '100%',
+            marginTop:      '8px',
+            padding:        '10px',
+            background:     'var(--bg-1)',
+            border:         '1px solid var(--border)',
+            borderRadius:   '12px',
+            cursor:         'pointer',
+            fontSize:       '12px',
+            fontWeight:     600,
+            color:          'var(--text-3)',
+            fontFamily:     'inherit',
+            transition:     'border-color 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-md)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-1)'
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'
+          }}
+        >
+          <span>{expanded ? `Show less` : `${data.length - PREVIEW} more habit${data.length - PREVIEW !== 1 ? 's' : ''}`}</span>
+          <span style={{
+            display:    'inline-block',
+            transition: 'transform 0.25s',
+            transform:  expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            fontSize:   '10px',
+          }}>▾</span>
+        </button>
+      )}
     </div>
   )
 }
