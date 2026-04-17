@@ -37,17 +37,20 @@ function storeShowBrief(val: boolean) {
 export default function ConversationalCheckin({
   existingCheckin,
   memory,
+  hasBrief = false,
 }: {
   existingCheckin: CheckIn | null
   memory?: UserMemory | null
+  hasBrief?: boolean
 }) {
   const [messages,     setMessages]     = useState<Message[]>([])
   const [input,        setInput]        = useState('')
   const [streaming,    setStreaming]    = useState(false)
   const [isSaving,     setIsSaving]    = useState(false)
   const [checkinSaved, setCheckinSaved] = useState(!!existingCheckin)
-  // Initialise from sessionStorage so the brief survives tab navigation
-  const [showBrief,    setShowBrief]    = useState(() => readStoredBrief())
+  // DB (hasBrief) is the cross-device source of truth; sessionStorage covers
+  // the gap between brief generation finishing and the next server render.
+  const [showBrief,    setShowBrief]    = useState(() => hasBrief || readStoredBrief())
   const [isRedo,       setIsRedo]       = useState(false)
   const [error,        setError]        = useState<string | null>(null)
 
