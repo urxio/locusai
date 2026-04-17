@@ -34,6 +34,35 @@ function storeShowBrief(val: boolean) {
   else sessionStorage.removeItem(briefKey())
 }
 
+// localStorage key scoped to today — persists conversation across tab/browser restarts
+const CHAT_STORAGE_KEY = 'locus_chat_messages'
+type StoredChat = { date: string; messages: Message[] }
+
+function readStoredChat(): Message[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY)
+    if (!raw) return []
+    const stored: StoredChat = JSON.parse(raw)
+    const today = new Date().toISOString().split('T')[0]
+    // Only restore if stored for today
+    return stored.date === today ? stored.messages : []
+  } catch { return [] }
+}
+
+function saveChat(messages: Message[]) {
+  if (typeof window === 'undefined') return
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify({ date: today, messages }))
+  } catch {}
+}
+
+function clearChat() {
+  if (typeof window === 'undefined') return
+  try { localStorage.removeItem(CHAT_STORAGE_KEY) } catch {}
+}
+
 export default function ConversationalCheckin({
   existingCheckin,
   memory,
@@ -48,6 +77,7 @@ export default function ConversationalCheckin({
   const [streaming,    setStreaming]    = useState(false)
   const [isSaving,     setIsSaving]    = useState(false)
   const [checkinSaved, setCheckinSaved] = useState(!!existingCheckin)
+  const restoredRef = useRef(false)
   // DB (hasBrief) is the cross-device source of truth; sessionStorage covers
   // the gap between brief generation finishing and the next server render.
   const [showBrief,    setShowBrief]    = useState(() => hasBrief || readStoredBrief())
@@ -79,6 +109,30 @@ export default function ConversationalCheckin({
 
   // Keep sessionStorage in sync whenever showBrief toggles
   useEffect(() => { storeShowBrief(showBrief) }, [showBrief])
+
+  // ── Restore conversation from localStorage on mount (runs before init fetch effect) ──
+  useEffect(() => {
+    // If check-in already exists, no chat needed — don't restore
+    if (!chatActive) return
+    const stored = readStoredChat()
+    if (stored.length > 0) {
+      setMessages(stored)
+      restoredRef.current  = true
+      initFetched.current  = true  // skip opener fetch — we're resuming
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally run once on mount only
+
+  // ── Persist messages to localStorage whenever they change ──
+  useEffect(() => {
+    if (!chatActive || messages.length === 0) return
+    saveChat(messages)
+  }, [messages, chatActive])
+
+  // ── Clear stored chat once check-in is saved (server will have it next visit) ──
+  useEffect(() => {
+    if (checkinSaved) clearChat()
+  }, [checkinSaved])
 
   useEffect(() => {
     const box = messagesBoxRef.current
@@ -209,9 +263,11 @@ export default function ConversationalCheckin({
     setCheckinSaved(false)
     setShowBrief(false)
     storeShowBrief(false)   // clear persisted state so redo starts fresh
+    clearChat()             // clear stored conversation so redo starts fresh
     setError(null)
-    savedRef.current    = false
-    initFetched.current = false
+    savedRef.current     = false
+    initFetched.current  = false
+    restoredRef.current  = false
   }
 
   const canSend = !!input.trim() && !streaming && !isSaving
