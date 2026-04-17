@@ -14,14 +14,27 @@ type Props = {
 ─────────────────────────────────────────────────────────────────────────── */
 
 function renderInline(raw: string, key: string): React.ReactNode {
-  // Split on **bold** and *italic* tokens
-  const parts = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  // Split on **bold**, *italic*, and <<highlight>> tokens
+  const parts = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|<<.+?>>)/g)
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={`${key}-b${i}`} style={{ fontWeight: 600, color: 'var(--text-0)' }}>{part.slice(2, -2)}</strong>
     }
     if (part.startsWith('*') && part.endsWith('*')) {
       return <em key={`${key}-i${i}`} style={{ fontStyle: 'italic', color: 'var(--text-2)', fontWeight: 300 }}>{part.slice(1, -1)}</em>
+    }
+    if (part.startsWith('<<') && part.endsWith('>>')) {
+      return (
+        <mark key={`${key}-h${i}`} style={{
+          background:   'rgba(212,168,83,0.18)',
+          color:        'var(--gold)',
+          borderRadius: '3px',
+          padding:      '1px 4px',
+          fontStyle:    'normal',
+        }}>
+          {part.slice(2, -2)}
+        </mark>
+      )
     }
     return part
   })
