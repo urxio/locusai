@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { CheckIn, HabitWithLogs, Brief, Goal } from '@/lib/types'
 
 type Props = {
@@ -10,16 +10,6 @@ type Props = {
   brief?:     Brief | null
   todayDate?: string   // server-authoritative local date (YYYY-MM-DD) — same source as logged_date
   userName?:  string | null
-}
-
-/* ── live status shape (mirrors /api/status response) ─── */
-
-type LiveStatus = {
-  habitsDone:  number
-  habitsTotal: number
-  goalsActive: number
-  avgPct:      number | null
-  hasCheckin:  boolean
 }
 
 /* ── Icons ───────────────────────────────────────────── */
@@ -65,28 +55,6 @@ function joinNames(names: string[], max = 3): string {
   return rest > 0 ? `${base} +${rest} more` : base
 }
 
-/** Seed a LiveStatus from server props so the first paint is correct */
-function propsToLiveStatus(
-  habits:  HabitWithLogs[],
-  goals:   Goal[],
-  checkin: CheckIn | null,
-  today:   string,
-): LiveStatus {
-  const scheduled = habits.filter(h => h.isScheduledToday)
-  const done      = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
-  const active    = goals.filter(g => g.status === 'active')
-  const avgPct    = active.length
-    ? Math.round(active.reduce((s, g) => s + g.progress_pct, 0) / active.length)
-    : null
-  return {
-    habitsDone:  done.length,
-    habitsTotal: scheduled.length,
-    goalsActive: active.length,
-    avgPct,
-    hasCheckin:  !!checkin,
-  }
-}
-
 /* ── Pulse text ─────────────────────────────────────── */
 
 type PulseResult = {
@@ -96,28 +64,17 @@ type PulseResult = {
 }
 
 function buildPulse(
-  checkin:        CheckIn | null,
-  brief:          Brief | null | undefined,
-  habits:         HabitWithLogs[],
-  goals:          Goal[],
-  todayDate:      string,
-  liveStatus?:    LiveStatus,
+  checkin:   CheckIn | null,
+  brief:     Brief | null | undefined,
+  habits:    HabitWithLogs[],
+  goals:     Goal[],
+  todayDate: string,
 ): PulseResult | null {
-  const today      = todayDate
-  const active     = goals.filter(g => g.status === 'active')
-  const scheduled  = habits.filter(h => h.isScheduledToday)
-
-  // Use live counts if available, otherwise fall back to computing from props
-  const doneTodayN  = liveStatus?.habitsDone  ?? scheduled.filter(h => h.logs.some(l => l.logged_date === today)).length
-  const remainingN  = liveStatus != null ? Math.max((liveStatus.habitsTotal) - doneTodayN, 0)
-                    : scheduled.filter(h => !h.logs.some(l => l.logged_date === today)).length
-  const goalsActive = liveStatus?.goalsActive ?? active.length
-  const avgPctLive  = liveStatus?.avgPct      ?? (active.length ? Math.round(active.reduce((s, g) => s + g.progress_pct, 0) / active.length) : null)
-
-  // Remaining habit items list for structured display (still from props — best effort)
-  const remainingItems = scheduled
-    .filter(h => !h.logs.some(l => l.logged_date === today))
-    .slice(0, 3)
+  const today = todayDate
+  const active      = goals.filter(g => g.status === 'active')
+  const scheduled   = habits.filter(h => h.isScheduledToday)
+  const doneToday   = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
+  const remaining   = scheduled.filter(h => !h.logs.some(l => l.logged_date === today))
 
   /* ── 1. Brief AI insight (post check-in + brief generated) ── */
   if (brief?.insight_text) {
@@ -132,28 +89,27 @@ function buildPulse(
   if (!checkin) {
     const parts: string[] = []
 
-    if (remainingN > 0) {
-      const names = joinNames(remainingItems.map(h => `${h.emoji} ${h.name}`), 3)
-      const extra = remainingN - remainingItems.length
-      const displayNames = extra > 0 ? `${names} +${extra} more` : names
-      parts.push(`${displayNames} ${remainingN === 1 ? 'is' : 'are'} on your list today.`)
+    if (remaining.length > 0) {
+      const names = joinNames(remaining.map(h => `${h.emoji} ${h.name}`), 3)
+      parts.push(`${names} ${remaining.length === 1 ? 'is' : 'are'} on your list today.`)
     } else if (scheduled.length > 0) {
       parts.push(`All ${scheduled.length} habit${scheduled.length > 1 ? 's' : ''} are already done — great start.`)
     }
 
-    if (goalsActive > 0) {
-      if (goalsActive === 1 && active[0]) {
+    if (active.length > 0) {
+      const avgPct = Math.round(active.reduce((s, g) => s + g.progress_pct, 0) / active.length)
+      if (active.length === 1) {
         parts.push(`Your goal "${active[0].title}" is at ${active[0].progress_pct}%.`)
       } else {
-        parts.push(`Your ${goalsActive} active goals are averaging ${avgPctLive ?? 0}% progress.`)
+        parts.push(`Your ${active.length} active goals are averaging ${avgPct}% progress.`)
       }
     }
 
     if (parts.length === 0) return null
 
-    // Build structured items: remaining habits first, then goals
+    // Build structured items: habits first, then goals
     const items: PulseResult['items'] = []
-    remainingItems.forEach(h => {
+    remaining.slice(0, 3).forEach(h => {
       const timeLabel = h.time_of_day ? `· ${h.time_of_day}` : ''
       items.push({ emoji: h.emoji, label: h.name, sub: [h.frequency, timeLabel].filter(Boolean).join(' ') })
     })
@@ -189,12 +145,12 @@ function buildPulse(
   if (checkin.blockers?.length > 0)
     parts.push(`Watching out for: ${checkin.blockers.slice(0, 2).join(', ')}.`)
 
-  if (doneTodayN > 0 && remainingN > 0)
-    parts.push(`${doneTodayN} of ${scheduled.length} habits done — ${remainingN} still to go.`)
-  else if (remainingN === 0 && scheduled.length > 0)
-    parts.push(`All ${scheduled.length} habits ticked off today. 🎉`)
-  else if (remainingN > 0)
-    parts.push(`${remainingN} habit${remainingN > 1 ? 's' : ''} still ahead today.`)
+  if (doneToday.length > 0 && remaining.length > 0)
+    parts.push(`${doneToday.length} of ${scheduled.length} habits done — ${remaining.length} still to go.`)
+  else if (doneToday.length === scheduled.length && scheduled.length > 0)
+    parts.push(`All ${scheduled.length} habits ticked off today.`)
+  else if (remaining.length > 0)
+    parts.push(`${remaining.length} habit${remaining.length > 1 ? 's' : ''} still ahead today.`)
 
   return {
     label: 'Check-in summary',
@@ -224,42 +180,8 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
     + (userName ? `, ${userName.split(' ')[0]}` : '')
 
   // Use server-authoritative date (same source as logged_date in DB); fall back to browser local
-  const today = todayDate ?? browserLocalDate()
-
-  // ── Live status — seeded from props, refreshed from /api/status ──
-  const [live, setLive]         = useState<LiveStatus>(() => propsToLiveStatus(habits, goals, checkin, today))
-  const fetchingStatusRef       = useRef(false)
-
-  const refreshStatus = useCallback(async () => {
-    if (fetchingStatusRef.current) return
-    fetchingStatusRef.current = true
-    try {
-      const res = await fetch('/api/status', { cache: 'no-store' })
-      if (res.ok) {
-        const data = await res.json()
-        setLive({
-          habitsDone:  data.habitsDone  ?? 0,
-          habitsTotal: data.habitsTotal ?? 0,
-          goalsActive: data.goalsActive ?? 0,
-          avgPct:      data.avgPct      ?? null,
-          hasCheckin:  data.hasCheckin  ?? false,
-        })
-      }
-    } catch { /* keep last known data */ }
-    finally { fetchingStatusRef.current = false }
-  }, [])
-
-  useEffect(() => {
-    refreshStatus()
-    const onVisible = () => { if (!document.hidden) refreshStatus() }
-    const onFocus   = () => refreshStatus()
-    document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', onFocus)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible)
-      window.removeEventListener('focus', onFocus)
-    }
-  }, [refreshStatus])
+  const today      = todayDate ?? browserLocalDate()
+  const scheduled  = habits.filter(h => h.isScheduledToday)
 
   // ── AI opener — streamed on mount ───────────────────────
   const [aiOpener, setAiOpener]   = useState('')
@@ -289,20 +211,13 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
 
     return () => { cancelled = true }
   }, [])
+  const doneToday  = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
+  const active     = goals.filter(g => g.status === 'active')
 
-  // ── Derived display values from live data ──────────────
-  const habitCount  = live.habitsTotal
-  const goalCount   = live.goalsActive
-  const doneTodayN  = live.habitsDone
-  // remaining habits count for pulse text (live)
-  const remainingN  = Math.max(habitCount - doneTodayN, 0)
-
-  const moodPills   = checkin ? getMoodPills(checkin) : []
-
-  // Build pulse using live counts while keeping the rich habit/goal item list from props
-  const scheduled   = habits.filter(h => h.isScheduledToday)
-  const remaining   = scheduled.filter(h => !h.logs.some(l => l.logged_date === today))
-  const pulse       = buildPulse(checkin, brief, habits, goals, today, live)
+  const habitCount = scheduled.length
+  const goalCount  = active.length
+  const moodPills  = checkin ? getMoodPills(checkin) : []
+  const pulse      = buildPulse(checkin, brief, habits, goals, today)
 
   return (
     <div style={{
@@ -333,9 +248,7 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
         {(goalCount > 0 || habitCount > 0) ? (
           <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.4, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
             {checkin
-              ? remainingN === 0
-                  ? `All ${habitCount} habit${habitCount !== 1 ? 's' : ''} done ✓`
-                  : `${doneTodayN} of ${habitCount} habit${habitCount !== 1 ? 's' : ''} done.`
+              ? `${doneToday.length} of ${habitCount} habit${habitCount !== 1 ? 's' : ''} done.`
               : <>
                   {'You have '}
                   {goalCount > 0 && (
@@ -353,7 +266,7 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
                       <InlineIcon color="rgba(56,139,180,0.18)" textColor="#3a7a88"><HabitsIcon /></InlineIcon>
                       {' '}
                       <a href="/habits" style={{ color: 'var(--text-0)', textDecoration: 'none', borderBottom: '2px solid #3a7a88', paddingBottom: '1px' }}>
-                        <strong>{remainingN} {remainingN === 1 ? 'habit' : 'habits'} left</strong>
+                        <strong>{habitCount} {habitCount === 1 ? 'habit' : 'habits'}</strong>
                       </a>
                       {' '}
                     </>
