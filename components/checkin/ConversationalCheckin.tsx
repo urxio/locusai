@@ -20,6 +20,20 @@ type CheckinData = {
 const CHECKIN_DATA_RE = /<checkin_data>\s*([\s\S]*?)\s*<\/checkin_data>/
 const SHOW_BRIEF_RE   = /<show_brief>/
 
+// sessionStorage key scoped to today — auto-resets tomorrow
+function briefKey() {
+  return `locus_showBrief_${new Date().toISOString().split('T')[0]}`
+}
+function readStoredBrief(): boolean {
+  if (typeof window === 'undefined') return false
+  return sessionStorage.getItem(briefKey()) === 'true'
+}
+function storeShowBrief(val: boolean) {
+  if (typeof window === 'undefined') return
+  if (val) sessionStorage.setItem(briefKey(), 'true')
+  else sessionStorage.removeItem(briefKey())
+}
+
 export default function ConversationalCheckin({
   existingCheckin,
   memory,
@@ -32,7 +46,8 @@ export default function ConversationalCheckin({
   const [streaming,    setStreaming]    = useState(false)
   const [isSaving,     setIsSaving]    = useState(false)
   const [checkinSaved, setCheckinSaved] = useState(!!existingCheckin)
-  const [showBrief,    setShowBrief]    = useState(false)
+  // Initialise from sessionStorage so the brief survives tab navigation
+  const [showBrief,    setShowBrief]    = useState(() => readStoredBrief())
   const [isRedo,       setIsRedo]       = useState(false)
   const [error,        setError]        = useState<string | null>(null)
 
@@ -57,6 +72,9 @@ export default function ConversationalCheckin({
   const briefCTARef    = useRef<HTMLDivElement>(null)
   const initFetched    = useRef(false)
   const savedRef       = useRef(false)
+
+  // Keep sessionStorage in sync whenever showBrief toggles
+  useEffect(() => { storeShowBrief(showBrief) }, [showBrief])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -185,8 +203,9 @@ export default function ConversationalCheckin({
     setCheckinData(null)
     setCheckinSaved(false)
     setShowBrief(false)
+    storeShowBrief(false)   // clear persisted state so redo starts fresh
     setError(null)
-    savedRef.current  = false
+    savedRef.current    = false
     initFetched.current = false
   }
 
