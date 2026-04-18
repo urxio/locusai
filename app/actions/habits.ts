@@ -53,34 +53,34 @@ export async function unlogHabitAction(habitId: string, date?: string) {
   revalidatePath('/goals')
 }
 
-/** Check if the habit's linked goal uses tracking_mode='habits'; if so, sync. */
+/** Check if the habit's linked goal uses tracking_mode='habits'; if so, sync.
+ *  Uses the already-authenticated client to avoid session-propagation issues. */
 async function maybeSyncGoalProgress(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   habitId: string,
   userId: string,
 ): Promise<void> {
-  try {
-    const { data: habit } = await supabase
-      .from('habits')
-      .select('goal_id')
-      .eq('id', habitId)
-      .eq('user_id', userId)
-      .single()
-    if (!habit?.goal_id) return
+  const { data: habit, error: hErr } = await supabase
+    .from('habits')
+    .select('goal_id')
+    .eq('id', habitId)
+    .eq('user_id', userId)
+    .single()
+  if (hErr) { console.error('[maybeSyncGoalProgress] habit fetch:', hErr); return }
+  if (!habit?.goal_id) return
 
-    const { data: goal } = await supabase
-      .from('goals')
-      .select('tracking_mode')
-      .eq('id', habit.goal_id)
-      .eq('user_id', userId)
-      .single()
-    if (goal?.tracking_mode !== 'habits') return
+  const { data: goal, error: gErr } = await supabase
+    .from('goals')
+    .select('tracking_mode')
+    .eq('id', habit.goal_id)
+    .eq('user_id', userId)
+    .single()
+  if (gErr) { console.error('[maybeSyncGoalProgress] goal fetch:', gErr); return }
+  if (goal?.tracking_mode !== 'habits') return
 
-    await syncHabitGoalProgress(habit.goal_id, userId)
-  } catch {
-    // Non-fatal — habit log already saved
-  }
+  // Pass the same authenticated client — avoids creating a second session
+  await syncHabitGoalProgress(habit.goal_id, userId, supabase)
 }
 
 /* ── CRUD ── */

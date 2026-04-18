@@ -172,17 +172,28 @@ async function syncGoalProgress(goalId: string, userId: string): Promise<void> {
  * Multiple linked habits are summed together (not averaged) so every
  * scheduled occurrence across all habits counts equally.
  */
-export async function syncHabitGoalProgress(goalId: string, userId: string): Promise<void> {
-  const supabase = await createClient()
+export async function syncHabitGoalProgress(
+  goalId: string,
+  userId: string,
+  // Accept an existing authenticated client to avoid session-propagation
+  // issues when called from within another server action.
+  // Falls back to creating a new client when called standalone.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  existingClient?: any,
+): Promise<void> {
+  const supabase = existingClient ?? (await createClient())
 
   // ── 1. Fetch goal window ────────────────────────────────────────────────
-  const { data: goal } = await supabase
+  const { data: goal, error: goalErr } = await supabase
     .from('goals')
     .select('created_at, target_date, habit_target_count')
     .eq('id', goalId)
     .eq('user_id', userId)
     .single()
-  if (!goal) return
+  if (goalErr || !goal) {
+    console.error('[syncHabitGoalProgress] goal fetch failed:', goalErr)
+    return
+  }
 
   const today       = new Date().toISOString().split('T')[0]
   const windowStart = goal.created_at.split('T')[0]
@@ -190,24 +201,29 @@ export async function syncHabitGoalProgress(goalId: string, userId: string): Pro
   const logEnd      = today                       // can't log future dates
 
   // ── 2. Fetch all habits linked to this goal ─────────────────────────────
-  const { data: habits } = await supabase
+  const { data: habits, error: habitsErr } = await supabase
     .from('habits')
     .select('id, days_of_week, created_at')
     .eq('goal_id', goalId)
     .eq('user_id', userId)
+  if (habitsErr) {
+    console.error('[syncHabitGoalProgress] habits fetch failed:', habitsErr)
+    return
+  }
   if (!habits || habits.length === 0) return
 
-  const habitIds = habits.map(h => h.id)
+  const habitIds = habits.map((h: { id: string; days_of_week: number[] | null; created_at: string }) => h.id)
 
   // ── 3. Fetch all logs for those habits in the window ────────────────────
-  const { data: logs } = await supabase
+  const { data: logs, error: logsErr } = await supabase
     .from('habit_logs')
     .select('habit_id, logged_date')
     .in('habit_id', habitIds)
     .gte('logged_date', windowStart)
     .lte('logged_date', logEnd)
+  if (logsErr) console.error('[syncHabitGoalProgress] logs fetch failed:', logsErr)
 
-  const logSet = new Set((logs ?? []).map(l => `${l.habit_id}:${l.logged_date}`))
+  const logSet = new Set((logs ?? []).map((l: { habit_id: string; logged_date: string }) => `${l.habit_id}:${l.logged_date}`))
 
   // ── 4. For each habit, count scheduled vs completed days ────────────────
   let totalScheduled = 0
@@ -254,9 +270,14 @@ export async function syncHabitGoalProgress(goalId: string, userId: string): Pro
     pct = Math.min(100, Math.round((totalCompleted / totalScheduled) * 100))
   }
 
-  await supabase
+  const { error: updateErr } = await supabase
     .from('goals')
     .update({ progress_pct: pct, updated_at: new Date().toISOString() })
     .eq('id', goalId)
     .eq('user_id', userId)
+  if (updateErr) {
+    console.error('[syncHabitGoalProgress] goal update failed:', updateErr)
+  } else {
+    console.log(`[syncHabitGoalProgress] goal ${goalId.slice(0,8)} → ${pct}% (${totalCompleted}/${targetCount ?? totalScheduled})`)
+  }
 }
