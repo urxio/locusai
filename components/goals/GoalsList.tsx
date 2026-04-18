@@ -53,6 +53,7 @@ const labelStyle: React.CSSProperties = {
 const EMPTY_FORM: GoalFormData = {
   title: '', category: 'product', timeframe: 'quarter',
   progress_pct: 0, next_action: '', target_date: null, status: 'active',
+  tracking_mode: 'manual',
 }
 
 type ModalState = null | { mode: 'add' } | { mode: 'edit'; goal: GoalWithSteps }
@@ -330,12 +331,13 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
   const [progressVal, setProgressVal]     = useState(goal.progress_pct)
   const [isPending, startTransition]      = useTransition()
 
-  const steps        = stepsMap.get(goal.id) ?? []
-  const isGenerating = generatingFor.has(goal.id)
-  const isSuggesting = suggestingFor.has(goal.id)
-  const isExpanded   = expanded.has(goal.id)
-  const hasSteps   = steps.length > 0
-  const doneCount  = steps.filter(s => s.completed).length
+  const steps          = stepsMap.get(goal.id) ?? []
+  const isGenerating   = generatingFor.has(goal.id)
+  const isSuggesting   = suggestingFor.has(goal.id)
+  const isExpanded     = expanded.has(goal.id)
+  const hasSteps       = steps.length > 0
+  const doneCount      = steps.filter(s => s.completed).length
+  const isHabitTracked = goal.tracking_mode === 'habits'
 
   const gradient = CATEGORY_COLORS[goal.category] ?? CATEGORY_COLORS.other
   const badge    = CATEGORY_BADGE[goal.category]  ?? CATEGORY_BADGE.other
@@ -431,19 +433,24 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
                 <button onClick={() => setConfirmDelete(false)} style={{ background: 'var(--bg-3)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}>No</button>
               </div>
             )}
-            {/* Progress % — only clickable when no steps */}
-            <button
-              onClick={() => !hasSteps && setEditingProgress(true)}
-              title={hasSteps ? 'Progress driven by steps' : 'Update progress'}
-              style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 300, color: 'var(--text-0)', background: 'none', border: 'none', cursor: hasSteps ? 'default' : 'pointer', padding: 0, lineHeight: 1 }}
-            >
-              {goal.progress_pct}%
-            </button>
+            {/* Progress % — only clickable when no steps and not habit-tracked */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {isHabitTracked && (
+                <span title="Progress auto-tracked from habit completions" style={{ fontSize: '13px', color: 'var(--sage)', lineHeight: 1 }}>⟳</span>
+              )}
+              <button
+                onClick={() => !hasSteps && !isHabitTracked && setEditingProgress(true)}
+                title={isHabitTracked ? 'Progress auto-tracked from habit completions' : hasSteps ? 'Progress driven by steps' : 'Update progress'}
+                style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 300, color: 'var(--text-0)', background: 'none', border: 'none', cursor: (hasSteps || isHabitTracked) ? 'default' : 'pointer', padding: 0, lineHeight: 1 }}
+              >
+                {goal.progress_pct}%
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Progress bar or inline slider */}
-        {editingProgress && !hasSteps ? (
+        {editingProgress && !hasSteps && !isHabitTracked ? (
           <div style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
               <input type="range" min={0} max={100} value={progressVal} onChange={e => setProgressVal(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--gold)', cursor: 'pointer' }} />
@@ -471,15 +478,23 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
           )}
         </div>
 
-        {/* Steps toggle button */}
-        <button
-          onClick={() => onToggleExpand(goal.id)}
-          className="icon-btn"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '12px', fontWeight: 600, padding: '0', letterSpacing: '0.04em', textTransform: 'uppercase' }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
-          {isGenerating ? 'Locus is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
-        </button>
+        {/* Steps toggle button — hidden for habit-tracked goals */}
+        {isHabitTracked ? (
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', padding: '3px 8px', borderRadius: '20px', background: 'rgba(122,158,138,0.12)', border: '1px solid rgba(122,158,138,0.2)' }}>
+              ⟳ Habit-tracked · updates on each check
+            </span>
+          </div>
+        ) : (
+          <button
+            onClick={() => onToggleExpand(goal.id)}
+            className="icon-btn"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '12px', fontWeight: 600, padding: '0', letterSpacing: '0.04em', textTransform: 'uppercase' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
+            {isGenerating ? 'Locus is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
+          </button>
+        )}
 
         {/* Linked habits */}
         {(() => {
@@ -511,8 +526,8 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
         )}
       </div>
 
-      {/* Steps panel */}
-      {isExpanded && (
+      {/* Steps panel — not shown for habit-tracked goals */}
+      {isExpanded && !isHabitTracked && (
         <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-0)', padding: '0 22px 16px' }}>
 
           {/* Generating skeleton */}
@@ -845,7 +860,7 @@ function GoalModal({ mode, goal, hasSteps, onClose, onSaved }: {
 }) {
   const [form, setForm] = useState<GoalFormData>(
     goal
-      ? { title: goal.title, category: goal.category, timeframe: goal.timeframe, progress_pct: goal.progress_pct, next_action: goal.next_action || '', target_date: goal.target_date, status: goal.status }
+      ? { title: goal.title, category: goal.category, timeframe: goal.timeframe, progress_pct: goal.progress_pct, next_action: goal.next_action || '', target_date: goal.target_date, status: goal.status, tracking_mode: goal.tracking_mode ?? 'manual' }
       : EMPTY_FORM
   )
   const [isPending, startTransition] = useTransition()
@@ -906,11 +921,40 @@ function GoalModal({ mode, goal, hasSteps, onClose, onSaved }: {
             </div>
           </div>
 
-          {/* Progress — hidden if steps drive it */}
-          {hasSteps ? (
+          {/* ── Tracking mode ── */}
+          <div>
+            <label style={labelStyle}>How is progress tracked?</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {([
+                { value: 'manual',  label: 'Manual',  icon: '✎', desc: 'You set it yourself' },
+                { value: 'steps',   label: 'Steps',   icon: '✦', desc: 'From step completion' },
+                { value: 'habits',  label: 'Habits',  icon: '⟳', desc: 'From daily habit logs' },
+              ] as const).map(opt => {
+                const active = form.tracking_mode === opt.value
+                return (
+                  <button key={opt.value} type="button" onClick={() => set('tracking_mode', opt.value)}
+                    style={{ padding: '10px 8px', borderRadius: '8px', border: `1px solid ${active ? 'var(--gold)' : 'var(--border)'}`, background: active ? 'var(--gold-dim)' : 'var(--bg-3)', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}>
+                    <div style={{ fontSize: '16px', marginBottom: '3px', color: active ? 'var(--gold)' : 'var(--text-2)' }}>{opt.icon}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: active ? 'var(--gold)' : 'var(--text-1)', letterSpacing: '0.04em' }}>{opt.label}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px', lineHeight: 1.3 }}>{opt.desc}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ── Progress block — depends on tracking mode ── */}
+          {form.tracking_mode === 'habits' ? (
+            <div style={{ background: 'rgba(122,158,138,0.08)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '8px', padding: '10px 13px', fontSize: '13px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: 'var(--sage)', fontSize: '14px' }}>⟳</span>
+              Progress updates automatically each time you check a linked habit. Link habits to this goal after saving.
+            </div>
+          ) : hasSteps || form.tracking_mode === 'steps' ? (
             <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 13px', fontSize: '13px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: 'var(--gold)', fontSize: '14px' }}>✦</span>
-              Progress is calculated from step completion ({goal?.progress_pct ?? 0}% — {(goal?.steps ?? []).filter(s => s.completed).length}/{(goal?.steps ?? []).length} steps done)
+              {hasSteps
+                ? `Progress is calculated from step completion (${goal?.progress_pct ?? 0}% — ${(goal?.steps ?? []).filter(s => s.completed).length}/${(goal?.steps ?? []).length} steps done)`
+                : 'Progress will be calculated from step completion once steps are added.'}
             </div>
           ) : (
             <div>
@@ -940,10 +984,16 @@ function GoalModal({ mode, goal, hasSteps, onClose, onSaved }: {
             </div>
           </div>
 
-          {mode === 'add' && (
+          {mode === 'add' && form.tracking_mode !== 'habits' && (
             <div style={{ background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '8px', padding: '10px 13px', fontSize: '12.5px', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '14px' }}>✦</span>
               Locus AI will automatically break this goal into steps when you save.
+            </div>
+          )}
+          {mode === 'add' && form.tracking_mode === 'habits' && (
+            <div style={{ background: 'rgba(122,158,138,0.08)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '8px', padding: '10px 13px', fontSize: '12.5px', color: 'var(--sage)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '14px' }}>⟳</span>
+              After saving, link habits to this goal and every daily check will push progress forward.
             </div>
           )}
 

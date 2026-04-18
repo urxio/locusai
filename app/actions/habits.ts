@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { deriveFrequencyMeta } from '@/lib/habits/utils'
+import { syncHabitGoalProgress } from '@/app/actions/goal-steps'
 
 /* ── LOG / UNLOG (any date) ── */
 
@@ -20,9 +21,13 @@ export async function logHabitAction(habitId: string, date?: string) {
     )
   if (error) throw new Error(error.message)
 
+  // If this habit is linked to a habit-tracked goal, sync its progress
+  await maybeSyncGoalProgress(supabase, habitId, user.id)
+
   revalidatePath('/habits')
   revalidatePath('/review')
   revalidatePath('/brief')
+  revalidatePath('/goals')
 }
 
 export async function unlogHabitAction(habitId: string, date?: string) {
@@ -39,9 +44,43 @@ export async function unlogHabitAction(habitId: string, date?: string) {
     .eq('logged_date', logged_date)
   if (error) throw new Error(error.message)
 
+  // If this habit is linked to a habit-tracked goal, sync its progress
+  await maybeSyncGoalProgress(supabase, habitId, user.id)
+
   revalidatePath('/habits')
   revalidatePath('/review')
   revalidatePath('/brief')
+  revalidatePath('/goals')
+}
+
+/** Check if the habit's linked goal uses tracking_mode='habits'; if so, sync. */
+async function maybeSyncGoalProgress(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  habitId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    const { data: habit } = await supabase
+      .from('habits')
+      .select('goal_id')
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .single()
+    if (!habit?.goal_id) return
+
+    const { data: goal } = await supabase
+      .from('goals')
+      .select('tracking_mode')
+      .eq('id', habit.goal_id)
+      .eq('user_id', userId)
+      .single()
+    if (goal?.tracking_mode !== 'habits') return
+
+    await syncHabitGoalProgress(habit.goal_id, userId)
+  } catch {
+    // Non-fatal — habit log already saved
+  }
 }
 
 /* ── CRUD ── */

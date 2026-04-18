@@ -17,6 +17,8 @@ export type Goal = {
   progress_pct: number
   next_action: string
   status: 'active' | 'completed' | 'paused'
+  /** How progress_pct is maintained for this goal. */
+  tracking_mode: 'manual' | 'steps' | 'habits'
   created_at: string
   updated_at: string
 }
