@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAllGoalsWithSteps } from '@/lib/db/goals'
 import { getUserHabits } from '@/lib/db/habits'
+import { syncHabitGoalProgress } from '@/app/actions/goal-steps'
 import GoalsList from '@/components/goals/GoalsList'
 
 export const dynamic = 'force-dynamic'
@@ -15,11 +16,21 @@ export default async function GoalsPage() {
     getUserHabits(user.id),
   ])
 
+  // Re-sync every habit-tracked goal on page load so progress is always
+  // up-to-date — covers pre-linked habits, manual DB edits, etc.
+  const habitTrackedGoals = goals.filter(g => g.tracking_mode === 'habits')
+  if (habitTrackedGoals.length > 0) {
+    await Promise.all(
+      habitTrackedGoals.map(g => syncHabitGoalProgress(g.id, user.id, supabase))
+    )
+    // Re-fetch goals so the synced progress_pct values are reflected in the UI
+    const fresh = await getAllGoalsWithSteps(user.id)
+    goals.splice(0, goals.length, ...fresh)
+  }
+
   // Build completion counts for habits linked to habit-tracked goals
   // so the goal card can render per-habit progress mini-bars.
-  const habitTrackedGoalIds = new Set(
-    goals.filter(g => g.tracking_mode === 'habits').map(g => g.id)
-  )
+  const habitTrackedGoalIds = new Set(habitTrackedGoals.map(g => g.id))
   const linkedHabitIds = habits
     .filter(h => h.goal_id && habitTrackedGoalIds.has(h.goal_id))
     .map(h => h.id)
