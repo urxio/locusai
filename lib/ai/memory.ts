@@ -69,6 +69,12 @@ export type UserMemory = {
   }
   // Habit audit dismissals — { 'YYYY-MM-DD': ['habitId', ...] } — cross-device sync
   audit_dismissals?: Record<string, string[]>
+  // Narrative summaries of each day's check-in conversation — last 30 days
+  daily_summaries?: Array<{
+    date: string         // YYYY-MM-DD
+    summary: string      // 2-3 sentence narrative of the day
+    generated_at: string // ISO timestamp
+  }>
 }
 
 /* ── READ ────────────────────────────────────────────── */
@@ -230,6 +236,28 @@ export function formatClarifyingQAForPrompt(memory: UserMemory | null): string {
     lines.push('')
   })
   lines.push('── END CLARIFIED CONTEXT ──')
+  return lines.join('\n')
+}
+
+/* ── FORMAT DAILY SUMMARIES FOR PROMPT ──────────────── */
+
+export function formatDailySummariesForPrompt(memory: UserMemory | null): string {
+  const summaries = memory?.daily_summaries
+  if (!summaries || summaries.length === 0) return ''
+
+  // Show last 10 days, newest first
+  const recent = [...summaries]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 10)
+
+  const lines: string[] = []
+  lines.push('── RECENT DAYS (narrative context) ──')
+  lines.push('A brief narrative of what the user actually said and experienced in recent check-ins:')
+  lines.push('')
+  recent.forEach(s => {
+    lines.push(`${s.date}: ${s.summary}`)
+  })
+  lines.push('── END RECENT DAYS ──')
   return lines.join('\n')
 }
 

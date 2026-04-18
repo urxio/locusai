@@ -148,7 +148,7 @@ export default function ConversationalCheckin({
     }
   }, [checkinSaved, showBrief])
 
-  const saveCheckin = useCallback(async (data: CheckinData) => {
+  const saveCheckin = useCallback(async (data: CheckinData, conversationMessages: Message[]) => {
     if (savedRef.current) return
     savedRef.current = true
     setIsSaving(true)
@@ -162,6 +162,17 @@ export default function ConversationalCheckin({
       })
       setCheckinSaved(true)
       router.refresh()
+
+      // Fire-and-forget: summarize the conversation into narrative memory
+      fetch('/api/checkin/summarize', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          messages: conversationMessages,
+          date:     localDateStr(),
+        }),
+      }).catch(err => console.error('[summarize]', err))
+
     } catch (err) {
       console.error('[saveCheckin]', err)
       savedRef.current = false
@@ -211,7 +222,8 @@ export default function ConversationalCheckin({
         if (dataMatch && !savedRef.current) {
           const data: CheckinData = JSON.parse(dataMatch[1])
           setCheckinData(data)
-          await saveCheckin(data)
+          // Pass the full conversation at this moment for summarization
+          await saveCheckin(data, msgs)
         }
 
         // AI confirmed user wants to see brief
