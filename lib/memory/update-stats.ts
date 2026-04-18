@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { patchUserMemory } from '@/lib/ai/memory'
 import type { UserMemory } from '@/lib/ai/memory'
 
 /* ── STOP WORDS for mood theme extraction ── */
@@ -261,40 +262,20 @@ export async function updateMemoryStats(userId: string): Promise<void> {
     keywordCorrelations.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
     const topKeywordCorrelations = keywordCorrelations.slice(0, 3)
 
-    /* ── PRESERVE ALL EXISTING MEMORY FIELDS ── */
-    // Critical: spread prev so we never wipe people_memory, self_profile,
-    // clarifying_qa, daily_summaries, audit_dismissals, pattern_narratives etc.
-    const { data: existing } = await supabase
-      .from('user_memory')
-      .select('data')
-      .eq('user_id', userId)
-      .single()
-    const prev = (existing?.data ?? {}) as UserMemory
-
-    /* ── WRITE ── */
-    const memory: UserMemory = {
-      ...prev,                          // preserve all unmanaged fields
-      energy:        { overall_avg: overallAvg, recent_avg: recentAvg, trend, by_day: byDay, best_day: bestDay, worst_day: worstDay },
-      habits:        { strongest, needs_work: needsWork },
-      blockers:      { frequent, frequencies: blockerFreq },
-      mood_themes:   moodThemes,
-      insights:      prev.insights ?? [],
+    /* ── WRITE via patchUserMemory — never wipes unrelated fields ── */
+    await patchUserMemory(userId, {
+      energy:      { overall_avg: overallAvg, recent_avg: recentAvg, trend, by_day: byDay, best_day: bestDay, worst_day: worstDay },
+      habits:      { strongest, needs_work: needsWork },
+      blockers:    { frequent, frequencies: blockerFreq },
+      mood_themes: moodThemes,
       checkin_count: checkins.length,
-      last_stats_update:   new Date().toISOString(),
-      last_insights_update: prev.last_insights_update ?? null,
+      last_stats_update: new Date().toISOString(),
       correlations: {
-        habits:       topHabitCorrelations,
-        keywords:     topKeywordCorrelations,
-        computed_at:  new Date().toISOString(),
+        habits:      topHabitCorrelations,
+        keywords:    topKeywordCorrelations,
+        computed_at: new Date().toISOString(),
       },
-    }
-
-    await supabase
-      .from('user_memory')
-      .upsert(
-        { user_id: userId, data: memory, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' }
-      )
+    })
   } catch (err) {
     // Non-fatal — never block the check-in
     console.error('[memory:update-stats]', err)

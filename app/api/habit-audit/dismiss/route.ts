@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,15 +13,11 @@ export async function POST(req: NextRequest) {
   const { habitId, auditDate } = await req.json() as { habitId: string; auditDate: string }
 
   try {
-    const { data: memRow } = await supabase
-      .from('user_memory').select('data').eq('user_id', user.id).single()
-    const mem = (memRow?.data ?? {}) as Record<string, unknown>
+    const memory     = (await readUserMemory(user.id)) ?? {}
+    const dismissals = { ...((memory as { audit_dismissals?: Record<string, string[]> }).audit_dismissals ?? {}) }
 
-    const dismissals = (mem.audit_dismissals ?? {}) as Record<string, string[]>
     if (!dismissals[auditDate]) dismissals[auditDate] = []
-    if (!dismissals[auditDate].includes(habitId)) {
-      dismissals[auditDate].push(habitId)
-    }
+    if (!dismissals[auditDate].includes(habitId)) dismissals[auditDate].push(habitId)
 
     // Keep only last 7 days to avoid unbounded growth
     const cutoff = new Date()
@@ -30,10 +27,7 @@ export async function POST(req: NextRequest) {
       if (date < cutoffStr) delete dismissals[date]
     }
 
-    await supabase.from('user_memory').upsert(
-      { user_id: user.id, data: { ...mem, audit_dismissals: dismissals } },
-      { onConflict: 'user_id' }
-    )
+    await patchUserMemory(user.id, { audit_dismissals: dismissals })
   } catch { /* non-fatal */ }
 
   return new Response('ok')

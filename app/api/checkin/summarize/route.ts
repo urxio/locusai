@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAnthropicClient } from '@/lib/ai/client'
-import { readUserMemory } from '@/lib/ai/memory'
+import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 import type { UserMemory } from '@/lib/ai/memory'
 
 export const runtime = 'nodejs'
@@ -73,25 +73,17 @@ export async function POST(request: NextRequest) {
       return Response.json({ ok: true, skipped: true })
     }
 
-    // Read current memory, append summary, keep last 30 days
-    const memory = (await readUserMemory(user.id)) ?? {} as UserMemory
+    // Read current summaries, append new one, keep last 30 days
+    const memory  = (await readUserMemory(user.id)) ?? {} as UserMemory
     const existing = memory.daily_summaries ?? []
-
-    // Replace if same date already exists, otherwise append
-    const filtered = existing.filter(s => s.date !== date)
-    const updated: typeof existing = [
-      ...filtered,
+    const updated = [
+      ...existing.filter(s => s.date !== date),
       { date, summary, generated_at: new Date().toISOString() },
     ]
       .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 30) // keep last 30 days
+      .slice(0, 30)
 
-    await supabase
-      .from('user_memory')
-      .upsert(
-        { user_id: user.id, data: { ...memory, daily_summaries: updated } },
-        { onConflict: 'user_id' }
-      )
+    await patchUserMemory(user.id, { daily_summaries: updated })
 
     return Response.json({ ok: true, summary })
   } catch (err) {

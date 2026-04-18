@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getUserLocalDate } from '@/lib/db/users'
-import type { UserMemory, SelfProfile } from '@/lib/ai/memory'
+import type { SelfProfile } from '@/lib/ai/memory'
+import { patchUserMemory } from '@/lib/ai/memory'
 import { deriveFrequencyMeta } from '@/lib/habits/utils'
 
 export type GoalInput = {
@@ -80,19 +81,11 @@ export async function completeOnboarding(
   // 3. Save self profile to user_memory JSONB
   const hasProfile = profile.occupation || profile.relationship_status || profile.personality.length > 0 || profile.life_context
   if (hasProfile) {
-    const { data: existing } = await supabase
-      .from('user_memory')
-      .select('data')
-      .eq('user_id', user.id)
-      .single()
-    const current = (existing?.data ?? {}) as UserMemory
     const selfProfile: SelfProfile = {
       ...profile,
       saved_at: new Date().toISOString(),
     }
-    await supabase
-      .from('user_memory')
-      .upsert({ user_id: user.id, data: { ...current, self_profile: selfProfile } }, { onConflict: 'user_id' })
+    await patchUserMemory(user.id, { self_profile: selfProfile })
   }
 
   // 4. Save first check-in

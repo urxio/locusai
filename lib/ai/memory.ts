@@ -113,6 +113,35 @@ export async function readUserMemory(userId: string): Promise<UserMemory | null>
   }
 }
 
+/* ── PATCH (safe write — never wipes unrelated fields) ── */
+
+/**
+ * The ONLY correct way to write to user_memory.
+ * Always reads current state first, merges the patch on top,
+ * then writes back — so callers only own the fields they pass.
+ *
+ * Using .upsert() with onConflict ensures the row is created if missing.
+ */
+export async function patchUserMemory(
+  userId: string,
+  patch: Partial<UserMemory>,
+): Promise<void> {
+  const supabase = await createClient()
+  // Read current state so we never lose unrelated fields
+  const { data } = await supabase
+    .from('user_memory')
+    .select('data')
+    .eq('user_id', userId)
+    .single()
+  const current = (data?.data ?? {}) as UserMemory
+  await supabase
+    .from('user_memory')
+    .upsert(
+      { user_id: userId, data: { ...current, ...patch }, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    )
+}
+
 /* ── FORMAT SELF PROFILE FOR PROMPT ─────────────────── */
 
 export function formatSelfProfileForPrompt(memory: UserMemory | null): string {

@@ -7,7 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { readUserMemory } from '@/lib/ai/memory'
+import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 import { getAnthropicClient } from '@/lib/ai/client'
 import type { PersonMemory } from '@/lib/ai/memory'
 
@@ -124,19 +124,12 @@ Rules:
 
     if (people.length === 0) return
 
-    await supabase
-      .from('user_memory')
-      .update({
-        data: {
-          ...memory,
-          people_memory: {
-            people,
-            last_updated: new Date().toISOString(),
-          },
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
+    await patchUserMemory(userId, {
+      people_memory: {
+        people,
+        last_updated: new Date().toISOString(),
+      },
+    })
 
     console.log(`[memory:people] extracted ${people.length} people for user ${userId.slice(0, 8)}`)
   } catch (err) {

@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { readUserMemory } from '@/lib/ai/memory'
+import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 import { getAnthropicClient } from '@/lib/ai/client'
 
 export async function updateMemoryInsights(userId: string): Promise<void> {
@@ -101,17 +101,10 @@ Example format: ["Insight one about their specific pattern", "Insight two refere
     // Merge: newest insights first, cap at 8 total
     const merged = [...newInsights, ...memory.insights].slice(0, 8)
 
-    await supabase
-      .from('user_memory')
-      .update({
-        data: {
-          ...memory,
-          insights: merged,
-          last_insights_update: new Date().toISOString(),
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
+    await patchUserMemory(userId, {
+      insights: merged,
+      last_insights_update: new Date().toISOString(),
+    })
 
     console.log(`[memory:insights] updated ${merged.length} insights for user ${userId.slice(0, 8)}`)
   } catch (err) {

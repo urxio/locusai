@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAnthropicClient } from '@/lib/ai/client'
-import { readUserMemory } from '@/lib/ai/memory'
+import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 
 export const runtime     = 'nodejs'
 export const dynamic     = 'force-dynamic'
@@ -23,26 +23,18 @@ export async function POST(req: NextRequest) {
 
   // ── Store blocker + mark audit as dismissed in user memory ───────────────
   try {
-    const { data: memRow } = await supabase
-      .from('user_memory').select('data').eq('user_id', user.id).single()
-    const mem = (memRow?.data ?? {}) as Record<string, unknown>
-
-    // Blockers frequency map
-    const blockers = (mem.blockers as { frequent: string[]; frequencies: Record<string, number> }) ?? { frequent: [], frequencies: {} }
-    const key = reason.trim().toLowerCase().slice(0, 60)
+    const memory   = await readUserMemory(user.id)
+    const blockers = { ...(memory?.blockers ?? { frequent: [], frequencies: {} }) }
+    const key      = reason.trim().toLowerCase().slice(0, 60)
     blockers.frequencies[key] = (blockers.frequencies[key] ?? 0) + 1
-    const sorted = Object.entries(blockers.frequencies).sort((a, b) => b[1] - a[1])
-    blockers.frequent = sorted.slice(0, 10).map(([k]) => k)
+    blockers.frequent = Object.entries(blockers.frequencies)
+      .sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k]) => k)
 
-    // Mark habit as audited for today (cross-device dismissal)
-    const dismissals = (mem.audit_dismissals ?? {}) as Record<string, string[]>
+    const dismissals = { ...(memory?.audit_dismissals ?? {}) }
     if (!dismissals[auditDate]) dismissals[auditDate] = []
     if (!dismissals[auditDate].includes(habitId)) dismissals[auditDate].push(habitId)
 
-    await supabase.from('user_memory').upsert(
-      { user_id: user.id, data: { ...mem, blockers, audit_dismissals: dismissals } },
-      { onConflict: 'user_id' }
-    )
+    await patchUserMemory(user.id, { blockers, audit_dismissals: dismissals })
   } catch { /* non-fatal */ }
 
   // ── Stream AI empathetic response ────────────────────────────────────────

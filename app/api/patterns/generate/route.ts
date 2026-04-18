@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildPatternsContext, formatPatternsForPrompt } from '@/lib/ai/patterns-context'
-import { readUserMemory } from '@/lib/ai/memory'
+import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 import { getAnthropicClient } from '@/lib/ai/client'
 
 export const runtime    = 'nodejs'
@@ -95,16 +95,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Cache in user_memory
-  const memory = await readUserMemory(user.id)
-  await supabase.from('user_memory').upsert({
-    user_id:    user.id,
-    data: {
-      ...(memory ?? {}),
-      pattern_narratives:   narratives,
-      pattern_generated_at: new Date().toISOString(),
-    },
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' })
+  await patchUserMemory(user.id, {
+    pattern_narratives:   narratives,
+    pattern_generated_at: new Date().toISOString(),
+  })
 
   return NextResponse.json({ narratives, cached: false, context: ctx })
 }
