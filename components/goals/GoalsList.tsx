@@ -60,7 +60,7 @@ type ModalState = null | { mode: 'add' } | { mode: 'edit'; goal: GoalWithSteps }
 type CelebrationState = null | { goalTitle: string; milestone: 25 | 50 | 75 | 100 }
 
 /* ── ROOT ── */
-export default function GoalsList({ goals: initial, habits: initialHabits = [], existingHabitNames: initialHabitNames = [] }: { goals: GoalWithSteps[]; habits?: Habit[]; existingHabitNames?: string[] }) {
+export default function GoalsList({ goals: initial, habits: initialHabits = [], existingHabitNames: initialHabitNames = [], habitCompletions: initialCompletions = {} }: { goals: GoalWithSteps[]; habits?: Habit[]; existingHabitNames?: string[]; habitCompletions?: Record<string, number> }) {
   const toast = useToast()
   const [goals, setGoals]         = useState<GoalWithSteps[]>(initial)
   const [modal, setModal]         = useState<ModalState>(null)
@@ -79,6 +79,8 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
   const [habits, setHabits] = useState<Habit[]>(initialHabits)
   // tracked habit names for deduplication in suggestions
   const [habitNames, setHabitNames] = useState<string[]>(initialHabitNames)
+  // habit completion counts (habitId → total logs) for mini progress bars
+  const [habitCompletions, setHabitCompletions] = useState<Record<string, number>>(initialCompletions)
   // which goal cards have the steps panel expanded
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const router = useRouter()
@@ -236,7 +238,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
 
         {(() => {
           const sharedHandlers = {
-            stepsMap, generatingFor, suggestingFor, habitNames, habits,
+            stepsMap, generatingFor, suggestingFor, habitNames, habits, habitCompletions,
             expanded, onToggleExpand: toggleExpand,
             onEdit: (g: GoalWithSteps) => setModal({ mode: 'edit', goal: g }),
             onDelete: handleDeleted,
@@ -298,7 +300,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
 type SectionProps = {
   title: string; goals: GoalWithSteps[]; dim?: boolean
   stepsMap: Map<string, GoalStep[]>; generatingFor: Set<string>
-  suggestingFor: Set<string>; habitNames: string[]; habits: Habit[]
+  suggestingFor: Set<string>; habitNames: string[]; habits: Habit[]; habitCompletions: Record<string, number>
   expanded: Set<string>; onToggleExpand: (id: string) => void
   onEdit: (g: GoalWithSteps) => void; onDelete: (id: string) => void
   onUpdate: (g: GoalWithSteps) => void
@@ -324,7 +326,7 @@ function GoalSection({ title, goals, dim, ...handlers }: SectionProps) {
 
 /* ── GOAL CARD ── */
 type CardProps = Omit<SectionProps, 'title' | 'goals' | 'dim'> & { goal: GoalWithSteps }
-function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, habits, expanded, onToggleExpand, onEdit, onDelete, onUpdate, onToggleStep, onAddStep, onUpdateStep, onDeleteStep, onRegenerate, onHabitAdded, onDismissSuggestion }: CardProps) {
+function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, habits, habitCompletions, expanded, onToggleExpand, onEdit, onDelete, onUpdate, onToggleStep, onAddStep, onUpdateStep, onDeleteStep, onRegenerate, onHabitAdded, onDismissSuggestion }: CardProps) {
   const [hovered,       setHovered]       = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingProgress, setEditingProgress] = useState(false)
@@ -493,7 +495,7 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
           </button>
         )}
 
-        {/* Linked habits */}
+        {/* Linked habits with per-habit progress mini-bars */}
         {(() => {
           const linked = habits.filter(h => h.goal_id === goal.id)
           if (linked.length === 0) return null
@@ -503,20 +505,73 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
                 Habits linked · {linked.length}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                {linked.map(h => (
-                  <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', borderRadius: '8px', background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.emoji}</span>
-                    <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-1)', fontWeight: 500 }}>{h.name}</span>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-3)', flexShrink: 0, fontWeight: 500 }}>
-                      {h.frequency}
-                    </span>
-                    {h.goal_target_count ? (
-                      <span style={{ fontSize: '10px', color: 'var(--sage)', background: 'rgba(122,158,138,0.1)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '10px', padding: '1px 7px', flexShrink: 0, fontWeight: 600 }}>
-                        × {h.goal_target_count}
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
+                {linked.map(h => {
+                  const completions = habitCompletions[h.id] ?? 0
+                  const byCount = !!(h.goal_target_count && h.goal_target_count > 0)
+                  let pct = 0
+                  if (byCount) {
+                    pct = Math.min(100, Math.round((completions / h.goal_target_count!) * 100))
+                  } else {
+                    // Schedule-based: walk window and count scheduled days
+                    const today = new Date().toISOString().split('T')[0]
+                    const windowStart = goal.created_at.split('T')[0]
+                    const windowEnd = goal.target_date ?? today
+                    const habitStart = h.created_at.split('T')[0]
+                    const start = habitStart > windowStart ? habitStart : windowStart
+                    const daysOfWeek = h.days_of_week
+                    const cur = new Date(start + 'T12:00:00Z')
+                    const end = new Date(windowEnd + 'T12:00:00Z')
+                    let scheduled = 0
+                    while (cur <= end) {
+                      const dow = cur.getUTCDay()
+                      if (!daysOfWeek || daysOfWeek.length === 0 || daysOfWeek.includes(dow)) scheduled++
+                      cur.setUTCDate(cur.getUTCDate() + 1)
+                    }
+                    pct = scheduled > 0 ? Math.min(100, Math.round((completions / scheduled) * 100)) : 0
+                  }
+
+                  const barColor = pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--gold)' : 'var(--text-3)'
+
+                  return (
+                    <div key={h.id} style={{ padding: '8px 10px', borderRadius: '8px', background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
+                      {/* Top row: emoji · name · mode label · pct */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.emoji}</span>
+                        <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-1)', fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                        {/* Mode label */}
+                        <span style={{
+                          fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.05em',
+                          textTransform: 'uppercase', flexShrink: 0,
+                          color: byCount ? 'var(--gold)' : 'var(--text-3)',
+                          background: byCount ? 'rgba(212,168,83,0.1)' : 'var(--bg-3)',
+                          border: `1px solid ${byCount ? 'rgba(212,168,83,0.25)' : 'var(--border)'}`,
+                          borderRadius: '10px', padding: '1px 6px',
+                        }}>
+                          {byCount ? `× ${h.goal_target_count}` : h.frequency}
+                        </span>
+                        {/* Pct */}
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: barColor, flexShrink: 0, minWidth: '30px', textAlign: 'right' }}>
+                          {pct}%
+                        </span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div style={{ height: '3px', background: 'var(--bg-4)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: '4px',
+                          background: barColor,
+                          width: `${pct}%`,
+                          transition: 'width 0.5s cubic-bezier(0.22,1,0.36,1)',
+                        }} />
+                      </div>
+                      {/* Sub-label */}
+                      <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>
+                        {byCount
+                          ? `${completions} of ${h.goal_target_count} completions`
+                          : `tracking by schedule`}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )

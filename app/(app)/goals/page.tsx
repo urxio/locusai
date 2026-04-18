@@ -15,5 +15,32 @@ export default async function GoalsPage() {
     getUserHabits(user.id),
   ])
 
-  return <GoalsList goals={goals} habits={habits} existingHabitNames={habits.map(h => h.name)} />
+  // Build completion counts for habits linked to habit-tracked goals
+  // so the goal card can render per-habit progress mini-bars.
+  const habitTrackedGoalIds = new Set(
+    goals.filter(g => g.tracking_mode === 'habits').map(g => g.id)
+  )
+  const linkedHabitIds = habits
+    .filter(h => h.goal_id && habitTrackedGoalIds.has(h.goal_id))
+    .map(h => h.id)
+
+  let habitCompletions: Record<string, number> = {}
+  if (linkedHabitIds.length > 0) {
+    const { data: logs } = await supabase
+      .from('habit_logs')
+      .select('habit_id')
+      .in('habit_id', linkedHabitIds)
+    for (const log of (logs ?? [])) {
+      habitCompletions[log.habit_id] = (habitCompletions[log.habit_id] ?? 0) + 1
+    }
+  }
+
+  return (
+    <GoalsList
+      goals={goals}
+      habits={habits}
+      existingHabitNames={habits.map(h => h.name)}
+      habitCompletions={habitCompletions}
+    />
+  )
 }
