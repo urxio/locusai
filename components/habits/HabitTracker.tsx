@@ -636,8 +636,9 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
     habit?.days_of_week && habit.days_of_week.length > 0 ? habit.days_of_week : []
   )
   const [endsAt,     setEndsAt]     = useState<string>(habit?.ends_at ?? '')
-  const [goalId,     setGoalId]     = useState<string>(habit?.goal_id ?? '')
-  const [error,      setError]      = useState('')
+  const [goalId,          setGoalId]          = useState<string>(habit?.goal_id ?? '')
+  const [goalTargetCount, setGoalTargetCount] = useState<number | null>(habit?.goal_target_count ?? null)
+  const [error,           setError]           = useState('')
   const [isPending,  startTransition] = useTransition()
 
   const toggleDay = (d: number) => {
@@ -664,7 +665,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
     if (!name.trim()) { setError('Give your habit a name.'); return }
     setError('')
     const linkedGoalObj = activeGoals.find(g => g.id === goalId) ?? null
-    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null, goal_id: goalId || null, motivation: motivation.trim() || null }
+    const data: HabitFormData = { name: name.trim(), emoji, days_of_week: daysOfWeek, ends_at: endsAt || null, goal_id: goalId || null, goal_target_count: goalId ? goalTargetCount : null, motivation: motivation.trim() || null }
     const { target_count } = deriveFrequencyMeta(daysOfWeek)
     const todayDow = new Date(today + 'T12:00:00').getDay()
     const isScheduledToday = daysOfWeek.length === 0 || daysOfWeek.includes(todayDow)
@@ -678,6 +679,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
             days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
             ends_at: endsAt || null,
             goal_id: goalId || null,
+            goal_target_count: goalId ? goalTargetCount : null,
             motivation: motivation.trim() || null,
             target_count,
             logs: [],
@@ -695,6 +697,7 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
             days_of_week: daysOfWeek.length > 0 ? daysOfWeek : null,
             ends_at: endsAt || null,
             goal_id: goalId || null,
+            goal_target_count: goalId ? goalTargetCount : null,
             motivation: motivation.trim() || null,
             target_count,
             isScheduledToday,
@@ -829,17 +832,52 @@ function HabitModal({ mode, habit, today, activeGoals, onClose, onSaved }: {
             )}
           </div>
 
-          {activeGoals.length > 0 && (
-            <div>
-              <label style={labelStyle}>Linked goal <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)', fontSize: '10px' }}>(optional)</span></label>
-              <select value={goalId} onChange={e => setGoalId(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                <option value="">— No linked goal —</option>
-                {activeGoals.map(g => (
-                  <option key={g.id} value={g.id}>{g.title}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {activeGoals.length > 0 && (() => {
+            const selectedGoal = activeGoals.find(g => g.id === goalId) ?? null
+            const isHabitTracked = selectedGoal?.tracking_mode === 'habits'
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                  <label style={labelStyle}>Linked goal <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)', fontSize: '10px' }}>(optional)</span></label>
+                  <select
+                    value={goalId}
+                    onChange={e => { setGoalId(e.target.value); setGoalTargetCount(null) }}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    <option value="">— No linked goal —</option>
+                    {activeGoals.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.tracking_mode === 'habits' ? '⟳ ' : ''}{g.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {isHabitTracked && (
+                  <div>
+                    <label style={labelStyle}>
+                      Target completions
+                      <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-3)', fontSize: '10px' }}> (optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={9999}
+                      value={goalTargetCount ?? ''}
+                      onChange={e => setGoalTargetCount(e.target.value ? Number(e.target.value) : null)}
+                      placeholder="e.g. 30  —  leave blank to track by schedule"
+                      style={inputStyle}
+                    />
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '5px' }}>
+                      {goalTargetCount
+                        ? `Progress = completions ÷ ${goalTargetCount} × 100%`
+                        : 'Progress tracks how often you complete this vs. your schedule.'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {error && (
             <div style={{ fontSize: '13px', color: '#e07060', background: 'rgba(200,80,60,0.08)', padding: '10px 14px', borderRadius: '8px' }}>{error}</div>

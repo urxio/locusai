@@ -53,7 +53,7 @@ const labelStyle: React.CSSProperties = {
 const EMPTY_FORM: GoalFormData = {
   title: '', category: 'product', timeframe: 'quarter',
   progress_pct: 0, target_date: null, status: 'active',
-  tracking_mode: 'manual', habit_target_count: null,
+  tracking_mode: 'manual',
 }
 
 type ModalState = null | { mode: 'add' } | { mode: 'edit'; goal: GoalWithSteps }
@@ -499,13 +499,23 @@ function GoalCard({ goal, stepsMap, generatingFor, suggestingFor, habitNames, ha
           if (linked.length === 0) return null
           return (
             <div style={{ marginTop: '10px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>Habits linked</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
+                Habits linked · {linked.length}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 {linked.map(h => (
-                  <span key={h.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 9px', borderRadius: '20px', background: 'var(--bg-2)', border: '1px solid var(--border)', fontSize: '11.5px', color: 'var(--text-2)' }}>
-                    <span>{h.emoji}</span>
-                    <span>{h.name}</span>
-                  </span>
+                  <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', borderRadius: '8px', background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.emoji}</span>
+                    <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-1)', fontWeight: 500 }}>{h.name}</span>
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-3)', flexShrink: 0, fontWeight: 500 }}>
+                      {h.frequency}
+                    </span>
+                    {h.goal_target_count ? (
+                      <span style={{ fontSize: '10px', color: 'var(--sage)', background: 'rgba(122,158,138,0.1)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '10px', padding: '1px 7px', flexShrink: 0, fontWeight: 600 }}>
+                        × {h.goal_target_count}
+                      </span>
+                    ) : null}
+                  </div>
                 ))}
               </div>
             </div>
@@ -857,7 +867,7 @@ function GoalModal({ mode, goal, hasSteps, onClose, onSaved }: {
 }) {
   const [form, setForm] = useState<GoalFormData>(
     goal
-      ? { title: goal.title, category: goal.category, timeframe: goal.timeframe, progress_pct: goal.progress_pct, target_date: goal.target_date, status: goal.status, tracking_mode: goal.tracking_mode ?? 'manual', habit_target_count: goal.habit_target_count ?? null }
+      ? { title: goal.title, category: goal.category, timeframe: goal.timeframe, progress_pct: goal.progress_pct, target_date: goal.target_date, status: goal.status, tracking_mode: goal.tracking_mode ?? 'manual' }
       : EMPTY_FORM
   )
   const [isPending, startTransition] = useTransition()
@@ -942,23 +952,13 @@ function GoalModal({ mode, goal, hasSteps, onClose, onSaved }: {
 
           {/* ── Progress block — depends on tracking mode ── */}
           {form.tracking_mode === 'habits' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ background: 'rgba(122,158,138,0.08)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '8px', padding: '10px 13px', fontSize: '13px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ background: 'rgba(122,158,138,0.08)', border: '1px solid rgba(122,158,138,0.2)', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ color: 'var(--sage)', fontSize: '14px' }}>⟳</span>
-                Progress updates automatically each time you check a linked habit. Link habits to this goal after saving.
+                <span>Progress updates automatically each time you check a linked habit.</span>
               </div>
-              <div>
-                <label style={labelStyle}>Target completions <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-                <input
-                  type="number" min={1} max={9999}
-                  value={form.habit_target_count ?? ''}
-                  onChange={e => set('habit_target_count', e.target.value ? Number(e.target.value) : null)}
-                  placeholder="e.g. 30  (leave blank to track by schedule)"
-                  style={inputStyle}
-                />
-                <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '5px' }}>
-                  Set a number (e.g. 30 runs) and progress = completions ÷ target. Leave blank to use the habit schedule instead.
-                </div>
+              <div style={{ fontSize: '11.5px', color: 'var(--text-3)', paddingLeft: '22px' }}>
+                After saving, open each linked habit to set its individual completion target (e.g. "30 runs"). Leave blank to track by schedule instead.
               </div>
             </div>
           ) : hasSteps || form.tracking_mode === 'steps' ? (

@@ -18,9 +18,6 @@ export type Goal = {
   status: 'active' | 'completed' | 'paused'
   /** How progress_pct is maintained for this goal. */
   tracking_mode: 'manual' | 'steps' | 'habits'
-  /** For tracking_mode='habits': fixed completion count target (e.g. 30 runs).
-   *  When null, progress is computed from scheduled days instead. */
-  habit_target_count: number | null
   created_at: string
   updated_at: string
 }
@@ -35,8 +32,9 @@ export type Habit = {
   target_count: number        // expected completions per week
   ends_at: string | null      // ISO date — optional end date
   time_of_day: 'morning' | 'afternoon' | 'evening' | null
-  goal_id: string | null      // optional link to a goal
-  motivation: string | null   // why the user wants this habit — used by AI audit
+  goal_id: string | null           // optional link to a goal
+  goal_target_count: number | null // completions target for the linked goal (e.g. 30 runs)
+  motivation: string | null        // why the user wants this habit — used by AI audit
   created_at: string
 }
 

@@ -88,10 +88,11 @@ async function maybeSyncGoalProgress(
 export type HabitFormData = {
   name: string
   emoji: string
-  days_of_week: number[]   // empty [] = every day; [1,3,5] = Mon/Wed/Fri
-  ends_at: string | null   // ISO date or null
-  goal_id: string | null   // optional link to a goal
-  motivation: string | null // why the user wants this habit
+  days_of_week: number[]        // empty [] = every day; [1,3,5] = Mon/Wed/Fri
+  ends_at: string | null        // ISO date or null
+  goal_id: string | null        // optional link to a goal
+  goal_target_count: number | null  // completions target for the linked goal
+  motivation: string | null     // why the user wants this habit
 }
 
 
@@ -112,6 +113,7 @@ export async function createHabitAction(data: HabitFormData) {
     target_count,
     ends_at: data.ends_at || null,
     goal_id: data.goal_id || null,
+    goal_target_count: data.goal_id ? (data.goal_target_count || null) : null,
     motivation: data.motivation?.trim() || null,
   }).select().single()
   if (error) throw new Error(error.message)
@@ -140,6 +142,7 @@ export async function updateHabitAction(habitId: string, data: HabitFormData) {
       target_count,
       ends_at: data.ends_at || null,
       goal_id: data.goal_id || null,
+      goal_target_count: data.goal_id ? (data.goal_target_count || null) : null,
       motivation: data.motivation?.trim() || null,
     })
     .eq('id', habitId)
