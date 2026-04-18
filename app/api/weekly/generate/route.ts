@@ -60,7 +60,7 @@ export async function POST() {
 
   const neglectedHabits = habits
     .filter(h => h.weekCompletions === 0)
-    .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency }))
+    .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency, linkedGoal: h.linkedGoal ?? null }))
 
   const avgEnergy = checkins.length
     ? Math.round((checkins.reduce((s, c) => s + c.energy_level, 0) / checkins.length) * 10) / 10

@@ -11,6 +11,7 @@ export type NeglectedHabit = {
   name: string
   emoji: string
   frequency: string
+  linkedGoal: { id: string; title: string; category: string } | null
 }
 
 export type BriefContext = {
@@ -63,7 +64,7 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
   // Habits with zero completions this week — consistently ignored
   const neglectedHabits: NeglectedHabit[] = habits
     .filter(h => h.weekCompletions === 0)
-    .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency }))
+    .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency, linkedGoal: h.linkedGoal ?? null }))
 
   // First brief: user has at most 1 check-in (the one from onboarding)
   const isFirstBrief = recentCheckins.length <= 1

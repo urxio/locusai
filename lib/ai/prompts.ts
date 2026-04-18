@@ -26,7 +26,8 @@ INTELLIGENCE RULES
 13. CLARIFIED CONTEXT: If a CLARIFIED CONTEXT section appears, treat those Q&A pairs as direct, first-person answers the user chose to share. They are high-signal, intentional context. Weave them naturally into your insight and reasoning — they should make the brief feel more specific and personally relevant.
 14. CLARIFYING QUESTIONS: After reading all context, if there is a genuine gap that — if filled — would meaningfully change your advice, include up to 2 short clarifying questions in the response. These will be surfaced to the user below their brief as a "Help me understand you better" prompt. Only include questions when the gap is real and the answer would unlock better personalization. Never ask about things already covered in the context. Never force questions — 0 is fine if context is rich. Questions must be conversational and specific — reference something real from today's data, never generic. Max 1 sentence each.
 15. MEMORY NOTES: If a MEMORY NOTES section appears, treat it as a direct instruction from the user about what to remember. REMINDERS marked "DUE TODAY" or "TOMORROW" are the highest-priority signal in the entire brief — they must appear in insight_text or as a dedicated priority, named explicitly. REMINDERS due within 3 days must appear as a priority. Reminders with no date should surface when energy or context connects. IDEAS and RESOURCES: name the specific thing when context touches it (e.g. user mentions wanting to travel → name the flight resource they saved). Never silently ignore a memory note — if it appears in the section, the user expects it to be acknowledged today.
-16. RECENT DAYS: If a RECENT DAYS section appears, treat it as the richest continuity signal available — what the user was actually experiencing and saying in recent conversations, in their own words. Use it to make the brief feel like a continuation of an ongoing relationship: reference something from yesterday or the day before when it's still relevant, connect today's mood or energy to a pattern that was building, or acknowledge a commitment they made. This context should make the brief feel like talking to someone who was listening then and is still listening now.
+16. HABIT-GOAL CONNECTIONS: If a HABIT → GOAL CONNECTIONS section appears in the habits block, use it to make the link between daily behaviour and long-term progress explicit. When a linked habit is on track or has a streak, say so in terms of what it's doing for the goal — not just "you did the habit" but "that's what's moving [goal] forward." When a linked habit appears in the NEGLECTED list, name the cost to the goal directly — "skipping [habit] this week is stalling [goal]." This is the most motivating frame available: connecting what they do today to what they're building over months. Use it.
+17. RECENT DAYS: If a RECENT DAYS section appears, treat it as the richest continuity signal available — what the user was actually experiencing and saying in recent conversations, in their own words. Use it to make the brief feel like a continuation of an ongoing relationship: reference something from yesterday or the day before when it's still relevant, connect today's mood or energy to a pattern that was building, or acknowledge a commitment they made. This context should make the brief feel like talking to someone who was listening then and is still listening now.
 17. FIRST BRIEF: If a ── FIRST BRIEF ── block appears, this is day one — the user has just completed onboarding. Do NOT reference absent history, streaks, trends, or patterns (there are none yet). Instead: warmly introduce yourself as Locus, briefly acknowledge what you already know about them from onboarding (their goals, habits they chose, their profile), and tell them what you'll learn to personalize over time (energy rhythms, blocker patterns, what drives their best days). Make it feel like a meaningful beginning, not a data-empty fallback. The priorities should still be real and grounded in their goals and habits from onboarding. Emit 0 clarifying questions on a first brief — give them space to start.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
@@ -212,8 +213,11 @@ export function buildUserMessage(ctx: BriefContext): string {
 
   // ── HABITS ──
   if (ctx.habits.length > 0) {
-    const todayLogged = ctx.habits.filter(h => h.logs.some(l => l.logged_date === today))
+    const todayLogged  = ctx.habits.filter(h => h.logs.some(l => l.logged_date === today))
     const todayPending = ctx.habits.filter(h => !h.logs.some(l => l.logged_date === today))
+
+    // Build a goal progress lookup from goalsWithSteps for inline references
+    const goalProgressMap = new Map(ctx.goalsWithSteps.map(g => [g.id, g.progress_pct]))
 
     lines.push(`HABITS — Today: ${todayLogged.length}/${ctx.habits.length} done · Week rate: ${ctx.weekHabitRate}%`)
     lines.push('')
@@ -228,17 +232,45 @@ export function buildUserMessage(ctx: BriefContext): string {
 
     lines.push(`  Streaks & momentum:`)
     ctx.habits.forEach(h => {
-      const streakTag = h.streak >= 14 ? '🔥 strong streak' : h.streak >= 7 ? '⚡ building' : h.streak >= 3 ? '↑ going' : h.streak === 0 ? '○ not started' : `${h.streak}d`
+      const streakTag  = h.streak >= 14 ? '🔥 strong streak' : h.streak >= 7 ? '⚡ building' : h.streak >= 3 ? '↑ going' : h.streak === 0 ? '○ not started' : `${h.streak}d`
       const weekStatus = h.weekCompletions >= h.target_count ? '✓ on track' : `${h.weekCompletions}/${h.target_count} this week`
-      lines.push(`  ${h.emoji} ${h.name} [${h.frequency}]: streak ${h.streak} days (${streakTag}) · ${weekStatus}`)
+      const goalSuffix = h.linkedGoal
+        ? ` → drives "${h.linkedGoal.title}" (${goalProgressMap.get(h.linkedGoal.id) ?? '?'}%)`
+        : ''
+      lines.push(`  ${h.emoji} ${h.name} [${h.frequency}]: streak ${h.streak} days (${streakTag}) · ${weekStatus}${goalSuffix}`)
     })
+
+    // ── HABIT → GOAL CONNECTIONS (grouped summary) ──
+    const linkedHabits = ctx.habits.filter(h => h.linkedGoal)
+    if (linkedHabits.length > 0) {
+      // Group by goal
+      const byGoal = new Map<string, { title: string; progress: number; habits: typeof linkedHabits }>()
+      linkedHabits.forEach(h => {
+        const g = h.linkedGoal!
+        if (!byGoal.has(g.id)) {
+          byGoal.set(g.id, { title: g.title, progress: goalProgressMap.get(g.id) ?? 0, habits: [] })
+        }
+        byGoal.get(g.id)!.habits.push(h)
+      })
+      lines.push('')
+      lines.push('  HABIT → GOAL CONNECTIONS:')
+      byGoal.forEach(({ title, progress, habits: gh }) => {
+        // Week completion rate across all habits linked to this goal
+        const totalDone    = gh.reduce((s, h) => s + h.weekCompletions, 0)
+        const totalTarget  = gh.reduce((s, h) => s + h.target_count, 0)
+        const weekRate     = totalTarget > 0 ? Math.round((totalDone / totalTarget) * 100) : 0
+        const habitNames   = gh.map(h => `${h.emoji} ${h.name}`).join(', ')
+        lines.push(`  ${habitNames} → "${title}" [goal at ${progress}%] · habits ${weekRate}% this week`)
+      })
+    }
 
     // ── NEGLECTED HABITS ── (suppress on first brief — user just started)
     if (ctx.neglectedHabits.length > 0 && !ctx.isFirstBrief) {
       lines.push('')
       lines.push(`  ⚠️ NEGLECTED THIS WEEK (0 completions — needs a nudge):`)
       ctx.neglectedHabits.forEach(h => {
-        lines.push(`    ${h.emoji} ${h.name} [${h.frequency}] — not logged once this week`)
+        const goalNote = h.linkedGoal ? ` — this is stalling "${h.linkedGoal.title}"` : ''
+        lines.push(`    ${h.emoji} ${h.name} [${h.frequency}] — not logged once this week${goalNote}`)
       })
     }
   } else {
