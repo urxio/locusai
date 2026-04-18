@@ -54,8 +54,7 @@ export async function POST(request: NextRequest) {
 
   const goalSummary = goals.map(g => {
     const deadline = g.target_date ? `, due: ${g.target_date}` : ''
-    const next = g.next_action ? `, next: "${g.next_action}"` : ''
-    return `- id:${g.id} "${g.title}" [${g.category}${deadline}${next}]`
+    return `- id:${g.id} "${g.title}" [${g.category}${deadline}]`
   }).join('\n')
 
   const energyContext = memory?.energy?.best_day

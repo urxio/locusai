@@ -472,7 +472,7 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
                 return (
                   <div
                     key={goal.id}
-                    onClick={() => setSelectedItem(isSelected ? null : { kind: 'goal', goalId: goal.id, title: goal.next_action || goal.title })}
+                    onClick={() => setSelectedItem(isSelected ? null : { kind: 'goal', goalId: goal.id, title: goal.title })}
                     style={{
                       padding: '7px 8px',
                       borderRadius: '6px',
@@ -485,9 +485,6 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
                     onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                   >
                     <div style={{ fontSize: '12px', color: 'var(--text-0)', fontWeight: 500, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.title}</div>
-                    {goal.next_action && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>→ {goal.next_action}</div>
-                    )}
                   </div>
                 )
               })}

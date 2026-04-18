@@ -7,7 +7,6 @@ export async function generateGoalSteps(goal: {
   category: string
   timeframe: string
   target_date: string | null
-  next_action: string
   progress_pct: number
 }): Promise<RawStep[]> {
   const today = new Date().toISOString().split('T')[0]
@@ -29,8 +28,6 @@ Category: ${goal.category}
 Timeframe: ${goal.timeframe}
 Target completion: ${endDate}
 Today: ${today}
-${goal.next_action ? `Planned first action: "${goal.next_action}"` : ''}
-
 Requirements:
 - Steps must be ordered chronologically
 - Each title starts with an action verb, is specific, max 10 words

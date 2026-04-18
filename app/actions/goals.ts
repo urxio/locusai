@@ -8,10 +8,10 @@ export type GoalFormData = {
   category: string
   timeframe: string
   progress_pct: number
-  next_action: string
   target_date: string | null
   status: string
   tracking_mode: 'manual' | 'steps' | 'habits'
+  habit_target_count: number | null
 }
 
 export async function createGoalAction(data: GoalFormData) {
@@ -25,10 +25,10 @@ export async function createGoalAction(data: GoalFormData) {
     category: data.category,
     timeframe: data.timeframe,
     progress_pct: data.tracking_mode === 'habits' ? 0 : data.progress_pct,
-    next_action: data.next_action,
     target_date: data.target_date || null,
     status: data.status,
     tracking_mode: data.tracking_mode,
+    habit_target_count: data.tracking_mode === 'habits' ? (data.habit_target_count || null) : null,
   }).select().single()
   if (error) throw new Error(error.message)
   revalidatePath('/goals')

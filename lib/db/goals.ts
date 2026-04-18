@@ -64,11 +64,9 @@ export async function createGoal(userId: string, goal: Omit<Goal, 'id' | 'user_i
   return data
 }
 
-export async function updateGoalProgress(goalId: string, progress_pct: number, next_action?: string): Promise<void> {
+export async function updateGoalProgress(goalId: string, progress_pct: number): Promise<void> {
   const supabase = await createClient()
-  const update: Partial<Goal> = { progress_pct }
-  if (next_action !== undefined) update.next_action = next_action
-  const { error } = await supabase.from('goals').update(update).eq('id', goalId)
+  const { error } = await supabase.from('goals').update({ progress_pct }).eq('id', goalId)
   if (error) console.error('updateGoalProgress:', error)
 }
 

@@ -15,7 +15,7 @@ export async function generateAndSaveStepsAction(goalId: string): Promise<GoalSt
 
   const { data: goal } = await supabase
     .from('goals')
-    .select('title, category, timeframe, target_date, next_action, progress_pct')
+    .select('title, category, timeframe, target_date, progress_pct')
     .eq('id', goalId)
     .eq('user_id', user.id)
     .single()
@@ -178,7 +178,7 @@ export async function syncHabitGoalProgress(goalId: string, userId: string): Pro
   // ── 1. Fetch goal window ────────────────────────────────────────────────
   const { data: goal } = await supabase
     .from('goals')
-    .select('created_at, target_date')
+    .select('created_at, target_date, habit_target_count')
     .eq('id', goalId)
     .eq('user_id', userId)
     .single()
@@ -241,9 +241,18 @@ export async function syncHabitGoalProgress(goalId: string, userId: string): Pro
     }
   }
 
-  if (totalScheduled === 0) return
-
-  const pct = Math.min(100, Math.round((totalCompleted / totalScheduled) * 100))
+  // ── 5. Compute progress ─────────────────────────────────────────────────
+  //   Count-target mode: user set a fixed number of completions as the goal
+  //   (e.g. "complete 30 runs"). Progress = completions / target × 100.
+  //   Schedule mode (default): completions / scheduled_days × 100.
+  let pct: number
+  const targetCount = goal.habit_target_count as number | null
+  if (targetCount && targetCount > 0) {
+    pct = Math.min(100, Math.round((totalCompleted / targetCount) * 100))
+  } else {
+    if (totalScheduled === 0) return
+    pct = Math.min(100, Math.round((totalCompleted / totalScheduled) * 100))
+  }
 
   await supabase
     .from('goals')

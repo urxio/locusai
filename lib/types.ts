@@ -15,10 +15,12 @@ export type Goal = {
   timeframe: 'quarter' | 'year' | 'ongoing'
   target_date: string | null
   progress_pct: number
-  next_action: string
   status: 'active' | 'completed' | 'paused'
   /** How progress_pct is maintained for this goal. */
   tracking_mode: 'manual' | 'steps' | 'habits'
+  /** For tracking_mode='habits': fixed completion count target (e.g. 30 runs).
+   *  When null, progress is computed from scheduled days instead. */
+  habit_target_count: number | null
   created_at: string
   updated_at: string
 }

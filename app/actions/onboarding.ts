@@ -11,7 +11,6 @@ export type GoalInput = {
   title: string
   category: string
   timeframe: string
-  next_action: string
 }
 
 export type HabitInput = {
@@ -50,7 +49,6 @@ export async function completeOnboarding(
         title: g.title,
         category: g.category,
         timeframe: g.timeframe,
-        next_action: g.next_action,
         progress_pct: 0,
         status: 'active',
         target_date: null,

@@ -92,7 +92,6 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
   const [gTitle, setGTitle]     = useState('')
   const [gCategory, setGCategory] = useState('product')
   const [gTimeframe, setGTimeframe] = useState('quarter')
-  const [gNextAction, setGNextAction] = useState('')
   const [gError, setGError]     = useState('')
 
   /* ── HABITS STATE ── */
@@ -110,8 +109,8 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
   const addGoal = () => {
     if (!gTitle.trim()) { setGError('Give your goal a title.'); return }
     setGError('')
-    setGoals(g => [...g, { id: crypto.randomUUID(), title: gTitle.trim(), category: gCategory, timeframe: gTimeframe, next_action: gNextAction.trim() }])
-    setGTitle(''); setGNextAction('')
+    setGoals(g => [...g, { id: crypto.randomUUID(), title: gTitle.trim(), category: gCategory, timeframe: gTimeframe }])
+    setGTitle('')
   }
   const addHabit = () => {
     if (!hName.trim()) { setHError('Give your habit a name.'); return }
@@ -337,7 +336,6 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)', marginBottom: '2px' }}>{g.title}</div>
                       <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>{GOAL_CATEGORIES.find(c => c.value === g.category)?.label} · {TIMEFRAMES.find(t => t.value === g.timeframe)?.label}</div>
-                      {g.next_action && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '2px', fontStyle: 'italic' }}>→ {g.next_action}</div>}
                     </div>
                     <button onClick={() => setGoals(gs => gs.filter(x => x.id !== g.id))} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '18px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>×</button>
                   </div>
@@ -365,11 +363,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
                     </select>
                   </div>
                 </div>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={labelStyle}>Next action <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-                  <input value={gNextAction} onChange={e => setGNextAction(e.target.value)} onKeyDown={e => e.key === 'Enter' && addGoal()} placeholder="e.g. Write landing page copy" style={inputStyle} />
-                </div>
-                {gError && <div style={{ fontSize: '12px', color: '#e07060', marginBottom: '10px' }}>{gError}</div>}
+                {gError &&<div style={{ fontSize: '12px', color: '#e07060', marginBottom: '10px' }}>{gError}</div>}
                 <button onClick={addGoal} style={{ background: 'var(--bg-4)', border: '1px solid var(--border-md)', color: 'var(--text-0)', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
                   + Add goal
                 </button>

@@ -207,7 +207,6 @@ export function buildUserMessage(ctx: BriefContext): string {
       const urgency = getGoalUrgency(g.target_date, g.progress_pct)
       lines.push(`• [${g.category.toUpperCase()}] "${g.title}"`)
       lines.push(`  Progress: ${g.progress_pct}% ${getProgressBar(g.progress_pct)} ${urgency}`)
-      if (g.next_action) lines.push(`  Next action: ${g.next_action}`)
       if (g.target_date) {
         const daysLeft = Math.ceil((new Date(g.target_date).getTime() - now) / 86400000)
         lines.push(`  Deadline: ${g.target_date} (${daysLeft > 0 ? `${daysLeft} days left` : daysLeft === 0 ? 'DUE TODAY' : `${Math.abs(daysLeft)} days overdue`})`)

@@ -139,7 +139,6 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
         ? (daysLeft <= 0 ? ' ⚠️ OVERDUE' : daysLeft <= 7 ? ` 🔴 ${daysLeft}d left` : ` · ${daysLeft}d left`)
         : ''
       lines.push(`  • [${g.category}] "${g.title}" — ${g.progress_pct}%${deadline}`)
-      if (g.next_action) lines.push(`    Next: ${g.next_action}`)
 
       const pendingSteps = g.steps.filter(s => !s.completed)
       const overdueSteps  = pendingSteps.filter(s => s.due_date && new Date(s.due_date).getTime() < now)
