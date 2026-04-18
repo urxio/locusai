@@ -213,22 +213,16 @@ export async function syncHabitGoalProgress(
 
   type HabitRow = { id: string; days_of_week: number[] | null; created_at: string; goal_target_count: number | null }
 
-  // Use the earliest habit creation date as the log query floor so that
-  // pre-existing habits (created before the goal) have their historical
-  // logs counted. Each habit's own created_at acts as its individual start.
-  const earliestHabitDate = (habits as HabitRow[]).reduce((min, h) => {
-    const d = h.created_at.split('T')[0]
-    return d < min ? d : min
-  }, today)
-
   const habitIds = (habits as HabitRow[]).map(h => h.id)
 
-  // ── 3. Fetch all logs for those habits from earliest habit start ─────────
+  // ── 3. Fetch ALL logs for those habits (no lower-date bound) ─────────────
+  // Users can back-date logs to before a habit's created_at, so any lower
+  // bound risks silently under-counting. The per-habit pct formula already
+  // handles the window correctly; we just need the raw total count.
   const { data: logs, error: logsErr } = await supabase
     .from('habit_logs')
     .select('habit_id, logged_date')
     .in('habit_id', habitIds)
-    .gte('logged_date', earliestHabitDate)
     .lte('logged_date', logEnd)
   if (logsErr) console.error('[syncHabitGoalProgress] logs fetch failed:', logsErr)
 
