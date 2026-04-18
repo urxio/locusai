@@ -195,10 +195,9 @@ export async function syncHabitGoalProgress(
     return
   }
 
-  const today       = new Date().toISOString().split('T')[0]
-  const windowStart = goal.created_at.split('T')[0]
-  const windowEnd   = goal.target_date ?? today  // full denominator window
-  const logEnd      = today                       // can't log future dates
+  const today     = new Date().toISOString().split('T')[0]
+  const windowEnd = goal.target_date ?? today  // full denominator window
+  const logEnd    = today                       // can't log future dates
 
   // ── 2. Fetch all habits linked to this goal ─────────────────────────────
   const { data: habits, error: habitsErr } = await supabase
@@ -213,14 +212,23 @@ export async function syncHabitGoalProgress(
   if (!habits || habits.length === 0) return
 
   type HabitRow = { id: string; days_of_week: number[] | null; created_at: string; goal_target_count: number | null }
+
+  // Use the earliest habit creation date as the log query floor so that
+  // pre-existing habits (created before the goal) have their historical
+  // logs counted. Each habit's own created_at acts as its individual start.
+  const earliestHabitDate = (habits as HabitRow[]).reduce((min, h) => {
+    const d = h.created_at.split('T')[0]
+    return d < min ? d : min
+  }, today)
+
   const habitIds = (habits as HabitRow[]).map(h => h.id)
 
-  // ── 3. Fetch all logs for those habits in the window ────────────────────
+  // ── 3. Fetch all logs for those habits from earliest habit start ─────────
   const { data: logs, error: logsErr } = await supabase
     .from('habit_logs')
     .select('habit_id, logged_date')
     .in('habit_id', habitIds)
-    .gte('logged_date', windowStart)
+    .gte('logged_date', earliestHabitDate)
     .lte('logged_date', logEnd)
   if (logsErr) console.error('[syncHabitGoalProgress] logs fetch failed:', logsErr)
 
@@ -232,13 +240,14 @@ export async function syncHabitGoalProgress(
 
   // ── 4. Compute per-habit progress, then average for overall goal pct ────
   //   • If habit has goal_target_count: pct = completions / target × 100
-  //   • Otherwise: pct = completions / scheduled_days_in_window × 100
+  //   • Otherwise: pct = completions / scheduled_days (from habit start) × 100
   //   Overall goal progress = mean of all habit pcts.
   const habitPcts: number[] = []
 
   for (const habit of habits as HabitRow[]) {
-    const habitStart = habit.created_at.split('T')[0]
-    const start      = habitStart > windowStart ? habitStart : windowStart
+    // Each habit's window starts from when the habit itself was created,
+    // so pre-existing habits contribute their full history.
+    const start      = habit.created_at.split('T')[0]
     const daysOfWeek = habit.days_of_week
     const completed  = completionsByHabit.get(habit.id) ?? 0
 
