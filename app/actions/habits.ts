@@ -118,8 +118,13 @@ export async function createHabitAction(data: HabitFormData) {
   }).select().single()
   if (error) throw new Error(error.message)
 
+  // If linked to a habit-tracked goal, sync goal progress immediately
+  // so pre-existing log data is reflected without needing a new check-in.
+  if (data.goal_id) await maybeSyncGoalProgress(supabase, created.id, user.id)
+
   revalidatePath('/habits')
   revalidatePath('/brief')
+  revalidatePath('/goals')
 
   return created
 }
@@ -149,8 +154,13 @@ export async function updateHabitAction(habitId: string, data: HabitFormData) {
     .eq('user_id', user.id)
   if (error) throw new Error(error.message)
 
+  // Re-sync goal progress whenever a habit is linked/updated —
+  // covers linking a pre-existing habit that already has log data.
+  if (data.goal_id) await maybeSyncGoalProgress(supabase, habitId, user.id)
+
   revalidatePath('/habits')
   revalidatePath('/brief')
+  revalidatePath('/goals')
 }
 
 export async function deleteHabitAction(habitId: string) {
