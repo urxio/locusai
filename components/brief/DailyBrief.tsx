@@ -12,6 +12,7 @@ import HabitsWeekStrip from './HabitsWeekStrip'
 import HabitAuditStrip from './HabitAuditStrip'
 import type { MissedHabit } from './HabitAuditStrip'
 import GoalsWeekStrip from './GoalsWeekStrip'
+import CorrelationsCard from './CorrelationsCard'
 
 type Props = {
   goals: Goal[]
@@ -30,7 +31,7 @@ type Props = {
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'
 
-export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, todayDate, yesterday = '', coverUrl, userName, missedYesterday = [], goalsWithSteps = [] }: Props) {
+export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, memory, todayDate, yesterday = '', coverUrl, userName, missedYesterday = [], goalsWithSteps = [] }: Props) {
   const router = useRouter()
   const cover  = coverUrl || DEFAULT_COVER
   const now    = new Date()
@@ -93,6 +94,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, t
 
         {/* ── Goals This Week ── */}
         <GoalsWeekStrip goals={goalsWithSteps} />
+
+        {/* ── What Locus has noticed (correlations) ── */}
+        <CorrelationsCard memory={memory ?? null} />
 
         {/* Weekly review link */}
         <a

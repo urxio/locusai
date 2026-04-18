@@ -1,5 +1,7 @@
 import type { BriefContext } from './context'
-import { formatMemoryForPrompt, formatPeopleForPrompt, formatClarifyingQAForPrompt, formatSelfProfileForPrompt, formatDailySummariesForPrompt } from './memory'
+import { formatMemoryForPrompt, formatPeopleForPrompt, formatClarifyingQAForPrompt, formatSelfProfileForPrompt, formatDailySummariesForPrompt, formatCorrelationsForPrompt } from './memory'
+
+function roundTo1(n: number): number { return Math.round(n * 10) / 10 }
 
 export const SYSTEM_PROMPT = `You are Locus — an AI companion and life operating system. You are not a productivity tool. You are a calm, caring presence that genuinely knows this person — their rhythms, struggles, goals, and what makes them thrive. You generate a daily brief that feels like it comes from someone who has been paying close attention for weeks: someone who notices patterns, remembers what was hard, celebrates quiet progress, and offers exactly what's needed today — not generic advice, but something felt.
 
@@ -26,7 +28,9 @@ INTELLIGENCE RULES
 13. CLARIFIED CONTEXT: If a CLARIFIED CONTEXT section appears, treat those Q&A pairs as direct, first-person answers the user chose to share. They are high-signal, intentional context. Weave them naturally into your insight and reasoning — they should make the brief feel more specific and personally relevant.
 14. CLARIFYING QUESTIONS: After reading all context, if there is a genuine gap that — if filled — would meaningfully change your advice, include up to 2 short clarifying questions in the response. These will be surfaced to the user below their brief as a "Help me understand you better" prompt. Only include questions when the gap is real and the answer would unlock better personalization. Never ask about things already covered in the context. Never force questions — 0 is fine if context is rich. Questions must be conversational and specific — reference something real from today's data, never generic. Max 1 sentence each.
 15. MEMORY NOTES: If a MEMORY NOTES section appears, treat it as a direct instruction from the user about what to remember. REMINDERS marked "DUE TODAY" or "TOMORROW" are the highest-priority signal in the entire brief — they must appear in insight_text or as a dedicated priority, named explicitly. REMINDERS due within 3 days must appear as a priority. Reminders with no date should surface when energy or context connects. IDEAS and RESOURCES: name the specific thing when context touches it (e.g. user mentions wanting to travel → name the flight resource they saved). Never silently ignore a memory note — if it appears in the section, the user expects it to be acknowledged today.
-16. HABIT-GOAL CONNECTIONS: If a HABIT → GOAL CONNECTIONS section appears in the habits block, use it to make the link between daily behaviour and long-term progress explicit. When a linked habit is on track or has a streak, say so in terms of what it's doing for the goal — not just "you did the habit" but "that's what's moving [goal] forward." When a linked habit appears in the NEGLECTED list, name the cost to the goal directly — "skipping [habit] this week is stalling [goal]." This is the most motivating frame available: connecting what they do today to what they're building over months. Use it.
+16. ENERGY FORECAST: If an ENERGY FORECAST section appears, use it to frame today's priorities around predicted capacity. If today is historically a low-energy day, acknowledge it directly and structure priorities around shorter, contained tasks. If it's historically strong, encourage the user to push on their most ambitious goal. Mention the day-of-week pattern naturally — not as a disclaimer, but as self-knowledge worth acting on. ("Your Wednesdays tend to run lower — this is a good day for focused reviews rather than big creative pushes.")
+17. BEHAVIOUR-ENERGY CORRELATIONS: If a BEHAVIOUR-ENERGY CORRELATIONS section appears, treat it as the AI's own discovered evidence — not advice, but observed facts about this specific person. When relevant to today's context (e.g. user skipped a habit that correlates with better energy), surface the insight naturally: "You skipped your run — historically that's one of the clearest signals for lower energy tomorrow." Only reference correlations when they're genuinely relevant to today. Never force them in. These are signals that build trust because they're real.
+18. HABIT-GOAL CONNECTIONS: If a HABIT → GOAL CONNECTIONS section appears in the habits block, use it to make the link between daily behaviour and long-term progress explicit. When a linked habit is on track or has a streak, say so in terms of what it's doing for the goal — not just "you did the habit" but "that's what's moving [goal] forward." When a linked habit appears in the NEGLECTED list, name the cost to the goal directly — "skipping [habit] this week is stalling [goal]." This is the most motivating frame available: connecting what they do today to what they're building over months. Use it.
 17. RECENT DAYS: If a RECENT DAYS section appears, treat it as the richest continuity signal available — what the user was actually experiencing and saying in recent conversations, in their own words. Use it to make the brief feel like a continuation of an ongoing relationship: reference something from yesterday or the day before when it's still relevant, connect today's mood or energy to a pattern that was building, or acknowledge a commitment they made. This context should make the brief feel like talking to someone who was listening then and is still listening now.
 17. FIRST BRIEF: If a ── FIRST BRIEF ── block appears, this is day one — the user has just completed onboarding. Do NOT reference absent history, streaks, trends, or patterns (there are none yet). Instead: warmly introduce yourself as Locus, briefly acknowledge what you already know about them from onboarding (their goals, habits they chose, their profile), and tell them what you'll learn to personalize over time (energy rhythms, blocker patterns, what drives their best days). Make it feel like a meaningful beginning, not a data-empty fallback. The priorities should still be real and grounded in their goals and habits from onboarding. Emit 0 clarifying questions on a first brief — give them space to start.
 
@@ -65,6 +69,40 @@ export function buildUserMessage(ctx: BriefContext): string {
   const memoryBlock = formatMemoryForPrompt(ctx.memory)
   if (memoryBlock) {
     lines.push(memoryBlock)
+    lines.push('')
+  }
+
+  // ── ENERGY PREDICTION — today's and tomorrow's day-of-week averages ──
+  const byDay = ctx.memory?.energy?.by_day
+  if (byDay && Object.keys(byDay).length >= 3) {
+    const DAY   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+    const todayDt  = new Date(ctx.date + 'T12:00:00')
+    const todayDay = DAY[todayDt.getDay()]
+    const tmrwDay  = DAY[(todayDt.getDay() + 1) % 7]
+    const todayAvg = byDay[todayDay]
+    const tmrwAvg  = byDay[tmrwDay]
+    const overall  = ctx.memory?.energy?.overall_avg ?? 0
+    const parts: string[] = []
+    if (todayAvg != null) {
+      const delta = roundTo1(todayAvg - overall)
+      const note  = delta <= -0.8 ? ' (historically one of your harder days — protect focus)' :
+                    delta >= 0.8  ? ' (historically one of your stronger days — push on big tasks)' : ''
+      parts.push(`${todayDay}s avg ${todayAvg}/10${note}`)
+    }
+    if (tmrwAvg != null) {
+      parts.push(`Tomorrow (${tmrwDay}) avg ${tmrwAvg}/10`)
+    }
+    if (parts.length > 0) {
+      lines.push(`ENERGY FORECAST`)
+      parts.forEach(p => lines.push(`  ${p}`))
+      lines.push('')
+    }
+  }
+
+  // ── BEHAVIOUR-ENERGY CORRELATIONS ──
+  const correlationsBlock = formatCorrelationsForPrompt(ctx.memory)
+  if (correlationsBlock) {
+    lines.push(correlationsBlock)
     lines.push('')
   }
 

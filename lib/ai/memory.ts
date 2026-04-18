@@ -75,6 +75,26 @@ export type UserMemory = {
     summary: string      // 2-3 sentence narrative of the day
     generated_at: string // ISO timestamp
   }>
+  // Behaviour-energy correlations — computed by updateMemoryStats
+  correlations?: {
+    habits: Array<{
+      habit_id:            string
+      habit_name:          string
+      habit_emoji:         string
+      energy_when_done:    number  // avg next-day energy after logging habit
+      energy_when_skipped: number  // avg next-day energy without logging
+      diff:                number  // positive = habit boosts energy
+      sample_size:         number
+    }>
+    keywords: Array<{
+      word:           string
+      energy_with:    number  // avg energy on days word appears in mood note
+      energy_without: number
+      diff:           number  // positive = word associated with higher energy
+      sample_size:    number
+    }>
+    computed_at: string
+  }
 }
 
 /* ── READ ────────────────────────────────────────────── */
@@ -236,6 +256,39 @@ export function formatClarifyingQAForPrompt(memory: UserMemory | null): string {
     lines.push('')
   })
   lines.push('── END CLARIFIED CONTEXT ──')
+  return lines.join('\n')
+}
+
+/* ── FORMAT CORRELATIONS FOR PROMPT ─────────────────── */
+
+export function formatCorrelationsForPrompt(memory: UserMemory | null): string {
+  const c = memory?.correlations
+  if (!c) return ''
+  const lines: string[] = []
+  const entries: string[] = []
+
+  c.habits.forEach(h => {
+    if (h.diff >= 0.5) {
+      entries.push(`• ${h.habit_emoji} ${h.habit_name} days → next-day energy +${h.diff} pts (avg ${h.energy_when_done}/10 vs ${h.energy_when_skipped}/10 when skipped, ${h.sample_size} data points)`)
+    } else if (h.diff <= -0.5) {
+      entries.push(`• Missing ${h.habit_emoji} ${h.habit_name} → next-day energy ${h.diff} pts (${h.sample_size} data points)`)
+    }
+  })
+
+  c.keywords.forEach(k => {
+    if (k.diff >= 0.7) {
+      entries.push(`• Mentioning "${k.word}" in mood notes → energy +${k.diff} pts that day (${k.sample_size} occurrences)`)
+    } else if (k.diff <= -0.7) {
+      entries.push(`• Mentioning "${k.word}" → energy ${k.diff} pts that day (${k.sample_size} occurrences)`)
+    }
+  })
+
+  if (entries.length === 0) return ''
+
+  lines.push('── BEHAVIOUR-ENERGY CORRELATIONS ──')
+  lines.push('Statistically observed patterns from this user\'s data (reference these when relevant):')
+  entries.forEach(e => lines.push(e))
+  lines.push('── END CORRELATIONS ──')
   return lines.join('\n')
 }
 

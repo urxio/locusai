@@ -1,7 +1,7 @@
 /**
  * updateMemoryStats — runs after every check-in.
  * Pure computation (no Claude call). Updates energy, blocker,
- * mood-theme, and habit-rate stats in the user_memory table.
+ * mood-theme, habit-rate, and correlation stats in the user_memory table.
  * Non-fatal: never throws, never blocks the check-in flow.
  */
 
@@ -31,6 +31,11 @@ function roundTo1(n: number): number {
 function avg(nums: number[]): number {
   return nums.length === 0 ? 0 : roundTo1(nums.reduce((s, n) => s + n, 0) / nums.length)
 }
+function nextDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().split('T')[0]
+}
 
 /* ── MAIN ── */
 export async function updateMemoryStats(userId: string): Promise<void> {
@@ -40,12 +45,13 @@ export async function updateMemoryStats(userId: string): Promise<void> {
     // Fetch up to 90 days of check-ins
     const since = new Date()
     since.setDate(since.getDate() - 90)
+    const sinceStr = since.toISOString().split('T')[0]
 
     const { data: checkins } = await supabase
       .from('check_ins')
       .select('date, energy_level, mood_note, blockers')
       .eq('user_id', userId)
-      .gte('date', since.toISOString().split('T')[0])
+      .gte('date', sinceStr)
       .order('date', { ascending: true })
 
     if (!checkins || checkins.length === 0) return
@@ -93,7 +99,6 @@ export async function updateMemoryStats(userId: string): Promise<void> {
     /* ── MOOD THEMES (from mood notes + journal entries) ── */
     const wordFreq: Record<string, number> = {}
 
-    // Extract from check-in mood notes
     checkins.forEach(c => {
       if (!c.mood_note) return
       c.mood_note
@@ -104,12 +109,11 @@ export async function updateMemoryStats(userId: string): Promise<void> {
         .forEach((w: string) => { wordFreq[w] = (wordFreq[w] ?? 0) + 1 })
     })
 
-    // Also extract from journal entries (weighted ×2 — richer signal)
     const { data: journals } = await supabase
       .from('journal_entries')
       .select('content')
       .eq('user_id', userId)
-      .gte('date', since.toISOString().split('T')[0])
+      .gte('date', sinceStr)
       .gt('content', '')
 
     ;(journals ?? []).forEach((j: { content: string }) => {
@@ -134,7 +138,8 @@ export async function updateMemoryStats(userId: string): Promise<void> {
 
     const [{ data: habits }, { data: logs }] = await Promise.all([
       supabase.from('habits').select('id, name, emoji, target_count').eq('user_id', userId),
-      supabase.from('habit_logs').select('habit_id').eq('user_id', userId).gte('logged_date', sinceDate),
+      // Fetch logged_date too — needed for correlation computation
+      supabase.from('habit_logs').select('habit_id, logged_date').eq('user_id', userId).gte('logged_date', sinceStr),
     ])
 
     const logCounts = new Map<string, number>()
@@ -156,24 +161,132 @@ export async function updateMemoryStats(userId: string): Promise<void> {
       .sort((a, b) => a.rate_pct - b.rate_pct)
       .slice(0, 3)
 
-    /* ── PRESERVE EXISTING INSIGHTS ── */
+    /* ── HABIT → NEXT-DAY ENERGY CORRELATIONS ── */
+    // Build date → energy lookup
+    const energyByDate = new Map(checkins.map(c => [c.date, c.energy_level]))
+
+    // Group logs by habit_id → set of logged dates
+    const logsByHabit = new Map<string, Set<string>>()
+    logs?.forEach(l => {
+      if (!logsByHabit.has(l.habit_id)) logsByHabit.set(l.habit_id, new Set())
+      logsByHabit.get(l.habit_id)!.add(l.logged_date)
+    })
+
+    type HabitCorrelation = {
+      habit_id:            string
+      habit_name:          string
+      habit_emoji:         string
+      energy_when_done:    number
+      energy_when_skipped: number
+      diff:                number   // positive = habit boosts next-day energy
+      sample_size:         number
+    }
+
+    const habitCorrelations: HabitCorrelation[] = []
+
+    for (const habit of (habits ?? [])) {
+      const loggedDates = logsByHabit.get(habit.id) ?? new Set<string>()
+      const nextWhenDone: number[]    = []
+      const nextWhenSkipped: number[] = []
+
+      checkins.forEach(c => {
+        const nd = nextDate(c.date)
+        const nextEnergy = energyByDate.get(nd)
+        if (nextEnergy == null) return  // no check-in next day
+
+        if (loggedDates.has(c.date)) {
+          nextWhenDone.push(nextEnergy)
+        } else {
+          nextWhenSkipped.push(nextEnergy)
+        }
+      })
+
+      // Need enough data on both sides to be meaningful
+      if (nextWhenDone.length < 5 || nextWhenSkipped.length < 3) continue
+
+      const avgDone    = avg(nextWhenDone)
+      const avgSkipped = avg(nextWhenSkipped)
+      const diff       = roundTo1(avgDone - avgSkipped)
+
+      if (Math.abs(diff) < 0.5) continue  // not strong enough signal
+
+      habitCorrelations.push({
+        habit_id:            habit.id,
+        habit_name:          habit.name,
+        habit_emoji:         habit.emoji,
+        energy_when_done:    avgDone,
+        energy_when_skipped: avgSkipped,
+        diff,
+        sample_size:         nextWhenDone.length,
+      })
+    }
+
+    // Sort by strength of signal, keep top 5
+    habitCorrelations.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+    const topHabitCorrelations = habitCorrelations.slice(0, 5)
+
+    /* ── KEYWORD → SAME-DAY ENERGY CORRELATIONS ── */
+    type KeywordCorrelation = {
+      word:             string
+      energy_with:      number
+      energy_without:   number
+      diff:             number   // positive = word associated with higher energy
+      sample_size:      number
+    }
+
+    const keywordCorrelations: KeywordCorrelation[] = []
+    const checkinsWithMood = checkins.filter(c => c.mood_note && c.mood_note.trim())
+
+    moodThemes.slice(0, 15).forEach(word => {
+      const withWord    = checkinsWithMood.filter(c => c.mood_note!.toLowerCase().includes(word))
+      const withoutWord = checkinsWithMood.filter(c => !c.mood_note!.toLowerCase().includes(word))
+
+      if (withWord.length < 5 || withoutWord.length < 3) return
+
+      const avgWith    = avg(withWord.map(c => c.energy_level))
+      const avgWithout = avg(withoutWord.map(c => c.energy_level))
+      const diff       = roundTo1(avgWith - avgWithout)
+
+      if (Math.abs(diff) < 0.7) return  // higher bar for keyword signals (noisier)
+
+      keywordCorrelations.push({
+        word,
+        energy_with:    avgWith,
+        energy_without: avgWithout,
+        diff,
+        sample_size:    withWord.length,
+      })
+    })
+
+    keywordCorrelations.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+    const topKeywordCorrelations = keywordCorrelations.slice(0, 3)
+
+    /* ── PRESERVE ALL EXISTING MEMORY FIELDS ── */
+    // Critical: spread prev so we never wipe people_memory, self_profile,
+    // clarifying_qa, daily_summaries, audit_dismissals, pattern_narratives etc.
     const { data: existing } = await supabase
       .from('user_memory')
       .select('data')
       .eq('user_id', userId)
       .single()
-    const prev = existing?.data as UserMemory | undefined
+    const prev = (existing?.data ?? {}) as UserMemory
 
     /* ── WRITE ── */
     const memory: UserMemory = {
-      energy: { overall_avg: overallAvg, recent_avg: recentAvg, trend, by_day: byDay, best_day: bestDay, worst_day: worstDay },
-      habits: { strongest, needs_work: needsWork },
-      blockers: { frequent, frequencies: blockerFreq },
-      mood_themes: moodThemes,
-      insights: prev?.insights ?? [],
+      ...prev,                          // preserve all unmanaged fields
+      energy:        { overall_avg: overallAvg, recent_avg: recentAvg, trend, by_day: byDay, best_day: bestDay, worst_day: worstDay },
+      habits:        { strongest, needs_work: needsWork },
+      blockers:      { frequent, frequencies: blockerFreq },
+      mood_themes:   moodThemes,
+      insights:      prev.insights ?? [],
       checkin_count: checkins.length,
-      last_stats_update: new Date().toISOString(),
-      last_insights_update: prev?.last_insights_update ?? null,
+      last_stats_update:   new Date().toISOString(),
+      last_insights_update: prev.last_insights_update ?? null,
+      correlations: {
+        habits:       topHabitCorrelations,
+        keywords:     topKeywordCorrelations,
+        computed_at:  new Date().toISOString(),
+      },
     }
 
     await supabase
