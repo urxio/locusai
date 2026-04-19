@@ -88,26 +88,26 @@ export default function LoginPage() {
                   required
                   style={{ padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-0)', fontSize: '13.5px', outline: 'none', fontFamily: 'inherit' }}
                 />
-                <div>
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-0)', fontSize: '13.5px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                  />
-                  <div style={{ textAlign: 'right', marginTop: '6px' }}>
-                    <Link href="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
-                      Forgot password?
-                    </Link>
-                  </div>
-                </div>
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  style={{ padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-0)', fontSize: '13.5px', outline: 'none', fontFamily: 'inherit' }}
+                />
                 {error && <div style={{ fontSize: '12px', color: '#e07060', padding: '8px 12px', background: 'rgba(200,80,60,0.1)', borderRadius: '6px' }}>{error}</div>}
                 <button type="submit" disabled={loading} style={{ padding: '11px', background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '8px', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {loading ? 'Signing in...' : 'Sign in'}
                 </button>
               </form>
+
+              {/* Forgot password — outside the form so required-field validation never blocks it */}
+              <div style={{ textAlign: 'right', marginTop: '6px' }}>
+                <Link href="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
+                  Forgot password?
+                </Link>
+              </div>
 
               <button onClick={handleMagicLink} disabled={loading} style={{ width: '100%', marginTop: '10px', padding: '10px', background: 'transparent', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Send magic link instead
