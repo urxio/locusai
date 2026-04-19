@@ -66,8 +66,12 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     .filter(h => h.weekCompletions === 0)
     .map(h => ({ name: h.name, emoji: h.emoji, frequency: h.frequency, linkedGoal: h.linkedGoal ?? null }))
 
-  // First brief: user has at most 1 check-in (the one from onboarding)
-  const isFirstBrief = recentCheckins.length <= 1
+  // First brief: user onboarded today OR has no prior check-ins
+  const { data: profileRow } = await (await import('@/lib/supabase/server')).createClient()
+    .then(s => s.from('users').select('onboarded_at').eq('id', userId).single())
+  const onboardedAt = (profileRow as { onboarded_at?: string } | null)?.onboarded_at
+  const onboardedToday = onboardedAt ? onboardedAt.slice(0, 10) === date : false
+  const isFirstBrief = onboardedToday || recentCheckins.length === 0
 
   const memoryNotes = await getContextualNotes(userId, date, topicKeywords)
 

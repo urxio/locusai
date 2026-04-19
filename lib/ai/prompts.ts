@@ -134,17 +134,27 @@ export function buildUserMessage(ctx: BriefContext): string {
 
   // ── FIRST BRIEF SIGNAL ──
   if (ctx.isFirstBrief) {
-    lines.push('── FIRST BRIEF ──')
-    lines.push('This is the very first brief for this user. They just completed onboarding.')
-    lines.push('There is no historical data yet — no streaks, no trends, no patterns learned.')
+    lines.push('╔══════════════════════════════════════╗')
+    lines.push('║           FIRST BRIEF — DAY ONE      ║')
+    lines.push('╚══════════════════════════════════════╝')
+    lines.push('This is the very first brief for this user. They JUST completed onboarding — today is day one.')
+    lines.push('STRICT RULES for this brief:')
+    lines.push('  • Open with a warm, personal welcome — introduce yourself as Locus')
+    lines.push('  • DO NOT judge, critique, or mention any missed habits or low completion rates')
+    lines.push('  • DO NOT reference streaks, trends, or history (there is none)')
+    lines.push('  • Acknowledge what they shared during onboarding (their goals and habits below)')
+    lines.push('  • Frame today as an exciting beginning, not a baseline to be measured against')
+    lines.push('  • Emit 0 clarifying questions — give them space to start')
     lines.push('')
     if (ctx.goalsWithSteps.length > 0) {
-      lines.push(`Goals they set during onboarding: ${ctx.goalsWithSteps.map(g => `"${g.title}"`).join(', ')}`)
+      lines.push(`Goals they set: ${ctx.goalsWithSteps.map(g => `"${g.title}"`).join(', ')}`)
     }
     if (ctx.habits.length > 0) {
-      lines.push(`Habits they chose: ${ctx.habits.map(h => `${h.emoji} ${h.name}`).join(', ')}`)
+      lines.push(`Habits they chose to build: ${ctx.habits.map(h => `${h.emoji} ${h.name}`).join(', ')}`)
     }
-    lines.push('── END FIRST BRIEF SIGNAL ──')
+    lines.push('╔══════════════════════════════════════╗')
+    lines.push('║        END FIRST BRIEF SIGNAL        ║')
+    lines.push('╚══════════════════════════════════════╝')
     lines.push('')
   }
 
