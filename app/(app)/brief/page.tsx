@@ -52,6 +52,8 @@ async function BriefContent() {
 
   const missedYesterday: MissedHabit[] = habits
     .filter(h => {
+      // Was the habit created before yesterday? (don't penalise brand-new habits)
+      if (h.created_at && h.created_at.slice(0, 10) >= yesterday) return false
       // Was it scheduled yesterday?
       const scheduled = !h.days_of_week || h.days_of_week.length === 0
         ? true
