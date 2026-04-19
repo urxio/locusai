@@ -25,8 +25,15 @@ function ResetPasswordInner() {
   const [error,       setError]     = useState<string | null>(null)
   const supabase = createClient()
 
-  /* ── Exchange the code that Supabase puts in the URL ── */
+  /* ── Exchange the code / token that Supabase puts in the URL ── */
   useEffect(() => {
+    // Implicit flow: Supabase fires PASSWORD_RECOVERY via the hash fragment
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setStage('ready')
+      }
+    })
+
     async function exchange() {
       const code       = searchParams.get('code')
       const tokenHash  = searchParams.get('token_hash')
@@ -51,11 +58,16 @@ function ResetPasswordInner() {
         return
       }
 
-      // No params at all — user navigated here manually
-      setError('Invalid or expired reset link. Please request a new one.')
-      setStage('error')
+      // No query params — may be implicit flow (hash handled by onAuthStateChange above)
+      // Wait up to 3s for the PASSWORD_RECOVERY event before giving up
+      setTimeout(() => {
+        setStage(s => s === 'exchanging' ? 'error' : s)
+        setError(e => e ?? 'Invalid or expired reset link. Please request a new one.')
+      }, 3000)
     }
+
     exchange()
+    return () => subscription.unsubscribe()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
