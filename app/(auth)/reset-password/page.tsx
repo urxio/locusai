@@ -2,13 +2,21 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 type Stage = 'exchanging' | 'ready' | 'done' | 'error'
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordInner />
+    </Suspense>
+  )
+}
+
+function ResetPasswordInner() {
   const searchParams  = useSearchParams()
   const [stage,       setStage]     = useState<Stage>('exchanging')
   const [password,    setPassword]  = useState('')
