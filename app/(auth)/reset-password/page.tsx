@@ -2,16 +2,54 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+type Stage = 'exchanging' | 'ready' | 'done' | 'error'
+
 export default function ResetPasswordPage() {
-  const [password,  setPassword]  = useState('')
-  const [confirm,   setConfirm]   = useState('')
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState<string | null>(null)
-  const [done,      setDone]      = useState(false)
+  const searchParams  = useSearchParams()
+  const [stage,       setStage]     = useState<Stage>('exchanging')
+  const [password,    setPassword]  = useState('')
+  const [confirm,     setConfirm]   = useState('')
+  const [loading,     setLoading]   = useState(false)
+  const [error,       setError]     = useState<string | null>(null)
   const supabase = createClient()
+
+  /* ── Exchange the code that Supabase puts in the URL ── */
+  useEffect(() => {
+    async function exchange() {
+      const code       = searchParams.get('code')
+      const tokenHash  = searchParams.get('token_hash')
+      const type       = searchParams.get('type')
+
+      // PKCE flow — code in URL, verifier in cookie (same browser session)
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) { setError(error.message); setStage('error'); return }
+        setStage('ready')
+        return
+      }
+
+      // token_hash flow (older Supabase email templates)
+      if (tokenHash && type) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type as 'recovery' | 'email' | 'magiclink',
+        })
+        if (error) { setError(error.message); setStage('error'); return }
+        setStage('ready')
+        return
+      }
+
+      // No params at all — user navigated here manually
+      setError('Invalid or expired reset link. Please request a new one.')
+      setStage('error')
+    }
+    exchange()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -20,14 +58,14 @@ export default function ResetPasswordPage() {
     setLoading(true)
     setError(null)
     const { error } = await supabase.auth.updateUser({ password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
-    }
-    setDone(true)
-    // Brief pause then redirect so the user sees the success state
+    if (error) { setError(error.message); setLoading(false); return }
+    setStage('done')
     setTimeout(() => { window.location.href = '/brief' }, 1800)
+  }
+
+  const inputStyle: React.CSSProperties = {
+    padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border-md)',
+    borderRadius: '8px', color: 'var(--text-0)', fontSize: '13.5px', outline: 'none', fontFamily: 'inherit',
   }
 
   return (
@@ -44,13 +82,40 @@ export default function ResetPasswordPage() {
         </div>
 
         <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: '16px', padding: '28px' }}>
-          {done ? (
+
+          {/* Exchanging / loading */}
+          {stage === 'exchanging' && (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-2)', fontSize: '13px' }}>
+              Verifying link…
+            </div>
+          )}
+
+          {/* Error state */}
+          {stage === 'error' && (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚠️</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', color: 'var(--text-0)', marginBottom: '8px' }}>Link expired</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5, marginBottom: '20px' }}>{error}</div>
+              <button
+                onClick={() => { window.location.href = '/login' }}
+                style={{ padding: '10px 20px', background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '8px', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Back to sign in
+              </button>
+            </div>
+          )}
+
+          {/* Success state */}
+          {stage === 'done' && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>✓</div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', color: 'var(--text-0)', marginBottom: '8px' }}>Password updated</div>
               <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>Redirecting you in…</div>
             </div>
-          ) : (
+          )}
+
+          {/* Password form */}
+          {stage === 'ready' && (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <input
                 type="password"
@@ -60,7 +125,7 @@ export default function ResetPasswordPage() {
                 required
                 minLength={8}
                 autoFocus
-                style={{ padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-0)', fontSize: '13.5px', outline: 'none', fontFamily: 'inherit' }}
+                style={inputStyle}
               />
               <input
                 type="password"
@@ -68,7 +133,7 @@ export default function ResetPasswordPage() {
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
                 required
-                style={{ padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-0)', fontSize: '13.5px', outline: 'none', fontFamily: 'inherit' }}
+                style={inputStyle}
               />
               {error && (
                 <div style={{ fontSize: '12px', color: '#e07060', padding: '8px 12px', background: 'rgba(200,80,60,0.1)', borderRadius: '6px' }}>
@@ -84,6 +149,7 @@ export default function ResetPasswordPage() {
               </button>
             </form>
           )}
+
         </div>
       </div>
     </div>
