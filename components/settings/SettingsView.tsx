@@ -6,6 +6,7 @@ import { updateProfile } from '@/app/actions/settings'
 import { signOut } from '@/app/actions/auth'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import { useToast } from '@/components/ui/ToastContext'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Cover presets ─────────────────────────────────────────────────────────────
 
@@ -202,6 +203,67 @@ function ProfileSection({ name: initialName, avatarUrl: initialUrl, coverUrl: in
   )
 }
 
+// ── Change password ───────────────────────────────────────────────────────────
+
+function ChangePasswordSection() {
+  const toast = useToast()
+  const supabase = createClient()
+  const [open, setOpen] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (password !== confirm) { toast.error('Passwords do not match'); return }
+    if (password.length < 8)  { toast.error('Password must be at least 8 characters'); return }
+    setSaving(true)
+    const { error } = await supabase.auth.updateUser({ password })
+    setSaving(false)
+    if (error) { toast.error(error.message); return }
+    toast.success('Password updated')
+    setPassword(''); setConfirm(''); setOpen(false)
+  }
+
+  const iStyle: React.CSSProperties = {
+    background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: '8px',
+    padding: '9px 12px', fontSize: '14px', color: 'var(--text-0)', outline: 'none',
+    width: '100%', boxSizing: 'border-box', fontFamily: 'inherit',
+  }
+
+  return (
+    <Section title="Security">
+      <div style={{ padding: '14px 18px', borderBottom: open ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '13.5px', color: 'var(--text-1)', fontWeight: 500 }}>Password</span>
+        <button
+          onClick={() => setOpen(o => !o)}
+          style={{ fontSize: '13px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          {open ? 'Cancel' : 'Change password'}
+        </button>
+      </div>
+      {open && (
+        <form onSubmit={handleSave} style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input type="password" placeholder="New password (min 8 characters)" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoFocus style={iStyle} />
+          <input type="password" placeholder="Confirm new password" value={confirm} onChange={e => setConfirm(e.target.value)} required style={iStyle} />
+          <button
+            type="submit"
+            disabled={saving || !password || !confirm}
+            style={{
+              padding: '9px 18px', borderRadius: '9px', border: 'none', fontSize: '13px', fontWeight: 600,
+              background: password && confirm ? 'var(--gold)' : 'var(--bg-3)',
+              color: password && confirm ? 'var(--bg-0)' : 'var(--text-3)',
+              cursor: password && confirm ? 'pointer' : 'not-allowed', alignSelf: 'flex-start',
+            }}
+          >
+            {saving ? 'Saving…' : 'Update password'}
+          </button>
+        </form>
+      )}
+    </Section>
+  )
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function SettingsView({
@@ -241,6 +303,9 @@ export default function SettingsView({
           <span style={{ fontSize: '10px', color: 'var(--text-3)', background: 'var(--bg-3)', borderRadius: '5px', padding: '2px 7px' }}>auto</span>
         </Row>
       </Section>
+
+      {/* Security */}
+      <ChangePasswordSection />
 
       {/* Appearance */}
       <Section title="Appearance">

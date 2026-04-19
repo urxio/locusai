@@ -58,12 +58,13 @@ export default function LoginPage() {
     })
   }
 
-  /* ── Forgot password ── */
+  /* ── Forgot password → send magic link ── */
   async function handleForgot(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); resetError()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
     if (error) setError(error.message)
     else setView('forgot-sent')
@@ -100,15 +101,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* ── Reset link sent ── */}
+          {/* ── Magic sign-in link sent (forgot password) ── */}
           {view === 'forgot-sent' && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>📬</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', color: 'var(--text-0)', marginBottom: '8px' }}>Reset link sent</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', color: 'var(--text-0)', marginBottom: '8px' }}>Check your inbox</div>
               <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6 }}>
-                We emailed a password reset link to{' '}
+                We sent a sign-in link to{' '}
                 <strong style={{ color: 'var(--text-1)' }}>{email}</strong>.
-                <br />Click it to choose a new password.
+                <br />Click it to sign in, then update your password in <strong style={{ color: 'var(--text-1)' }}>Settings</strong>.
               </div>
               <button onClick={() => setView('login')} style={{ marginTop: '20px', background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
                 ← Back to sign in
@@ -120,9 +121,9 @@ export default function LoginPage() {
           {view === 'forgot' && (
             <>
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', marginBottom: '6px' }}>Reset your password</div>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', marginBottom: '6px' }}>Forgot your password?</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>
-                  Enter your email and we&apos;ll send you a reset link.
+                  Enter your email and we&apos;ll send a sign-in link. Once in, update your password from Settings.
                 </div>
               </div>
               <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -133,7 +134,7 @@ export default function LoginPage() {
                 />
                 {error && <div style={{ fontSize: '12px', color: '#e07060', padding: '8px 12px', background: 'rgba(200,80,60,0.1)', borderRadius: '6px' }}>{error}</div>}
                 <button type="submit" disabled={loading} style={btnPrimary}>
-                  {loading ? 'Sending…' : 'Send reset link'}
+                  {loading ? 'Sending…' : 'Send sign-in link'}
                 </button>
               </form>
               <button
