@@ -102,11 +102,11 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {/* Forgot password — outside the form so required-field validation never blocks it */}
+              {/* Forgot password — plain <a> so Next.js soft-nav issues can't block it */}
               <div style={{ textAlign: 'right', marginTop: '6px' }}>
-                <Link href="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
+                <a href="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
                   Forgot password?
-                </Link>
+                </a>
               </div>
 
               <button onClick={handleMagicLink} disabled={loading} style={{ width: '100%', marginTop: '10px', padding: '10px', background: 'transparent', border: '1px solid var(--border-md)', borderRadius: '8px', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
