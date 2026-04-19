@@ -19,16 +19,27 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${window.location.origin}/onboarding`
-      }
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+      },
     })
-    if (error) setError(error.message)
-    else setDone(true)
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+      return
+    }
+    // If Supabase email confirmation is disabled, a session is returned immediately.
+    // Redirect straight to onboarding — no email step needed.
+    if (data.session) {
+      window.location.href = '/onboarding'
+      return
+    }
+    // Confirmation still enabled — show "check your email" state.
+    setDone(true)
     setLoading(false)
   }
 
