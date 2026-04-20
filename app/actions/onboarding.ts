@@ -17,6 +17,7 @@ export type HabitInput = {
   name: string
   emoji: string
   days_of_week: number[]  // empty = every day
+  goal_index: number | null  // index into the goals array; resolved to goal_id on save
 }
 
 export type ProfileInput = {
@@ -41,9 +42,10 @@ export async function completeOnboarding(
 
   const today = await getUserLocalDate(user.id)
 
-  // 1. Save goals
+  // 1. Save goals — select back IDs so habits can reference them
+  const savedGoalIds: (string | null)[] = goals.map(() => null)
   if (goals.length > 0) {
-    const { error } = await supabase.from('goals').insert(
+    const { data: savedGoals, error } = await supabase.from('goals').insert(
       goals.map(g => ({
         user_id: user.id,
         title: g.title,
@@ -53,15 +55,18 @@ export async function completeOnboarding(
         status: 'active',
         target_date: null,
       }))
-    )
+    ).select('id')
     if (error) throw new Error('Failed to save goals: ' + error.message)
+    // Map position → DB id (insert preserves order)
+    savedGoals?.forEach((row, i) => { savedGoalIds[i] = row.id })
   }
 
-  // 2. Save habits
+  // 2. Save habits — link to goal when goal_index is set
   if (habits.length > 0) {
     const { error } = await supabase.from('habits').insert(
       habits.map(h => {
         const { frequency, target_count } = deriveFrequencyMeta(h.days_of_week)
+        const goalId = (h.goal_index != null && savedGoalIds[h.goal_index]) ? savedGoalIds[h.goal_index] : null
         return {
           user_id: user.id,
           name: h.name,
@@ -70,6 +75,7 @@ export async function completeOnboarding(
           target_count,
           days_of_week: h.days_of_week.length > 0 ? h.days_of_week : null,
           ends_at: null,
+          goal_id: goalId,
         }
       })
     )
