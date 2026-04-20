@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
-type View = 'login' | 'forgot' | 'forgot-sent' | 'magic-sent'
+type View = 'login' | 'forgot' | 'forgot-code' | 'forgot-reset' | 'magic-sent'
 
 const LOGO = (
   <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -21,8 +21,11 @@ export default function LoginPage() {
   const [view,     setView]     = useState<View>('login')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState<string | null>(null)
+  const [code,      setCode]      = useState('')
+  const [newPass,   setNewPass]   = useState('')
+  const [confirm,   setConfirm]   = useState('')
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
   const supabase = createClient()
 
   function resetError() { setError(null) }
@@ -58,16 +61,42 @@ export default function LoginPage() {
     })
   }
 
-  /* ── Forgot password → send magic link ── */
-  async function handleForgot(e: React.FormEvent) {
+  /* ── Forgot: send 6-digit OTP ── */
+  async function handleSendCode(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); resetError()
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { shouldCreateUser: false },
     })
     if (error) setError(error.message)
-    else setView('forgot-sent')
+    else { setCode(''); setView('forgot-code') }
+    setLoading(false)
+  }
+
+  /* ── Forgot: verify 6-digit OTP → move to password reset ── */
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true); resetError()
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: 'email',
+    })
+    if (error) setError(error.message)
+    else { setNewPass(''); setConfirm(''); setView('forgot-reset') }
+    setLoading(false)
+  }
+
+  /* ── Forgot: set new password after OTP verified ── */
+  async function handleSetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPass !== confirm) { setError('Passwords do not match.'); return }
+    if (newPass.length < 8)  { setError('Password must be at least 8 characters.'); return }
+    setLoading(true); resetError()
+    const { error } = await supabase.auth.updateUser({ password: newPass })
+    if (error) setError(error.message)
+    else window.location.href = '/brief'
     setLoading(false)
   }
 
@@ -101,32 +130,16 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* ── Magic sign-in link sent (forgot password) ── */}
-          {view === 'forgot-sent' && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>📬</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', color: 'var(--text-0)', marginBottom: '8px' }}>Check your inbox</div>
-              <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6 }}>
-                We sent a sign-in link to{' '}
-                <strong style={{ color: 'var(--text-1)' }}>{email}</strong>.
-                <br />Click it to sign in, then update your password in <strong style={{ color: 'var(--text-1)' }}>Settings</strong>.
-              </div>
-              <button onClick={() => setView('login')} style={{ marginTop: '20px', background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
-                ← Back to sign in
-              </button>
-            </div>
-          )}
-
-          {/* ── Forgot password form ── */}
+          {/* ── Enter email for code ── */}
           {view === 'forgot' && (
             <>
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', marginBottom: '6px' }}>Forgot your password?</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>
-                  Enter your email and we&apos;ll send a sign-in link. Once in, update your password from Settings.
+                  Enter your email and we&apos;ll send you a 6-digit code to sign in.
                 </div>
               </div>
-              <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <form onSubmit={handleSendCode} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <input
                   type="email" placeholder="Email" value={email} required autoFocus
                   onChange={e => setEmail(e.target.value)}
@@ -134,7 +147,7 @@ export default function LoginPage() {
                 />
                 {error && <div style={{ fontSize: '12px', color: '#e07060', padding: '8px 12px', background: 'rgba(200,80,60,0.1)', borderRadius: '6px' }}>{error}</div>}
                 <button type="submit" disabled={loading} style={btnPrimary}>
-                  {loading ? 'Sending…' : 'Send sign-in link'}
+                  {loading ? 'Sending…' : 'Send code'}
                 </button>
               </form>
               <button
@@ -143,6 +156,68 @@ export default function LoginPage() {
               >
                 ← Back to sign in
               </button>
+            </>
+          )}
+
+          {/* ── Enter 6-digit code ── */}
+          {view === 'forgot-code' && (
+            <>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', marginBottom: '6px' }}>Enter your code</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                  We sent a 6-digit code to <strong style={{ color: 'var(--text-1)' }}>{email}</strong>
+                </div>
+              </div>
+              <form onSubmit={handleVerifyCode} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={code}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  autoFocus
+                  style={{ ...inputStyle, fontSize: '24px', letterSpacing: '0.3em', textAlign: 'center' }}
+                />
+                {error && <div style={{ fontSize: '12px', color: '#e07060', padding: '8px 12px', background: 'rgba(200,80,60,0.1)', borderRadius: '6px' }}>{error}</div>}
+                <button type="submit" disabled={loading || code.length < 6} style={{ ...btnPrimary, opacity: code.length < 6 ? 0.5 : 1 }}>
+                  {loading ? 'Verifying…' : 'Sign in'}
+                </button>
+              </form>
+              <button
+                onClick={() => { setView('forgot'); resetError(); setCode('') }}
+                style={{ width: '100%', marginTop: '10px', padding: '10px', background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                ← Resend code
+              </button>
+            </>
+          )}
+
+          {/* ── Set new password ── */}
+          {view === 'forgot-reset' && (
+            <>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', marginBottom: '6px' }}>Set a new password</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                  You&apos;re signed in. Choose a new password for your account.
+                </div>
+              </div>
+              <form onSubmit={handleSetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input
+                  type="password" placeholder="New password (min 8 characters)" value={newPass}
+                  onChange={e => setNewPass(e.target.value)} required minLength={8} autoFocus
+                  style={inputStyle}
+                />
+                <input
+                  type="password" placeholder="Confirm new password" value={confirm}
+                  onChange={e => setConfirm(e.target.value)} required
+                  style={inputStyle}
+                />
+                {error && <div style={{ fontSize: '12px', color: '#e07060', padding: '8px 12px', background: 'rgba(200,80,60,0.1)', borderRadius: '6px' }}>{error}</div>}
+                <button type="submit" disabled={loading} style={btnPrimary}>
+                  {loading ? 'Saving…' : 'Update password'}
+                </button>
+              </form>
             </>
           )}
 
