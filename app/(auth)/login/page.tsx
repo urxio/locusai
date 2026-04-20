@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -26,7 +26,10 @@ export default function LoginPage() {
   const [confirm,   setConfirm]   = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState<string | null>(null)
-  const supabase = createClient()
+
+  // useRef so the client isn't re-created on every render
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   function resetError() { setError(null) }
 
@@ -35,15 +38,12 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true); resetError()
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        // Map Supabase's generic message to something human-readable
-        const msg = error.message.toLowerCase()
-        if (msg.includes('invalid login') || msg.includes('invalid credentials') || msg.includes('email not confirmed')) {
-          setError('Incorrect email or password.')
-        } else {
-          setError(error.message || 'Sign-in failed. Please try again.')
-        }
+        setError('Incorrect email or password.')
+      } else if (!data?.session) {
+        // Supabase returned no error but also no session — treat as failure
+        setError('Sign-in failed. Please try again.')
       } else {
         window.location.href = '/brief'
       }
