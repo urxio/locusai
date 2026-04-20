@@ -16,7 +16,7 @@ function formatDisplayDate(dateStr: string): string {
   })
 }
 
-function getWeekDays(todayStr: string): Array<{
+function getWeekDays(todayStr: string, weekOffset = 0): Array<{
   label: string; dateStr: string; isToday: boolean; isFuture: boolean
 }> {
   const [y, m, d] = todayStr.split('-').map(Number)
@@ -24,7 +24,7 @@ function getWeekDays(todayStr: string): Array<{
   const dow = today.getDay()
   const mondayOffset = dow === 0 ? -6 : 1 - dow
   const monday = new Date(today)
-  monday.setDate(today.getDate() + mondayOffset)
+  monday.setDate(today.getDate() + mondayOffset + weekOffset * 7)
 
   return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => {
     const date = new Date(monday)
@@ -41,25 +41,51 @@ function WeekDotMap({
   selectedDate,
   todayStr,
   onSelectDate,
+  weekOffset,
+  onWeekOffsetChange,
 }: {
   recentJournals: JournalEntry[]
   selectedDate: string
   todayStr: string
   onSelectDate: (date: string) => void
+  weekOffset: number
+  onWeekOffsetChange: (offset: number) => void
 }) {
   const journalDates = new Set(recentJournals.filter(j => j.content.trim()).map(j => j.date))
-  const weekDays = getWeekDays(todayStr)
+  const weekDays = getWeekDays(todayStr, weekOffset)
 
   const filledCount = weekDays.filter(d => !d.isFuture && journalDates.has(d.dateStr)).length
   const totalSoFar  = weekDays.filter(d => !d.isFuture).length
 
+  const isThisWeek  = weekOffset === 0
+  const isLastWeek  = weekOffset === -1
+  const weekLabel   = isThisWeek ? 'This week' : isLastWeek ? 'Last week' : 'Earlier'
+
   return (
     <div style={{ marginBottom: '28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          This week
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Prev week */}
+          {weekOffset > -1 && (
+            <button
+              onClick={() => onWeekOffsetChange(weekOffset - 1)}
+              title="Previous week"
+              style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0 2px', fontSize: '14px', lineHeight: 1, fontFamily: 'inherit' }}
+            >‹</button>
+          )}
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            {weekLabel}
+          </div>
+          {/* Next week — only if not already on current week */}
+          {weekOffset < 0 && (
+            <button
+              onClick={() => onWeekOffsetChange(weekOffset + 1)}
+              title="Next week"
+              style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0 2px', fontSize: '14px', lineHeight: 1, fontFamily: 'inherit' }}
+            >›</button>
+          )}
         </div>
-        <div style={{ fontSize: '11px', color: filledCount === totalSoFar ? 'var(--sage)' : 'var(--text-3)', fontWeight: 600 }}>
+        <div style={{ fontSize: '11px', color: filledCount === totalSoFar && totalSoFar > 0 ? 'var(--sage)' : 'var(--text-3)', fontWeight: 600 }}>
           {filledCount}/{totalSoFar}{filledCount === totalSoFar && totalSoFar > 1 ? ' ✓' : ''}
         </div>
       </div>
@@ -182,6 +208,7 @@ export default function JournalSection({
   const todayStr = localDateStr()
 
   const [selectedDate, setSelectedDate] = useState(todayStr)
+  const [weekOffset,   setWeekOffset]   = useState(0)   // 0 = this week, -1 = last week
   const isToday = selectedDate === todayStr
 
   // Derive initial content from existing (today's server-fetched entry) or recentJournals
@@ -351,6 +378,12 @@ export default function JournalSection({
     setSelectedDate(date)
   }
 
+  const handleWeekOffsetChange = (offset: number) => {
+    setWeekOffset(offset)
+    // If navigating back to this week, snap selection to today
+    if (offset === 0) setSelectedDate(todayStr)
+  }
+
   // Merge today's entry into recentJournals for the dot-map (server entry may be fresher)
   const journalsForMap: JournalEntry[] = existing
     ? [existing, ...recentJournals.filter(j => j.date !== todayStr)]
@@ -365,6 +398,8 @@ export default function JournalSection({
         selectedDate={selectedDate}
         todayStr={todayStr}
         onSelectDate={handleSelectDate}
+        weekOffset={weekOffset}
+        onWeekOffsetChange={handleWeekOffsetChange}
       />
 
       {/* Past-date editing banner */}
@@ -388,7 +423,7 @@ export default function JournalSection({
             </span>
           </div>
           <button
-            onClick={() => setSelectedDate(todayStr)}
+            onClick={() => { setSelectedDate(todayStr); setWeekOffset(0) }}
             style={{
               fontSize: '12px', color: 'var(--text-2)', background: 'none',
               border: '1px solid var(--border-md)', borderRadius: '6px',
