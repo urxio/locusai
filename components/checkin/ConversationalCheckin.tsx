@@ -226,10 +226,7 @@ export default function ConversationalCheckin({
           await saveCheckin(data, msgs)
         }
 
-        // AI confirmed user wants to see brief
-        if (SHOW_BRIEF_RE.test(fullText)) {
-          setShowBrief(true)
-        }
+        // <show_brief> tag is no longer used to auto-open — user clicks the CTA instead
       } catch (err) {
         console.error('[ConversationalCheckin]', err)
         setError('Something went wrong — please try again.')
