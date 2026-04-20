@@ -34,23 +34,42 @@ export default function LoginPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); resetError()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setError(error.message)
-    else window.location.href = '/brief'
-    setLoading(false)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        // Map Supabase's generic message to something human-readable
+        const msg = error.message.toLowerCase()
+        if (msg.includes('invalid login') || msg.includes('invalid credentials') || msg.includes('email not confirmed')) {
+          setError('Incorrect email or password.')
+        } else {
+          setError(error.message || 'Sign-in failed. Please try again.')
+        }
+      } else {
+        window.location.href = '/brief'
+      }
+    } catch {
+      setError('Something went wrong. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   /* ── Magic link ── */
   async function handleMagicLink() {
     if (!email) { setError('Enter your email first.'); return }
     setLoading(true); resetError()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    })
-    if (error) setError(error.message)
-    else setView('magic-sent')
-    setLoading(false)
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      })
+      if (error) setError(error.message || 'Failed to send magic link.')
+      else setView('magic-sent')
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   /* ── Google OAuth ── */
@@ -65,27 +84,53 @@ export default function LoginPage() {
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); resetError()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    })
-    if (error) setError(error.message)
-    else { setCode(''); setView('forgot-code') }
-    setLoading(false)
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      })
+      if (error) {
+        const msg = error.message.toLowerCase()
+        if (msg.includes('user not found') || msg.includes('no user')) {
+          setError('No account found with that email.')
+        } else {
+          setError(error.message || 'Failed to send code.')
+        }
+      } else {
+        setCode(''); setView('forgot-code')
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   /* ── Forgot: verify 6-digit OTP → move to password reset ── */
   async function handleVerifyCode(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); resetError()
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code.trim(),
-      type: 'email',
-    })
-    if (error) setError(error.message)
-    else { setNewPass(''); setConfirm(''); setView('forgot-reset') }
-    setLoading(false)
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: code.trim(),
+        type: 'email',
+      })
+      if (error) {
+        const msg = error.message.toLowerCase()
+        if (msg.includes('expired') || msg.includes('invalid') || msg.includes('otp')) {
+          setError('Invalid or expired code. Please request a new one.')
+        } else {
+          setError(error.message || 'Verification failed.')
+        }
+      } else {
+        setNewPass(''); setConfirm(''); setView('forgot-reset')
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   /* ── Forgot: set new password after OTP verified ── */
@@ -94,10 +139,15 @@ export default function LoginPage() {
     if (newPass !== confirm) { setError('Passwords do not match.'); return }
     if (newPass.length < 8)  { setError('Password must be at least 8 characters.'); return }
     setLoading(true); resetError()
-    const { error } = await supabase.auth.updateUser({ password: newPass })
-    if (error) setError(error.message)
-    else window.location.href = '/brief'
-    setLoading(false)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPass })
+      if (error) setError(error.message || 'Failed to update password.')
+      else window.location.href = '/brief'
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const inputStyle: React.CSSProperties = {
