@@ -174,7 +174,7 @@ export default function LoginPage() {
                   inputMode="numeric"
                   placeholder="000000"
                   value={code}
-                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                   required
                   autoFocus
                   style={{ ...inputStyle, fontSize: '24px', letterSpacing: '0.3em', textAlign: 'center' }}
