@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import type { HabitWithLogs } from '@/lib/types'
+import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
 
 type HabitWeekData = {
   id:           string
@@ -49,17 +49,20 @@ function propsToWeekData(habits: HabitWithLogs[]): HabitWeekData[] {
 function HabitRow({
   habit,
   todayDate,
-  onMark,
+  onToggle,
+  pending,
 }: {
   habit: HabitWeekData
   todayDate: string
-  onMark: () => void
+  onToggle: () => void
+  pending: boolean
 }) {
   const done = isDoneToday(habit, todayDate)
 
   return (
     <button
-      onClick={onMark}
+      onClick={onToggle}
+      disabled={pending}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -131,8 +134,8 @@ function HabitRow({
 }
 
 export default function HabitsWeekStrip({ habits }: Props) {
-  const router = useRouter()
   const [data, setData] = useState<HabitWeekData[]>(() => propsToWeekData(habits))
+  const [pending, setPending] = useState<Set<string>>(new Set())
   const fetchingRef = useRef(false)
 
   const refresh = useCallback(async () => {
@@ -160,13 +163,42 @@ export default function HabitsWeekStrip({ habits }: Props) {
     }
   }, [refresh])
 
+  const toggle = async (habitId: string, todayDate: string) => {
+    if (pending.has(habitId)) return
+    const wasDone = data.find(h => h.id === habitId)
+      ? isDoneToday(data.find(h => h.id === habitId)!, todayDate)
+      : false
+
+    // Optimistic update
+    setPending(p => new Set(p).add(habitId))
+    setData(prev => prev.map(h => {
+      if (h.id !== habitId) return h
+      return {
+        ...h,
+        logs: wasDone
+          ? h.logs.filter(l => l.logged_date !== todayDate)
+          : [...h.logs, { logged_date: todayDate }],
+      }
+    }))
+
+    try {
+      if (wasDone) await unlogHabitAction(habitId, todayDate)
+      else         await logHabitAction(habitId, todayDate)
+    } catch {
+      // revert on failure
+      await refresh()
+    } finally {
+      setPending(p => { const n = new Set(p); n.delete(habitId); return n })
+    }
+  }
+
   if (data.length === 0) return null
 
   const todayDate = localDateStr(new Date())
   const todayDow  = new Date().getDay()
   const scheduled = data.filter(h => isScheduledToday(h, todayDow))
   const visible   = scheduled.length > 0 ? scheduled : data
-  const done      = visible.filter(h => isDoneToday(h, todayDate)).length
+  const doneCount = visible.filter(h => isDoneToday(h, todayDate)).length
 
   return (
     <div style={{ marginTop: '24px' }}>
@@ -203,7 +235,7 @@ export default function HabitsWeekStrip({ habits }: Props) {
             </h3>
           </div>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink-soft)' }}>
-            {done} of {visible.length} done
+            {doneCount} of {visible.length} done
           </span>
         </div>
 
@@ -214,7 +246,8 @@ export default function HabitsWeekStrip({ habits }: Props) {
               key={habit.id}
               habit={habit}
               todayDate={todayDate}
-              onMark={() => router.push('/habits')}
+              onToggle={() => toggle(habit.id, todayDate)}
+              pending={pending.has(habit.id)}
             />
           ))}
         </div>
