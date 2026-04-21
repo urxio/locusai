@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import type { HabitWithLogs } from '@/lib/types'
 
 /* ── slim API shape (from /api/habits/week) ──────────── */
@@ -15,23 +16,14 @@ type HabitWeekData = {
   logs:         { logged_date: string }[]
 }
 
-/* ── props ───────────────────────────────────────────── */
-
 type Props = {
   habits: HabitWithLogs[]
 }
-
-/* ── constants ───────────────────────────────────────── */
-
-// Week starts Monday — Mon Tue Wed Thu Fri Sat Sun
-const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 const HABIT_COLORS = [
   '#7a9e8a', '#d4a853', '#7090c0', '#c09040',
   '#9080b0', '#50a0a0', '#c07080', '#70a070',
 ]
-
-/* ── helpers ─────────────────────────────────────────── */
 
 function habitColor(id: string): string {
   let hash = 0
@@ -39,7 +31,6 @@ function habitColor(id: string): string {
   return HABIT_COLORS[hash % HABIT_COLORS.length]
 }
 
-/** Local date string (YYYY-MM-DD) — never use toISOString() which gives UTC */
 function localDateStr(d: Date): string {
   const y  = d.getFullYear()
   const m  = String(d.getMonth() + 1).padStart(2, '0')
@@ -47,35 +38,16 @@ function localDateStr(d: Date): string {
   return `${y}-${m}-${dd}`
 }
 
-/**
- * Returns 7 days Mon→Sun for the current local week.
- * dow values follow JS convention: 0=Sun, 1=Mon … 6=Sat.
- */
-function getWeekDays(): { date: string; dow: number }[] {
-  const now            = new Date()
-  const dayOfWeek      = now.getDay()                  // 0=Sun … 6=Sat (local)
-  const daysSinceMonday = (dayOfWeek + 6) % 7          // 0=Mon … 6=Sun
-  const days: { date: string; dow: number }[] = []
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(now)
-    d.setDate(now.getDate() - daysSinceMonday + i)
-    const dow = (1 + i) % 7                            // 1=Mon…6=Sat, 0=Sun
-    days.push({ date: localDateStr(d), dow })
-  }
-  return days
+function isScheduledToday(habit: HabitWeekData, todayDow: number): boolean {
+  if (!habit.days_of_week || habit.days_of_week.length === 0) return true
+  return habit.days_of_week.includes(todayDow)
 }
 
-function isScheduledOn(dow: number, daysOfWeek: number[] | null): boolean {
-  if (!daysOfWeek || daysOfWeek.length === 0) return true
-  return daysOfWeek.includes(dow)
+function isDoneToday(habit: HabitWeekData, todayDate: string): boolean {
+  return habit.logs.some(log => log.logged_date === todayDate)
 }
 
-/** Convert server props → HabitWeekData[] for the initial seed */
 function propsToWeekData(habits: HabitWithLogs[]): HabitWeekData[] {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 6)
-  const cutoffStr = cutoff.toISOString().split('T')[0]
-
   return habits.map(h => ({
     id:           h.id,
     name:         h.name,
@@ -83,160 +55,106 @@ function propsToWeekData(habits: HabitWithLogs[]): HabitWeekData[] {
     frequency:    h.frequency,
     days_of_week: h.days_of_week,
     streak:       h.streak,
-    logs:         h.logs
-      .filter(l => l.logged_date >= cutoffStr)
-      .map(l => ({ logged_date: l.logged_date })),
+    logs:         h.logs.map(log => ({ logged_date: log.logged_date })),
   }))
 }
 
-/* ── day cell ────────────────────────────────────────── */
-
-type CellState = 'done' | 'missed' | 'unscheduled' | 'future'
-
-function DayCell({ label, state, isToday, color }: {
-  label:   string
-  state:   CellState
-  isToday: boolean
-  color:   string
-}) {
-  const isDone        = state === 'done'
-  const isMissed      = state === 'missed'
-  const isUnscheduled = state === 'unscheduled'
-  const isFuture      = state === 'future'
-
-  const cellBg = isDone        ? color
-    : isMissed                 ? 'rgba(255,255,255,0.06)'
-    : isUnscheduled            ? 'transparent'
-    : isFuture                 ? 'rgba(255,255,255,0.04)'
-    :                            'rgba(255,255,255,0.06)'
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flex: 1 }}>
-      <span style={{
-        fontSize: '9px', fontWeight: isToday ? 800 : 600, lineHeight: 1,
-        color: isToday ? 'var(--text-1)' : 'var(--text-3)', letterSpacing: '0.04em',
-      }}>
-        {label}
-      </span>
-      <div style={{
-        width: '100%', height: '6px', borderRadius: '5px',
-        background:  cellBg,
-        boxShadow:   isDone ? `0 0 8px ${color}cc, 0 0 2px ${color}` : 'none',
-        border:      isToday
-          ? `1.5px solid rgba(255,255,255,${isDone ? '0.35' : '0.18'})`
-          : isMissed
-          ? '1px solid rgba(255,255,255,0.08)'
-          : isUnscheduled
-          ? '1px dashed rgba(255,255,255,0.07)'
-          : '1px solid transparent',
-        transition: 'background 0.3s, box-shadow 0.3s',
-      }} />
-    </div>
-  )
-}
-
-/* ── single habit row ────────────────────────────────── */
-
-function HabitRow({ habit, weekDays, todayDate }: {
-  habit:     HabitWeekData
-  weekDays:  { date: string; dow: number }[]
-  todayDate: string
-}) {
-  const color    = habitColor(habit.id)
-  const logDates = new Set(habit.logs.map(l => l.logged_date))
-
-  const cells = weekDays.map(({ date, dow }) => {
-    const scheduled = isScheduledOn(dow, habit.days_of_week)
-    const done      = logDates.has(date)
-    const isFuture  = date > todayDate
-    const isToday   = date === todayDate
-    let state: CellState
-    if (!scheduled)    state = 'unscheduled'
-    else if (done)     state = 'done'
-    else if (isFuture) state = 'future'
-    else               state = 'missed'
-    return { date, state, isToday }
-  })
-
-  const doneThisWeek   = cells.filter(c => c.state === 'done').length
-  const totalScheduled = cells.filter(c => c.state !== 'unscheduled').length
+function HabitRow({ habit, todayDate, onMark }: { habit: HabitWeekData; todayDate: string; onMark: () => void }) {
+  const done = isDoneToday(habit, todayDate)
+  const color = habitColor(habit.id)
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', gap: '10px',
-      padding: '14px 14px 13px',
-      background: 'var(--bg-1)', border: '1px solid var(--border)',
-      borderRadius: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '14px',
+      padding: '16px',
+      background: 'var(--bg-1)',
+      border: '1px solid var(--border)',
+      borderRadius: '20px',
+      minHeight: '72px',
     }}>
-      {/* Top row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
         <div style={{
-          width: '32px', height: '32px', borderRadius: '8px',
-          background: `${color}22`, border: `1px solid ${color}44`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '16px', flexShrink: 0,
+          width: '40px',
+          height: '40px',
+          borderRadius: '16px',
+          display: 'grid',
+          placeItems: 'center',
+          background: done ? color : 'rgba(255,255,255,0.05)',
+          border: done ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.1)',
+          color: done ? 'white' : 'var(--text-0)',
+          fontSize: '18px',
         }}>
-          {habit.emoji}
+          {done ? '✓' : habit.emoji}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{
-            fontSize: '13px', fontWeight: 600, color: 'var(--text-0)',
-            lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            fontSize: '15px',
+            fontWeight: 600,
+            color: done ? 'var(--text-3)' : 'var(--text-0)',
+            lineHeight: 1.2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}>
             {habit.name}
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: done ? 'var(--text-3)' : 'var(--text-2)', marginTop: '4px' }}>
             {habit.frequency}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500 }}>
-            {doneThisWeek}/{totalScheduled}
-          </span>
-          {habit.streak > 0 && (
-            <span style={{
-              fontSize: '10px', fontWeight: 700, color,
-              background: `${color}18`, border: `1px solid ${color}33`,
-              borderRadius: '10px', padding: '2px 7px', letterSpacing: '0.02em',
-            }}>
-              {habit.streak} 🔥
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Sparkline */}
-      <div style={{ display: 'flex', gap: '4px' }}>
-        {cells.map(({ date, state, isToday }, i) => (
-          <DayCell key={date} label={DAY_LABELS[i]} state={state} isToday={isToday} color={color} />
-        ))}
-      </div>
+      <button
+        onClick={onMark}
+        disabled={done}
+        style={{
+          minWidth: '88px',
+          padding: '10px 14px',
+          borderRadius: '999px',
+          border: done ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.18)',
+          background: done ? 'rgba(255,255,255,0.04)' : 'transparent',
+          color: done ? 'var(--text-3)' : 'var(--text-1)',
+          fontSize: '12px',
+          fontWeight: 700,
+          cursor: done ? 'default' : 'pointer',
+          transition: 'background 0.2s, border-color 0.2s, color 0.2s',
+        }}
+      >
+        {done ? 'Done' : 'Mark'}
+      </button>
     </div>
   )
 }
 
-/* ── main section ────────────────────────────────────── */
-
 export default function HabitsWeekStrip({ habits }: Props) {
-  const [data, setData]           = useState<HabitWeekData[]>(() => propsToWeekData(habits))
-  const [refreshing, setRefresh]  = useState(false)
-  const fetchingRef               = useRef(false)
+  const router = useRouter()
+  const [data, setData] = useState<HabitWeekData[]>(() => propsToWeekData(habits))
+  const [refreshing, setRefreshing] = useState(false)
+  const fetchingRef = useRef(false)
 
   const refresh = useCallback(async () => {
     if (fetchingRef.current) return
     fetchingRef.current = true
-    setRefresh(true)
+    setRefreshing(true)
     try {
       const res = await fetch('/api/habits/week', { cache: 'no-store' })
       if (res.ok) setData(await res.json())
-    } catch { /* keep last known data */ }
-    finally { fetchingRef.current = false; setRefresh(false) }
+    } catch {
+      // keep last known data
+    } finally {
+      fetchingRef.current = false
+      setRefreshing(false)
+    }
   }, [])
 
   useEffect(() => {
     refresh()
     const onVisible = () => { if (!document.hidden) refresh() }
-    const onFocus   = () => refresh()
+    const onFocus = () => refresh()
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onFocus)
     return () => {
@@ -245,87 +163,74 @@ export default function HabitsWeekStrip({ habits }: Props) {
     }
   }, [refresh])
 
-  const [expanded, setExpanded] = useState(false)
-
   if (data.length === 0) return null
 
-  const weekDays   = getWeekDays()
-  const todayDate  = localDateStr(new Date())
-  const PREVIEW    = 3
-  const visible    = expanded ? data : data.slice(0, PREVIEW)
-  const hasMore    = data.length > PREVIEW
+  const todayDate = localDateStr(new Date())
+  const todayDow = new Date().getDay()
+  const scheduledToday = data.filter(habit => isScheduledToday(habit, todayDow))
+  const visibleHabits = scheduledToday.length > 0 ? scheduledToday : data
+  const completedCount = visibleHabits.filter(habit => isDoneToday(habit, todayDate)).length
 
   return (
     <div style={{ marginTop: '24px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <span style={{
-            fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-          }}>
-            Habits This Week
-          </span>
-          <div style={{
-            width: '5px', height: '5px', borderRadius: '50%',
-            background:  refreshing ? 'var(--gold)' : 'var(--sage)',
-            boxShadow:   refreshing ? '0 0 6px var(--gold)' : '0 0 5px var(--sage)',
-            transition:  'background 0.3s, box-shadow 0.3s',
-            animation:   refreshing ? 'statusPulse 0.8s ease-in-out infinite' : 'none',
-          }} />
+      <div style={{
+        padding: '20px',
+        background: 'var(--bg-1)',
+        border: '1px solid var(--border)',
+        borderRadius: '28px',
+        overflow: 'hidden',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '18px', marginBottom: '18px' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-3)',
+              marginBottom: '8px',
+            }}>
+              Habits — Today
+            </div>
+            <div style={{
+              fontSize: '22px',
+              fontWeight: 700,
+              color: 'var(--text-0)',
+              lineHeight: 1.1,
+            }}>
+              {visibleHabits.every(habit => isScheduledToday(habit, todayDow)) ? 'Today’s routine' : 'Daily habits'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', minWidth: '96px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500, marginBottom: '4px' }}>
+              {completedCount} of {visibleHabits.length} done
+            </div>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '999px',
+              padding: '4px 10px',
+              background: 'rgba(255,255,255,0.04)',
+              color: 'var(--text-2)',
+              fontSize: '11px',
+            }}>
+              {refreshing ? 'Refreshing…' : 'Updated today'}
+            </div>
+          </div>
         </div>
-        <a href="/habits" style={{ fontSize: '11px', color: 'var(--text-3)', textDecoration: 'none', fontWeight: 500 }}>
-          All habits →
-        </a>
-      </div>
 
-      {/* Rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: refreshing ? 0.7 : 1, transition: 'opacity 0.3s' }}>
-        {visible.map(h => (
-          <HabitRow key={h.id} habit={h} weekDays={weekDays} todayDate={todayDate} />
-        ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {visibleHabits.map(habit => (
+            <HabitRow
+              key={habit.id}
+              habit={habit}
+              todayDate={todayDate}
+              onMark={() => router.push('/habits')}
+            />
+          ))}
+        </div>
       </div>
-
-      {/* Expand / collapse toggle */}
-      {hasMore && (
-        <button
-          onClick={() => setExpanded(e => !e)}
-          style={{
-            display:        'flex',
-            alignItems:     'center',
-            justifyContent: 'center',
-            gap:            '6px',
-            width:          '100%',
-            marginTop:      '8px',
-            padding:        '10px',
-            background:     'var(--bg-1)',
-            border:         '1px solid var(--border)',
-            borderRadius:   '12px',
-            cursor:         'pointer',
-            fontSize:       '12px',
-            fontWeight:     600,
-            color:          'var(--text-3)',
-            fontFamily:     'inherit',
-            transition:     'border-color 0.15s, color 0.15s',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-md)'
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-1)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'
-          }}
-        >
-          <span>{expanded ? `Show less` : `${data.length - PREVIEW} more habit${data.length - PREVIEW !== 1 ? 's' : ''}`}</span>
-          <span style={{
-            display:    'inline-block',
-            transition: 'transform 0.25s',
-            transform:  expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            fontSize:   '10px',
-          }}>▾</span>
-        </button>
-      )}
     </div>
   )
 }
