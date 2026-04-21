@@ -122,16 +122,16 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
         </div>
       </div>
 
-      {/* ── Right photo panel — fixed, matches left sidebar width ── */}
+      {/* ── Right photo panel — sticky, matches left sidebar width ── */}
       <div style={{
-        position: 'fixed',
-        top: '16px',
-        right: '16px',
-        bottom: '16px',
         width: '256px',
+        flexShrink: 0,
         display: 'none',
         flexDirection: 'column',
-        zIndex: 10,
+        position: 'sticky',
+        top: '0px',
+        alignSelf: 'flex-start',
+        height: 'calc(100vh - 32px)',
       }} className="brief-photo-panel">
         <div style={{
           position: 'relative',

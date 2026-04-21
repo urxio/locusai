@@ -357,10 +357,6 @@ input:focus,    input:focus-visible {
   .brief-photo-panel {
     display: flex !important;
   }
-  /* offset main content so it doesn't slide under the fixed right panel */
-  .app-main {
-    padding-right: calc(256px + 32px);
-  }
 }
 
 .stats-grid-3 {
