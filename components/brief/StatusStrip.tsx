@@ -134,8 +134,8 @@ type PillConfig = {
 function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: PillConfig) {
   /* Glow blob color: sun/warm for energy, sea-soft/teal for habits+goals */
   const glowColor = barColor === '#d4a853'
-    ? 'rgba(240,223,160,0.55)'   /* sun glow */
-    : 'rgba(200,221,215,0.55)'   /* sea-soft glow */
+    ? 'rgba(240,223,160,0.18)'
+    : 'rgba(200,221,215,0.18)'
 
   const [mainVal, unitVal] = value.includes('/')
     ? [value.split('/')[0].trim(), '/' + value.split('/')[1].trim()]
