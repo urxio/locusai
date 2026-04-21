@@ -146,6 +146,7 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
   return (
     <a
       href={href}
+      className="status-pill"
       style={{
         display:          'flex',
         flexDirection:    'column',
@@ -153,7 +154,6 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
         flex:             1,
         minWidth:         0,
         background:       'var(--bg-1)',
-        border:           '1px solid var(--border)',
         borderRadius:     '24px',
         padding:          '20px',
         textDecoration:   'none',
@@ -163,7 +163,7 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
         backdropFilter:   'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         transition:       'transform 0.18s',
-        boxShadow:        'var(--shadow-glass, var(--shadow-card))',
+        boxShadow:        '0 8px 32px oklch(0 0 0 / 0.4)',
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)' }}
