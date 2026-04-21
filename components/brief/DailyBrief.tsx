@@ -52,7 +52,7 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
       {/* ── Main scrollable content ── */}
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* ── Header ── */}
-        <div className="page-pad" style={{ paddingBottom: '0' }}>
+        <div className="page-pad" style={{ paddingTop: '24px', paddingBottom: '0' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
             <div>
               <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sage)', fontWeight: 600, marginBottom: '4px' }}>

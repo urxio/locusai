@@ -251,10 +251,10 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
       {(aiOpener || pulse?.text) && (
         <p style={{
           fontFamily:   'var(--font-serif)',
-          fontSize:     '15px',
-          fontWeight:   300,
-          color:        'var(--text-2)',
-          lineHeight:   1.65,
+          fontSize:     '17px',
+          fontWeight:   400,
+          color:        'var(--text-1)',
+          lineHeight:   1.7,
           margin:       '0 0 22px',
         }}>
           {aiOpener || pulse?.text}
