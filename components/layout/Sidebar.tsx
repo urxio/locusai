@@ -39,12 +39,12 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
 
         {/* ── Brand ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px' }}>
-          {/* White card logo with gradient dot — matches Lovable exactly */}
+          {/* Logo box — uses CSS vars so it adapts to dark/light */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: '40px', height: '40px', borderRadius: '16px',
-            border: '1px solid rgba(255,255,255,0.9)',
-            background: 'rgba(255,255,255,0.92)',
+            border: '1px solid var(--logo-box-border)',
+            background: 'var(--logo-box-bg)',
             boxShadow: '0 2px 12px rgba(110,158,145,0.15)',
             flexShrink: 0,
           }}>
@@ -83,8 +83,8 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       borderRadius: '16px',
-                      border: active ? '1px solid rgba(255,255,255,0.85)' : '1px solid transparent',
-                      background: active ? 'rgba(255,255,255,0.70)' : 'transparent',
+                      border: active ? '1px solid var(--nav-active-border)' : '1px solid transparent',
+                      background: active ? 'var(--nav-active-bg)' : 'transparent',
                       padding: '10px 16px',
                       fontSize: '14px',
                       fontWeight: active ? 600 : 500,
@@ -95,7 +95,7 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
                     }}
                     onMouseEnter={e => {
                       if (!active) {
-                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.40)'
+                        (e.currentTarget as HTMLElement).style.background = 'var(--nav-hover-bg)'
                         ;(e.currentTarget as HTMLElement).style.color = 'var(--text-0)'
                       }
                     }}
@@ -136,7 +136,7 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
             transition: 'background 0.15s',
             flexShrink: 0,
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.40)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--nav-hover-bg)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
         >
           {avatarUrl ? (

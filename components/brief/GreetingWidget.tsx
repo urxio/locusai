@@ -212,12 +212,12 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
       {/* Gradient overlay — from-white/40 to sea-soft — matches Lovable */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(to right, rgba(255,255,255,0.40), transparent, rgba(200,221,215,0.15))',
+        background: 'var(--card-overlay)',
         pointerEvents: 'none',
       }} />
 
       {/* ── AI badge ── */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '6px 14px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.60)', position: 'relative' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '6px 14px', borderRadius: '999px', border: '1px solid var(--surface-soft-border)', background: 'var(--surface-soft-bg)', position: 'relative' }}>
         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0, animation: 'pulse 2s ease-in-out infinite' }} />
         <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 600 }}>
           {pulse?.label ?? "Locus AI · Today's pulse"}

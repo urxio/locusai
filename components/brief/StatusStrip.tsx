@@ -187,8 +187,8 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: '24px', height: '24px', borderRadius: '50%',
-            border: '1px solid rgba(255,255,255,0.85)',
-            background: 'rgba(255,255,255,0.80)',
+            border: '1px solid var(--surface-strong-border)',
+            background: 'var(--surface-strong-bg)',
           }}>
             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sun, #f0dfa0), var(--sea-soft, #c8ddd7))' }} />
           </div>
@@ -218,7 +218,7 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
 
       {/* Progress bar */}
       {barPct != null && barColor && (
-        <div style={{ position: 'relative', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.50)', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: '4px', borderRadius: '2px', background: 'var(--progress-track)', overflow: 'hidden' }}>
           <div style={{
             height: '100%',
             width: loading ? '30%' : `${Math.min(Math.max(barPct, 0), 100)}%`,
