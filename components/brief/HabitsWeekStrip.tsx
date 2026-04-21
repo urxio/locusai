@@ -25,13 +25,13 @@ function localDateStr(d: Date): string {
   return `${y}-${m}-${dd}`
 }
 
-function isScheduledToday(habit: HabitWeekData, todayDow: number): boolean {
-  if (!habit.days_of_week || habit.days_of_week.length === 0) return true
-  return habit.days_of_week.includes(todayDow)
+function isScheduledToday(h: HabitWeekData, dow: number): boolean {
+  if (!h.days_of_week || h.days_of_week.length === 0) return true
+  return h.days_of_week.includes(dow)
 }
 
-function isDoneToday(habit: HabitWeekData, todayDate: string): boolean {
-  return habit.logs.some(log => log.logged_date === todayDate)
+function isDoneToday(h: HabitWeekData, today: string): boolean {
+  return h.logs.some(l => l.logged_date === today)
 }
 
 function propsToWeekData(habits: HabitWithLogs[]): HabitWeekData[] {
@@ -42,11 +42,19 @@ function propsToWeekData(habits: HabitWithLogs[]): HabitWeekData[] {
     frequency:    h.frequency,
     days_of_week: h.days_of_week,
     streak:       h.streak,
-    logs:         h.logs.map(log => ({ logged_date: log.logged_date })),
+    logs:         h.logs.map(l => ({ logged_date: l.logged_date })),
   }))
 }
 
-function HabitRow({ habit, todayDate, onMark }: { habit: HabitWeekData; todayDate: string; onMark: () => void }) {
+function HabitRow({
+  habit,
+  todayDate,
+  onMark,
+}: {
+  habit: HabitWeekData
+  todayDate: string
+  onMark: () => void
+}) {
   const done = isDoneToday(habit, todayDate)
 
   return (
@@ -58,16 +66,16 @@ function HabitRow({ habit, todayDate, onMark }: { habit: HabitWeekData; todayDat
         gap: '16px',
         padding: '16px',
         borderRadius: '16px',
-        border: done ? '1px solid transparent' : '1px solid var(--border)',
+        border: `1px solid ${done ? 'transparent' : 'var(--border)'}`,
         background: done ? 'oklch(1 0 0 / 0.03)' : 'var(--bg-1)',
+        boxShadow: done ? 'none' : '0 2px 12px oklch(0 0 0 / 0.03)',
         textAlign: 'left',
         cursor: 'pointer',
         width: '100%',
         transition: 'background 0.2s, box-shadow 0.2s',
-        boxShadow: done ? 'none' : '0 2px 12px oklch(0 0 0 / 0.03)',
       }}
     >
-      {/* Circle indicator */}
+      {/* Circle */}
       <span style={{
         flexShrink: 0,
         width: '24px',
@@ -155,15 +163,15 @@ export default function HabitsWeekStrip({ habits }: Props) {
   if (data.length === 0) return null
 
   const todayDate = localDateStr(new Date())
-  const todayDow = new Date().getDay()
-  const scheduledToday = data.filter(h => isScheduledToday(h, todayDow))
-  const visibleHabits = scheduledToday.length > 0 ? scheduledToday : data
-  const completedCount = visibleHabits.filter(h => isDoneToday(h, todayDate)).length
+  const todayDow  = new Date().getDay()
+  const scheduled = data.filter(h => isScheduledToday(h, todayDow))
+  const visible   = scheduled.length > 0 ? scheduled : data
+  const done      = visible.filter(h => isDoneToday(h, todayDate)).length
 
   return (
     <div style={{ marginTop: '24px' }}>
       <section style={{
-        padding: '24px',
+        padding: '24px 24px 20px',
         background: 'var(--glass)',
         border: '1px solid var(--glass-border)',
         borderRadius: '2.5rem',
@@ -191,17 +199,17 @@ export default function HabitsWeekStrip({ habits }: Props) {
               Habits — today
             </div>
             <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.2 }}>
-              {visibleHabits.every(h => isScheduledToday(h, todayDow)) ? 'Morning routine' : 'Daily habits'}
+              {visible.every(h => isScheduledToday(h, todayDow)) ? 'Morning routine' : 'Daily habits'}
             </h3>
           </div>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink-soft)' }}>
-            {completedCount} of {visibleHabits.length} done
+            {done} of {visible.length} done
           </span>
         </div>
 
-        {/* Habit rows */}
+        {/* Rows */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {visibleHabits.map(habit => (
+          {visible.map(habit => (
             <HabitRow
               key={habit.id}
               habit={habit}

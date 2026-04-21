@@ -7,6 +7,7 @@ import type { Goal, CheckIn, HabitWithLogs, Brief, GoalWithSteps } from '@/lib/t
 import type { UserMemory } from '@/lib/ai/memory'
 import GreetingWidget from './GreetingWidget'
 import StatusStrip from './StatusStrip'
+import HabitsWeekStrip from './HabitsWeekStrip'
 import HabitAuditStrip from './HabitAuditStrip'
 import type { MissedHabit } from './HabitAuditStrip'
 import GoalsWeekStrip from './GoalsWeekStrip'
@@ -93,6 +94,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
             avgEnergy={avgEnergy}
             habits={habits}
           />
+
+          {/* ── Habits Today ── */}
+          <HabitsWeekStrip habits={habits} />
 
           {/* ── Goals This Week ── */}
           <GoalsWeekStrip goals={goalsWithSteps} />
