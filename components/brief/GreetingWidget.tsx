@@ -199,18 +199,27 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
     <div style={{
       background:    'var(--bg-1)',
       border:        '1px solid var(--border)',
-      borderRadius:  '20px',
-      padding:       '28px',
+      borderRadius:  '40px',
+      padding:       '32px 40px',
       marginBottom:  '16px',
       animation:     'fadeUp 0.3s var(--ease) both',
       animationDelay:'0.05s',
       overflow:      'hidden',
       position:      'relative',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
     }}>
+      {/* Gradient overlay — from-white/40 to sea-soft — matches Lovable */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(to right, rgba(255,255,255,0.40), transparent, rgba(200,221,215,0.15))',
+        pointerEvents: 'none',
+      }} />
+
       {/* ── AI badge ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '16px' }}>
-        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />
-        <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 500 }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '6px 14px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.60)', position: 'relative' }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0, animation: 'pulse 2s ease-in-out infinite' }} />
+        <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 600 }}>
           {pulse?.label ?? "Locus AI · Today's pulse"}
         </span>
       </div>

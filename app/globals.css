@@ -30,79 +30,119 @@
   --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.4);
   --noise-opacity: 0.60;
+  /* ── Extra tokens used by sidebar in both modes */
+  --sea-soft: #a0c4b8;
+  --sun: #c8a84a;
 }
 
-/* ── LIGHT MODE — Glassmorphism ─────────────── */
+/* ── LIGHT MODE — Warm Linen + Glass ────────── */
 [data-theme="light"] {
-  /* ── Glass surfaces (semi-transparent, body gradient shows through) */
-  --bg-0: rgba(255, 255, 255, 0.0);    /* transparent — gradient bleeds in */
-  --bg-1: rgba(255, 255, 255, 0.58);   /* primary card */
-  --bg-2: rgba(255, 255, 255, 0.40);   /* nested surface  */
-  --bg-3: rgba(255, 255, 255, 0.26);   /* tertiary */
-  --bg-4: rgba(255, 255, 255, 0.16);   /* subtle chrome */
+  /* ── Lovable linen palette */
+  --linen:     oklch(0.965 0.012 85);   /* warm cream #f7f3eb */
+  --ink:       oklch(0.27  0.012 60);   /* deep warm brown */
+  --ink-soft:  oklch(0.48  0.010 70);   /* medium text */
+  --ink-faint: oklch(0.68  0.008 75);   /* placeholder / labels */
+  --sea:       oklch(0.62  0.050 165);  /* teal green accent */
+  --sea-soft:  oklch(0.86  0.035 165);  /* light teal */
+  --sun:       oklch(0.92  0.055 80);   /* warm yellow */
+  --glass:          oklch(1 0 0 / 0.55);
+  --glass-border:   oklch(1 0 0 / 0.70);
+  --shadow-glass:   0 8px 32px oklch(0 0 0 / 0.04), inset 0 0 0 1px oklch(1 0 0 / 0.60);
 
-  /* ── Borders — white hairlines are the glassmorphism signature */
-  --border:        rgba(255, 255, 255, 0.44);
-  --border-md:     rgba(255, 255, 255, 0.64);
-  --border-bright: rgba(255, 255, 255, 0.85);
+  /* ── Map to existing design token names */
+  --bg-0:   var(--linen);
+  --bg-1:   var(--glass);
+  --bg-2:   oklch(1 0 0 / 0.40);
+  --bg-3:   oklch(1 0 0 / 0.26);
+  --bg-4:   oklch(1 0 0 / 0.16);
 
-  /* ── Accents */
-  --gold:      #b87e18;
-  --gold-dim:  rgba(184, 126, 24, 0.15);
-  --gold-glow: rgba(184, 126, 24, 0.07);
-  --sage:      #36785a;
-  --sage-dim:  rgba(54, 120, 90, 0.16);
+  --border:        var(--glass-border);
+  --border-md:     oklch(1 0 0 / 0.85);
+  --border-bright: oklch(1 0 0 / 0.95);
 
-  /* ── Text — dark for readability on light glass */
-  --text-0: #1a1628;
-  --text-1: #30293e;
-  --text-2: #67607e;
-  --text-3: #a49ab8;
+  --gold:      var(--sea);
+  --gold-dim:  oklch(0.62 0.050 165 / 0.15);
+  --gold-glow: oklch(0.62 0.050 165 / 0.10);
+  --sage:      var(--sea);
+  --sage-dim:  oklch(0.62 0.050 165 / 0.15);
 
-  /* ── AI card — brightest glass pane */
-  --ai-card-bg:   rgba(255, 255, 255, 0.74);
-  --ai-card-text: #1a1628;
+  --text-0: var(--ink);
+  --text-1: var(--ink-soft);
+  --text-2: var(--ink-soft);
+  --text-3: var(--ink-faint);
 
-  /* ── Elevation — soft violet tint shadow + inner highlight */
-  --shadow-card:  0 8px 32px rgba(80, 60, 130, 0.10),
-                  0 2px 8px rgba(0, 0, 0, 0.05),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.78);
-
+  --ai-card-bg:   var(--glass);
+  --ai-card-text: var(--ink);
+  --shadow-card:  var(--shadow-glass);
   --noise-opacity: 0.0;
-
-  /* ── Background gradient the glass blurs against */
-  --body-bg: linear-gradient(135deg,
-    #dce9f8 0%,
-    #ede3f8 28%,
-    #f8e4df 62%,
-    #daf2ec 100%
-  );
 }
 
-/* Gradient body in light mode — the canvas glass panels sit on */
+/* Warm linen body */
 [data-theme="light"] body {
-  background: var(--body-bg) fixed;
+  background-color: var(--linen);
 }
 
-/* Main content area must be transparent so body gradient shows through cards */
+/* Ambient glow blobs — top-left teal, bottom-right warm sun */
+[data-theme="light"] body::after {
+  content: '';
+  position: fixed;
+  top: -160px; left: -128px;
+  width: 60vw; height: 60vw;
+  border-radius: 50%;
+  background: oklch(0.86 0.035 165 / 0.45);
+  mix-blend-mode: multiply;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+/* second glow injected via before on html */
+[data-theme="light"] html::before {
+  content: '';
+  position: fixed;
+  bottom: -160px; right: -128px;
+  width: 55vw; height: 55vw;
+  border-radius: 50%;
+  background: oklch(0.92 0.055 80 / 0.55);
+  mix-blend-mode: multiply;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Floating sidebar layout in light mode */
+[data-theme="light"] .app-shell {
+  padding: 16px;
+  gap: 16px;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="light"] .app-sidebar {
+  width: 256px !important;
+  border-radius: 32px !important;
+  border: 1px solid var(--glass-border) !important;
+  background: var(--glass) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: var(--shadow-glass) !important;
+  height: auto;
+  align-self: stretch;
+}
+
+/* Main content area transparent so linen/glows show through */
 [data-theme="light"] .app-main {
   background: transparent;
-}
-
-/* ── Frosted sidebar ── */
-[data-theme="light"] .app-sidebar {
-  background: rgba(255, 255, 255, 0.62) !important;
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Frosted bottom nav ── */
 [data-theme="light"] .bottom-nav {
-  background: rgba(255, 255, 255, 0.74) !important;
+  background: oklch(1 0 0 / 0.74) !important;
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-top: 1px solid var(--glass-border);
 }
 
 /* ── Modal overlay — soft tinted blur ── */
@@ -256,9 +296,9 @@ input:focus,    input:focus-visible {
   padding: 36px 40px 60px;
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1280px) {
   .brief-photo-panel {
-    display: block !important;
+    display: flex !important;
   }
 }
 

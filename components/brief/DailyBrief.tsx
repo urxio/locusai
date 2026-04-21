@@ -122,20 +122,45 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
         </div>
       </div>
 
-      {/* ── Right nature photo panel ── */}
+      {/* ── Right photo panel — matches left sidebar width (256px) ── */}
       <div style={{
-        width: '240px',
+        width: '256px',
         flexShrink: 0,
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-        overflow: 'hidden',
         display: 'none',
+        flexDirection: 'column',
+        alignSelf: 'stretch',
       }} className="brief-photo-panel">
         <div style={{
-          position: 'absolute', inset: 0,
-          background: `url(${cover}) center/cover no-repeat`,
-        }} />
+          position: 'relative', flex: 1,
+          overflow: 'hidden',
+          borderRadius: '32px',
+          border: '1px solid var(--glass-border, rgba(255,255,255,0.7))',
+          boxShadow: 'var(--shadow-glass, 0 8px 32px rgba(0,0,0,0.04))',
+        }}>
+          {/* Photo */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `url(${cover}) center/cover no-repeat`,
+          }} />
+          {/* Gradient overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(45,42,39,0.65) 0%, rgba(45,42,39,0.10) 50%, transparent 100%)',
+          }} />
+          {/* Quote */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            padding: '24px',
+            color: '#f7f3eb',
+          }}>
+            <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.20em', opacity: 0.80, marginBottom: '8px' }}>
+              Today&apos;s intention
+            </div>
+            <p style={{ fontSize: '14px', fontWeight: 500, lineHeight: 1.4, margin: 0 }}>
+              &ldquo;Move slowly, finish what matters, leave space for stillness.&rdquo;
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

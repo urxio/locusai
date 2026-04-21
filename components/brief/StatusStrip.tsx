@@ -132,69 +132,104 @@ type PillConfig = {
 }
 
 function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: PillConfig) {
+  /* Glow blob color: sun/warm for energy, sea-soft/teal for habits+goals */
+  const glowColor = barColor === '#d4a853'
+    ? 'rgba(240,223,160,0.55)'   /* sun glow */
+    : 'rgba(200,221,215,0.55)'   /* sea-soft glow */
+
+  const [mainVal, unitVal] = value.includes('/')
+    ? [value.split('/')[0].trim(), '/' + value.split('/')[1].trim()]
+    : value.includes(' ')
+      ? [value.split(' ')[0], value.split(' ').slice(1).join(' ')]
+      : [value, '']
+
   return (
     <a
       href={href}
       style={{
-        display:        'flex',
-        flexDirection:  'column',
-        flex:           1,
-        minWidth:       0,
-        background:     'var(--bg-1)',
-        border:         '1px solid var(--border)',
-        borderRadius:   '16px',
-        padding:        '16px',
-        textDecoration: 'none',
-        cursor:         'pointer',
-        transition:     'border-color 0.18s',
-        position:       'relative',
+        display:          'flex',
+        flexDirection:    'column',
+        gap:              '16px',
+        flex:             1,
+        minWidth:         0,
+        background:       'var(--bg-1)',
+        border:           '1px solid var(--border)',
+        borderRadius:     '24px',
+        padding:          '20px',
+        textDecoration:   'none',
+        cursor:           'pointer',
+        position:         'relative',
+        overflow:         'hidden',
+        backdropFilter:   'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        transition:       'transform 0.18s',
+        boxShadow:        'var(--shadow-glass, var(--shadow-card))',
       }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-md)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+      onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)' }}
     >
-      {/* Label */}
-      <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-        {label}
-      </span>
+      {/* Glow blob — top right */}
+      <div style={{
+        position: 'absolute', top: '-24px', right: '-24px',
+        width: '96px', height: '96px', borderRadius: '50%',
+        background: glowColor,
+        filter: 'blur(24px)',
+        pointerEvents: 'none',
+        transition: 'background 0.3s',
+      }} />
+
+      {/* Label row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+        <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.20em', textTransform: 'uppercase' }}>
+          {label}
+        </span>
+        {moodDot && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '24px', height: '24px', borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.85)',
+            background: 'rgba(255,255,255,0.80)',
+          }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sun, #f0dfa0), var(--sea-soft, #c8ddd7))' }} />
+          </div>
+        )}
+      </div>
 
       {/* Value */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', position: 'relative', flex: 1 }}>
         <span style={{
-          fontFamily:   'var(--font-serif)',
-          fontSize:     '32px',
-          fontWeight:   500,
-          color:        'var(--text-0)',
-          lineHeight:   1,
-          letterSpacing:'-0.02em',
-          opacity:      loading ? 0.4 : 1,
-          transition:   'opacity 0.3s',
+          fontSize: '30px', fontWeight: 700, letterSpacing: '-0.02em',
+          color: 'var(--text-0)', lineHeight: 1,
+          opacity: loading ? 0.4 : 1, transition: 'opacity 0.3s',
         }}>
-          {value.split('/')[0].split(' ')[0]}
+          {mainVal}
         </span>
-        {value.includes('/') && (
-          <span style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: 400 }}>
-            /{value.split('/')[1]}
+        {unitVal && (
+          <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-3)' }}>
+            {unitVal}
           </span>
         )}
       </div>
 
-      {/* Sub */}
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px', lineHeight: 1.3 }}>
+      {/* Sub text */}
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3, position: 'relative' }}>
         {sub}
       </div>
 
-      {/* Mood dot indicator */}
-      {moodDot && (
-        <div style={{
-          position: 'absolute', top: '14px', right: '14px',
-          width: '20px', height: '20px', borderRadius: '50%',
-          border: '1.5px solid var(--border)', background: 'transparent',
-        }} />
-      )}
-
       {/* Progress bar */}
       {barPct != null && barColor && (
-        <ProgressBar pct={barPct} color={barColor} loading={loading} />
+        <div style={{ position: 'relative', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.50)', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: loading ? '30%' : `${Math.min(Math.max(barPct, 0), 100)}%`,
+            borderRadius: '2px',
+            background: barColor === '#d4a853'
+              ? 'linear-gradient(to right, var(--sun, #f0dfa0), var(--sea-soft, #c8ddd7))'
+              : 'linear-gradient(to right, var(--sea-soft, #c8ddd7), var(--sage))',
+            transition: loading ? 'none' : 'width 0.5s var(--ease)',
+            animation: loading ? 'statusPulse 1.4s ease-in-out infinite' : 'none',
+          }} />
+        </div>
       )}
     </a>
   )
