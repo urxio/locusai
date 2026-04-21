@@ -538,25 +538,8 @@ input:focus,    input:focus-visible {
  * The -webkit-mask / mask trick punches out the content area so only
  * the 1px padding "frame" of ::before is visible as the border.
  */
-.status-pill::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    145deg,
-    oklch(1 0 0 / 0.32) 0%,
-    oklch(1 0 0 / 0.14) 50%,
-    oklch(1 0 0 / 0.08) 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 1;
+.status-pill {
+  border: 1px solid var(--border);
 }
 
 /* Light mode — brighter glass border */
