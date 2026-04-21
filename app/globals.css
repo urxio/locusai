@@ -73,9 +73,9 @@
   --ink:       oklch(0.27  0.012 60);   /* deep warm brown */
   --ink-soft:  oklch(0.48  0.010 70);   /* medium text */
   --ink-faint: oklch(0.68  0.008 75);   /* placeholder / labels */
-  --sea:       oklch(0.62  0.050 165);  /* teal green accent */
-  --sea-soft:  oklch(0.86  0.035 165);  /* light teal */
-  --sun:       oklch(0.92  0.055 80);   /* warm yellow */
+  --sea:       oklch(0.66  0.05  165);  /* teal green accent */
+  --sea-soft:  oklch(0.86  0.04  165);  /* light teal */
+  --sun:       oklch(0.92  0.06  80);   /* warm yellow */
   --glass:          oklch(1 0 0 / 0.55);
   --glass-border:   oklch(1 0 0 / 0.70);
   --shadow-glass:   0 8px 32px oklch(0 0 0 / 0.04), inset 0 0 0 1px oklch(1 0 0 / 0.60);
@@ -87,15 +87,15 @@
   --bg-3:   oklch(1 0 0 / 0.26);
   --bg-4:   oklch(1 0 0 / 0.16);
 
-  --border:        var(--glass-border);
-  --border-md:     oklch(1 0 0 / 0.85);
-  --border-bright: oklch(1 0 0 / 0.95);
+  --border:        oklch(0.88 0.01 80);
+  --border-md:     oklch(0.84 0.01 80);
+  --border-bright: oklch(0.80 0.01 80);
 
   --gold:      var(--sea);
-  --gold-dim:  oklch(0.62 0.050 165 / 0.15);
-  --gold-glow: oklch(0.62 0.050 165 / 0.10);
+  --gold-dim:  oklch(0.66 0.05 165 / 0.15);
+  --gold-glow: oklch(0.66 0.05 165 / 0.10);
   --sage:      var(--sea);
-  --sage-dim:  oklch(0.62 0.050 165 / 0.15);
+  --sage-dim:  oklch(0.66 0.05 165 / 0.15);
 
   --text-0: var(--ink);
   --text-1: var(--ink-soft);
@@ -160,7 +160,7 @@ html::before {
   top: -160px; left: -128px;
   width: 60vw; height: 60vw;
   border-radius: 50%;
-  background: oklch(0.86 0.035 165 / 0.45);
+  background: oklch(0.86 0.04 165 / 0.45);
   mix-blend-mode: multiply;
   filter: blur(120px);
   pointer-events: none;
@@ -173,7 +173,7 @@ html::before {
   bottom: -160px; right: -128px;
   width: 55vw; height: 55vw;
   border-radius: 50%;
-  background: oklch(0.92 0.055 80 / 0.55);
+  background: oklch(0.92 0.06 80 / 0.55);
   mix-blend-mode: multiply;
   filter: blur(120px);
   pointer-events: none;
