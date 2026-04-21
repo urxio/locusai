@@ -122,20 +122,27 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
         </div>
       </div>
 
-      {/* ── Right photo panel — matches left sidebar width (256px) ── */}
+      {/* ── Right photo panel — fixed, matches left sidebar width ── */}
       <div style={{
+        position: 'fixed',
+        top: '16px',
+        right: '16px',
+        bottom: '16px',
         width: '256px',
-        flexShrink: 0,
         display: 'none',
         flexDirection: 'column',
-        alignSelf: 'stretch',
+        zIndex: 10,
       }} className="brief-photo-panel">
         <div style={{
-          position: 'relative', flex: 1,
+          position: 'relative',
+          flex: 1,
           overflow: 'hidden',
           borderRadius: '32px',
-          border: '1px solid var(--glass-border, rgba(255,255,255,0.7))',
-          boxShadow: 'var(--shadow-glass, 0 8px 32px rgba(0,0,0,0.04))',
+          border: '1px solid var(--glass-border)',
+          boxShadow: 'var(--shadow-glass)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          height: '100%',
         }}>
           {/* Photo */}
           <div style={{
@@ -145,7 +152,15 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
           {/* Gradient overlay */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(45,42,39,0.65) 0%, rgba(45,42,39,0.10) 50%, transparent 100%)',
+            background: 'linear-gradient(to top, rgba(45,42,39,0.72) 0%, rgba(45,42,39,0.08) 55%, transparent 100%)',
+          }} />
+          {/* Top glass shimmer strip */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0,
+            height: '64px',
+            background: 'linear-gradient(to bottom, var(--glass) 0%, transparent 100%)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
           }} />
           {/* Quote */}
           <div style={{
