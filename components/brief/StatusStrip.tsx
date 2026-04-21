@@ -350,8 +350,8 @@ export default function StatusStrip({ goals, checkin, avgEnergy, habits }: Props
         <LiveDot refreshing={refreshing} />
       </div>
 
-      {/* 4-column grid */}
-      <div style={{ display: 'flex', gap: '10px' }}>
+      {/* 4-column grid — collapses to 2×2 on small phones via .status-strip-grid */}
+      <div className="status-strip-grid" style={{ display: 'flex', gap: '10px' }}>
         {pills.map(p => <Pill key={p.label} {...p} />)}
       </div>
 

@@ -375,7 +375,10 @@ input:focus,    input:focus-visible {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: var(--bg-1);
+  /* Dark mode: semi-opaque warm dark glass so content doesn't bleed through */
+  background: oklch(0.20 0.010 60 / 0.90);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   border-top: 1px solid var(--border);
   /* Force stable GPU compositing layer — prevents jitter */
   transform: translateZ(0);
@@ -442,6 +445,12 @@ input:focus,    input:focus-visible {
     display: none;
   }
 
+  /* Remove shell padding so content fills the full viewport width */
+  .app-shell {
+    padding: 0;
+    gap: 0;
+  }
+
   .bottom-nav {
     display: flex;
   }
@@ -506,6 +515,13 @@ input:focus,    input:focus-visible {
   /* Tighter serif headings on very small phones */
   .serif-hero {
     font-size: 26px !important;
+  }
+
+  /* 4 status pills → 2×2 grid so each card has breathing room */
+  .status-strip-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
   }
 }
 
