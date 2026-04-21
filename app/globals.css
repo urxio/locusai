@@ -546,9 +546,9 @@ input:focus,    input:focus-visible {
   padding: 1px;
   background: linear-gradient(
     145deg,
-    oklch(1 0 0 / 0.16) 0%,
-    oklch(1 0 0 / 0.07) 50%,
-    oklch(1 0 0 / 0.04) 100%
+    oklch(1 0 0 / 0.32) 0%,
+    oklch(1 0 0 / 0.14) 50%,
+    oklch(1 0 0 / 0.08) 100%
   );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
