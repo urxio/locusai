@@ -2,57 +2,67 @@
 
 /* ── DARK MODE (default) — Lovable Nocturne palette ── */
 :root {
-  /* Warm dark background */
-  --bg-0: oklch(0.18 0.012 60);
-  /* Glass surfaces — ultra-subtle white */
-  --bg-1: oklch(1 0 0 / 0.04);
-  --bg-2: oklch(1 0 0 / 0.05);
-  --bg-3: oklch(1 0 0 / 0.06);
-  --bg-4: oklch(1 0 0 / 0.08);
-  --border: oklch(1 0 0 / 0.08);
-  --border-md: oklch(1 0 0 / 0.10);
-  --border-bright: oklch(1 0 0 / 0.15);
-  /* Sun amber accent */
-  --gold: oklch(0.78 0.09 75);
-  --gold-dim: oklch(0.78 0.09 75 / 0.15);
-  --gold-glow: oklch(0.78 0.09 75 / 0.10);
-  /* Sea teal accent */
-  --sage: oklch(0.78 0.07 165);
-  --sage-dim: oklch(0.78 0.07 165 / 0.15);
-  /* Text */
-  --text-0: oklch(0.96 0.01 85);
-  --text-1: oklch(0.78 0.012 75);
-  --text-2: oklch(0.68 0.012 72);
-  --text-3: oklch(0.58 0.012 70);
-  /* AI card glass surface */
-  --ai-card-bg: oklch(1 0 0 / 0.04);
-  --ai-card-text: oklch(0.96 0.01 85);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --sidebar-w: 256px;
   --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --shadow-card: 0 8px 32px oklch(0 0 0 / 0.4), inset 0 0 0 1px oklch(1 0 0 / 0.06);
-  --noise-opacity: 0.60;
-  /* Accent tokens */
+
+  /* Frosted Linen — Nocturne */
+  --linen: oklch(0.18 0.012 60);
+  --ink: oklch(0.96 0.01 85);
+  --ink-soft: oklch(0.78 0.012 75);
+  --ink-faint: oklch(0.58 0.012 70);
+  --sea: oklch(0.78 0.07 165);
   --sea-soft: oklch(0.42 0.05 165);
   --sun: oklch(0.78 0.09 75);
-  /* Nav item interactive states */
+  --glass: oklch(1 0 0 / 0.04);
+  --glass-border: oklch(1 0 0 / 0.08);
+  --shadow-glass: 0 8px 32px oklch(0 0 0 / 0.4), inset 0 0 0 1px oklch(1 0 0 / 0.06);
+
+  --bg-0: var(--linen);
+  --bg-1: var(--glass);
+  --bg-2: oklch(1 0 0 / 0.10);
+  --bg-3: oklch(1 0 0 / 0.06);
+  --bg-4: oklch(1 0 0 / 0.08);
+
+  --border: oklch(1 0 0 / 0.08);
+  --border-md: oklch(1 0 0 / 0.10);
+  --border-bright: oklch(1 0 0 / 0.15);
+
+  --gold: var(--sun);
+  --gold-dim: oklch(0.78 0.09 75 / 0.15);
+  --gold-glow: oklch(0.78 0.09 75 / 0.10);
+  --sage: var(--sea);
+  --sage-dim: oklch(0.78 0.07 165 / 0.15);
+
+  --text-0: var(--ink);
+  --text-1: var(--ink-soft);
+  --text-2: var(--ink-soft);
+  --text-3: var(--ink-faint);
+
+  --ai-card-bg: var(--glass);
+  --ai-card-text: var(--ink);
+  --shadow-card: var(--shadow-glass);
+  --noise-opacity: 0.60;
+
+  --sea-soft: var(--sea-soft);
+  --sun: var(--sun);
+
   --nav-active-bg: oklch(1 0 0 / 0.06);
   --nav-active-border: oklch(1 0 0 / 0.10);
   --nav-hover-bg: oklch(1 0 0 / 0.06);
-  /* Logo box */
-  --logo-box-bg: oklch(1 0 0 / 0.06);
-  --logo-box-border: oklch(1 0 0 / 0.10);
-  /* General glass surfaces (Lovable surfaceStrong / surfaceSoft) */
-  --surface-strong-bg: oklch(1 0 0 / 0.06);
-  --surface-strong-border: oklch(1 0 0 / 0.10);
-  --surface-soft-bg: oklch(1 0 0 / 0.04);
+
+  --logo-box-bg: var(--glass);
+  --logo-box-border: var(--glass-border);
+
+  --surface-strong-bg: var(--glass);
+  --surface-strong-border: var(--glass-border);
+  --surface-soft-bg: oklch(1 0 0 / 0.06);
   --surface-soft-border: oklch(1 0 0 / 0.08);
-  /* Progress bar track */
+
   --progress-track: oklch(1 0 0 / 0.10);
-  /* Card inner gradient overlay */
   --card-overlay: linear-gradient(to right, oklch(1 0 0 / 0.04), transparent, oklch(0.78 0.07 165 / 0.10));
 }
 
@@ -173,7 +183,7 @@ html::before {
 
 /* ── Frosted bottom nav ── */
 [data-theme="light"] .bottom-nav {
-  background: oklch(1 0 0 / 0.74) !important;
+  background: var(--glass) !important;
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   border-top: 1px solid var(--glass-border);
@@ -181,17 +191,17 @@ html::before {
 
 /* ── Modal overlay — soft tinted blur ── */
 [data-theme="light"] .modal-overlay {
-  background: rgba(60, 50, 90, 0.30);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* ── Modal box — brightest glass pane ── */
 [data-theme="light"] .modal-box {
-  background: rgba(255, 255, 255, 0.84) !important;
+  background: var(--surface-strong-bg) !important;
   backdrop-filter: blur(32px) saturate(200%);
   -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--surface-strong-border);
   box-shadow: 0 24px 64px rgba(60, 50, 100, 0.14), inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
@@ -199,13 +209,13 @@ html::before {
 [data-theme="light"] input,
 [data-theme="light"] textarea,
 [data-theme="light"] select {
-  background: rgba(255, 255, 255, 0.55) !important;
-  border-color: rgba(255, 255, 255, 0.6) !important;
-  color: #1a1628 !important;
+  background: var(--surface-soft-bg) !important;
+  border-color: var(--surface-soft-border) !important;
+  color: var(--ink) !important;
 }
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
-  color: #a49ab8 !important;
+  color: var(--ink-faint) !important;
 }
 
 @theme inline {
