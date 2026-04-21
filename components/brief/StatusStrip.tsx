@@ -153,17 +153,18 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
         gap:              '16px',
         flex:             1,
         minWidth:         0,
-        background:       'var(--bg-2)',
+        background:       'var(--bg-1)',
         borderRadius:     '24px',
         padding:          '20px',
         textDecoration:   'none',
         cursor:           'pointer',
         position:         'relative',
         overflow:         'hidden',
-        backdropFilter:   'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        transition:       'transform 0.18s',
-        boxShadow:        '0 8px 32px oklch(0 0 0 / 0.4)',
+        backdropFilter:   'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        transition:       'transform 0.18s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease)',
+        boxShadow:        'var(--shadow-card)',
+        border:           '1px solid var(--border)',
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)' }}
