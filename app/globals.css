@@ -543,6 +543,14 @@ input:focus,    input:focus-visible {
   border-radius: 24px !important;
 }
 
+/* Glow blob — dark mode: hidden to keep corners clean */
+.status-pill-glow {
+  display: none;
+}
+[data-theme="light"] .status-pill-glow {
+  display: block;
+}
+
 /* Light mode — brighter glass border */
 [data-theme="light"] .status-pill {
   box-shadow: 0 8px 32px oklch(0 0 0 / 0.06) !important;

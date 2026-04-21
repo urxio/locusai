@@ -168,8 +168,8 @@ function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: P
       onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)' }}
     >
-      {/* Glow blob — top right */}
-      <div style={{
+      {/* Glow blob — visible in light mode only (hidden in dark to avoid corner artifacts) */}
+      <div className="status-pill-glow" style={{
         position: 'absolute', top: '-24px', right: '-24px',
         width: '96px', height: '96px', borderRadius: '50%',
         background: glowColor,
