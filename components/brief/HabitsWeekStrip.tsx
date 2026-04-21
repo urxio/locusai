@@ -133,9 +133,12 @@ function HabitRow({
   )
 }
 
+const VISIBLE_COUNT = 3
+
 export default function HabitsWeekStrip({ habits }: Props) {
   const [data, setData] = useState<HabitWeekData[]>(() => propsToWeekData(habits))
   const [pending, setPending] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState(false)
   const fetchingRef = useRef(false)
 
   const refresh = useCallback(async () => {
@@ -197,8 +200,10 @@ export default function HabitsWeekStrip({ habits }: Props) {
   const todayDate = localDateStr(new Date())
   const todayDow  = new Date().getDay()
   const scheduled = data.filter(h => isScheduledToday(h, todayDow))
-  const visible   = scheduled.length > 0 ? scheduled : data
-  const doneCount = visible.filter(h => isDoneToday(h, todayDate)).length
+  const allVisible   = scheduled.length > 0 ? scheduled : data
+  const doneCount = allVisible.filter(h => isDoneToday(h, todayDate)).length
+  const shown     = expanded ? allVisible : allVisible.slice(0, VISIBLE_COUNT)
+  const hiddenCount = allVisible.length - VISIBLE_COUNT
 
   return (
     <div style={{ marginTop: '24px' }}>
@@ -231,17 +236,17 @@ export default function HabitsWeekStrip({ habits }: Props) {
               Habits — today
             </div>
             <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.2 }}>
-              {visible.every(h => isScheduledToday(h, todayDow)) ? 'Morning routine' : 'Daily habits'}
+              {allVisible.every(h => isScheduledToday(h, todayDow)) ? 'Morning routine' : 'Daily habits'}
             </h3>
           </div>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink-soft)' }}>
-            {doneCount} of {visible.length} done
+            {doneCount} of {allVisible.length} done
           </span>
         </div>
 
         {/* Rows */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {visible.map(habit => (
+          {shown.map(habit => (
             <HabitRow
               key={habit.id}
               habit={habit}
@@ -251,6 +256,38 @@ export default function HabitsWeekStrip({ habits }: Props) {
             />
           ))}
         </div>
+
+        {/* Expand / collapse */}
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              width: '100%',
+              marginTop: '8px',
+              padding: '10px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--ink-faint)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'color 0.15s',
+            }}
+          >
+            {expanded ? 'Show less' : `${hiddenCount} more habit${hiddenCount !== 1 ? 's' : ''}`}
+            <span style={{
+              display: 'inline-block',
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s',
+              fontSize: '10px',
+            }}>▾</span>
+          </button>
+        )}
       </section>
     </div>
   )
