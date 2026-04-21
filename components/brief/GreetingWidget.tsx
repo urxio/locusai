@@ -12,32 +12,6 @@ type Props = {
   userName?:  string | null
 }
 
-/* ── Icons ───────────────────────────────────────────── */
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-      <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
-    </svg>
-  )
-}
-
-function GoalIcon() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
-      <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V8z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
-function HabitsIcon() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
-      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
 /* ── Helpers ─────────────────────────────────────────── */
 
 /** Fallback: browser local date — only used if server didn't supply todayDate */
@@ -174,11 +148,7 @@ function getMoodPills(checkin: CheckIn): { label: string; icon: string }[] {
 
 /* ── Main component ──────────────────────────────────── */
 
-export default function GreetingWidget({ checkin, habits, goals, brief, todayDate, userName }: Props) {
-  const hour     = new Date().getHours()
-  const greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening')
-    + (userName ? `, ${userName.split(' ')[0]}` : '')
-
+export default function GreetingWidget({ checkin, habits, goals, brief, todayDate }: Props) {
   // Use server-authoritative date (same source as logged_date in DB); fall back to browser local
   const today      = todayDate ?? browserLocalDate()
   const scheduled  = habits.filter(h => h.isScheduledToday)
@@ -216,221 +186,117 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
 
   const habitCount = scheduled.length
   const goalCount  = active.length
-  const moodPills  = checkin ? getMoodPills(checkin) : []
   const pulse      = buildPulse(checkin, brief, habits, goals, today)
+
+  const headlineGoalPart = goalCount > 0
+    ? <><a href="/goals" style={{ color: 'var(--sage)', textDecoration: 'none', fontWeight: 700 }}>{goalCount} {goalCount === 1 ? 'goal' : 'goals'}</a>{' '}</>
+    : null
+  const headlineHabitPart = habitCount > 0
+    ? <><a href="/habits" style={{ color: 'var(--sage)', textDecoration: 'none', fontWeight: 700 }}>{habitCount} {habitCount === 1 ? 'habit' : 'habits'}</a>{' '}</>
+    : null
 
   return (
     <div style={{
       background:    'var(--bg-1)',
       border:        '1px solid var(--border)',
       borderRadius:  '20px',
-      padding:       '24px',
-      marginBottom:  '20px',
+      padding:       '28px',
+      marginBottom:  '16px',
       animation:     'fadeUp 0.3s var(--ease) both',
       animationDelay:'0.05s',
       overflow:      'hidden',
       position:      'relative',
     }}>
-      {/* Ambient glow */}
-      <div style={{
-        position: 'absolute', top: '-60px', right: '-60px',
-        width: '220px', height: '220px',
-        background: 'radial-gradient(circle, rgba(122,158,138,0.07) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
+      {/* ── AI badge ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '16px' }}>
+        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />
+        <span style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 500 }}>
+          {pulse?.label ?? "Locus AI · Today's pulse"}
+        </span>
+      </div>
 
-      {/* ── Greeting ── */}
-      <div style={{ marginBottom: '20px', position: 'relative', zIndex: 1 }}>
-        <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-2)', lineHeight: 1.4, margin: 0, letterSpacing: '-0.01em' }}>
-          {greeting}.
-        </p>
-
-        {(goalCount > 0 || habitCount > 0) ? (
-          <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.4, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
-            {checkin
-              ? `${doneToday.length} of ${habitCount} habit${habitCount !== 1 ? 's' : ''} done.`
-              : <>
-                  {'You have '}
-                  {goalCount > 0 && (
-                    <>
-                      <InlineIcon color="rgba(122,158,138,0.18)" textColor="var(--sage)"><GoalIcon /></InlineIcon>
-                      {' '}
-                      <a href="/goals" style={{ color: 'var(--text-0)', textDecoration: 'none', borderBottom: '2px solid var(--sage)', paddingBottom: '1px' }}>
-                        <strong>{goalCount} {goalCount === 1 ? 'goal' : 'goals'}</strong>
-                      </a>
-                      {habitCount > 0 ? ' and ' : ' '}
-                    </>
-                  )}
-                  {habitCount > 0 && (
-                    <>
-                      <InlineIcon color="rgba(56,139,180,0.18)" textColor="#3a7a88"><HabitsIcon /></InlineIcon>
-                      {' '}
-                      <a href="/habits" style={{ color: 'var(--text-0)', textDecoration: 'none', borderBottom: '2px solid #3a7a88', paddingBottom: '1px' }}>
-                        <strong>{habitCount} {habitCount === 1 ? 'habit' : 'habits'}</strong>
-                      </a>
-                      {' '}
-                    </>
-                  )}
-                  {'today.'}
-                </>
-            }
+      {/* ── Headline ── */}
+      <div style={{ marginBottom: '14px' }}>
+        {(goalCount > 0 || habitCount > 0) && !checkin ? (
+          <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.35, margin: 0, letterSpacing: '-0.02em' }}>
+            {'You have '}
+            {headlineGoalPart}
+            {goalCount > 0 && habitCount > 0 ? 'and ' : ''}
+            {headlineHabitPart}
+            {'aligned for today.'}
+          </p>
+        ) : checkin ? (
+          <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.35, margin: 0, letterSpacing: '-0.02em' }}>
+            {doneToday.length === habitCount && habitCount > 0
+              ? `All ${habitCount} habits done. Great work.`
+              : `${doneToday.length} of ${habitCount} habit${habitCount !== 1 ? 's' : ''} done today.`}
           </p>
         ) : (
-          <p style={{ fontSize: '20px', fontWeight: 500, color: 'var(--text-2)', margin: '4px 0 0', lineHeight: 1.4 }}>
-            {checkin ? "Check your brief for today\u2019s focus." : 'Check in to get started.'}
+          <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.35, margin: 0, letterSpacing: '-0.02em' }}>
+            Start your day with a check-in.
           </p>
         )}
       </div>
 
-      {/* ── Mood pills (post check-in) ── */}
-      {moodPills.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px', position: 'relative', zIndex: 1 }}>
-          {moodPills.map((pill, i) => (
-            <div key={i} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '5px',
-              background: 'var(--bg-2)', border: '1px solid var(--border)',
-              borderRadius: '20px', padding: '6px 14px',
-              fontSize: '13px', fontWeight: 500, color: 'var(--text-1)',
-            }}>
-              <span>{pill.icon}</span>{pill.label}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Pulse card ── */}
-      {pulse && (
-        <div style={{
-          background:   'var(--ai-card-bg)',
-          border:       '1px solid rgba(212,168,83,0.15)',
-          borderRadius: '14px',
-          padding:      '16px 18px',
-          position:     'relative',
-          zIndex:       1,
-          marginBottom: '20px',
+      {/* ── AI opener / pulse text ── */}
+      {(aiOpener || pulse?.text) && (
+        <p style={{
+          fontFamily:   'var(--font-serif)',
+          fontSize:     '15px',
+          fontWeight:   300,
+          color:        'var(--text-2)',
+          lineHeight:   1.65,
+          margin:       '0 0 22px',
         }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+          {aiOpener || pulse?.text}
+          {!openerDone && aiOpener && (
             <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: '18px', height: '18px', borderRadius: '50%',
-              background: 'var(--gold-dim)', color: 'var(--gold)',
-            }}>
-              <SparkIcon />
-            </span>
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gold)', opacity: 0.85 }}>
-              {pulse.label}
-            </span>
-          </div>
-
-          {/* AI opener — streams in first */}
-          {(aiOpener || !openerDone) && (
-            <p style={{
-              fontFamily:   'var(--font-serif)',
-              fontSize:     '15px',
-              fontWeight:   300,
-              color:        'var(--ai-card-text)',
-              lineHeight:   1.65,
-              margin:       0,
-              marginBottom: '10px',
-              opacity:      aiOpener ? 1 : 0,
-              transition:   'opacity 0.4s',
-            }}>
-              {aiOpener}
-              {!openerDone && (
-                <span style={{
-                  display:      'inline-block',
-                  width:        '2px',
-                  height:       '1em',
-                  background:   'var(--gold)',
-                  marginLeft:   '2px',
-                  verticalAlign:'middle',
-                  animation:    'statusPulse 0.9s ease-in-out infinite',
-                }} />
-              )}
-            </p>
+              display:      'inline-block',
+              width:        '2px',
+              height:       '1em',
+              background:   'var(--sage)',
+              marginLeft:   '2px',
+              verticalAlign:'middle',
+              animation:    'statusPulse 0.9s ease-in-out infinite',
+            }} />
           )}
-
-          {/* Data summary (habits + goals) */}
-          <p style={{
-            fontFamily:   'var(--font-serif)',
-            fontSize:     '14px',
-            fontWeight:   300,
-            color:        'var(--text-2)',
-            lineHeight:   1.65,
-            margin:       0,
-            marginBottom: pulse.items?.length ? '14px' : 0,
-            opacity:      openerDone ? 1 : 0,
-            transition:   'opacity 0.5s 0.1s',
-          }}>
-            {pulse.text}
-          </p>
-
-          {/* Structured items — habits + goals (no check-in state) */}
-          {pulse.items && pulse.items.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', opacity: openerDone ? 1 : 0, transition: 'opacity 0.5s 0.2s' }}>
-              {pulse.items.map((item, i) => (
-                <div key={i} style={{
-                  display:       'flex',
-                  alignItems:    'center',
-                  gap:           '10px',
-                  background:    'rgba(255,255,255,0.03)',
-                  borderRadius:  '8px',
-                  padding:       '8px 10px',
-                  border:        '1px solid rgba(255,255,255,0.05)',
-                }}>
-                  <span style={{ fontSize: '16px', flexShrink: 0, lineHeight: 1 }}>{item.emoji}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', flex: 1 }}>{item.label}</span>
-                  {item.sub && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-3)', flexShrink: 0 }}>{item.sub}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        </p>
       )}
 
-      {/* ── CTA ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+      {/* ── CTAs ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <a
           href={checkin ? '/habits' : '/checkin'}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            background: 'var(--bg-3)', border: '1px solid var(--border-md)',
-            borderRadius: '20px', padding: '10px 24px',
+            background: 'var(--text-0)', color: 'var(--bg-0)',
+            borderRadius: '24px', padding: '10px 22px',
             fontSize: '13.5px', fontWeight: 600,
-            color: 'var(--text-1)', textDecoration: 'none',
-            transition: 'background 0.2s, color 0.2s',
+            textDecoration: 'none',
+            transition: 'opacity 0.2s',
           }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLAnchorElement).style.background = 'var(--bg-4)'
-            ;(e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-0)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLAnchorElement).style.background = 'var(--bg-3)'
-            ;(e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-1)'
-          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.88' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1' }}
         >
-          {checkin ? 'Open Activity' : 'Start Check-in'}
+          {checkin ? 'Open Activity' : 'Start Check-in'} →
+        </a>
+        <a
+          href="/brief"
+          style={{
+            display: 'inline-flex', alignItems: 'center',
+            background: 'var(--bg-2)', border: '1px solid var(--border)',
+            borderRadius: '24px', padding: '10px 20px',
+            fontSize: '13.5px', fontWeight: 500,
+            color: 'var(--text-2)', textDecoration: 'none',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-1)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-2)' }}
+        >
+          Skip today
         </a>
       </div>
     </div>
   )
 }
 
-/* ── Sub-components ──────────────────────────────────── */
-
-function InlineIcon({ children, color, textColor }: { children: React.ReactNode; color?: string; textColor?: string }) {
-  return (
-    <span style={{
-      display: 'inline-flex', verticalAlign: 'middle',
-      alignItems: 'center', justifyContent: 'center',
-      width: '22px', height: '22px', borderRadius: '6px',
-      background: color ?? 'rgba(122,158,138,0.15)',
-      color: textColor ?? 'var(--sage)', marginBottom: '3px',
-    }}>
-      <span style={{ transform: 'scale(0.8)' }}>{children}</span>
-    </span>
-  )
-}

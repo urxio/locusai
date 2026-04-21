@@ -5,26 +5,26 @@ import { usePathname } from 'next/navigation'
 
 const NAV = [
   {
-    section: 'Today',
+    section: 'Rhythm',
     items: [
-      { href: '/brief',   label: 'Home', badge: null, icon: <BriefIcon /> },
-      { href: '/checkin', label: 'Check-in',    badge: null, icon: <CheckinIcon /> },
-      { href: '/habits',  label: 'Habits',      badge: null, icon: <HabitsIcon /> },
-      { href: '/capture', label: 'Capture',     badge: null, icon: <CaptureIcon /> },
+      { href: '/brief',   label: 'Home', badge: null },
+      { href: '/checkin', label: 'Check-in',    badge: null },
+      { href: '/habits',  label: 'Habits',      badge: null },
+      { href: '/capture', label: 'Capture',     badge: null },
     ]
   },
   {
-    section: 'System',
+    section: 'Direction',
     items: [
-      { href: '/goals',    label: 'Goals',          badge: null, icon: <GoalsIcon /> },
-      { href: '/planner',  label: 'Planner',        badge: null, icon: <PlannerIcon /> },
-      { href: '/review',   label: 'Weekly Review',  badge: null, icon: <ReviewIcon /> },
+      { href: '/goals',    label: 'Goals',          badge: null },
+      { href: '/planner',  label: 'Planner',        badge: null },
+      { href: '/review',   label: 'Weekly Review',  badge: null },
     ]
   },
   {
     section: 'Settings',
     items: [
-      { href: '/settings', label: 'Settings', badge: null, icon: <SettingsIcon /> },
+      { href: '/settings', label: 'Settings', badge: null },
     ]
   }
 ]
@@ -42,22 +42,16 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, var(--bg-1), transparent)', pointerEvents: 'none', zIndex: 1 }} />
 
       {/* Brand */}
-      <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+      <div style={{ padding: '22px 20px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 12px rgba(212,168,83,0.3)' }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="#131110"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="2" r="1.2"/><circle cx="8" cy="14" r="1.2"/><circle cx="2" cy="8" r="1.2"/><circle cx="14" cy="8" r="1.2"/></svg>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)' }} />
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 500, color: 'var(--text-0)' }}>Locus</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: '1px' }}>Life OS</div>
+            <div style={{ fontSize: '9px', color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: '1px' }}>Life OS</div>
           </div>
         </div>
-      </div>
-
-      {/* Date */}
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 300, color: 'var(--text-0)', lineHeight: 1 }}>{day}</div>
-        <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '3px', letterSpacing: '0.04em' }}>{full}</div>
       </div>
 
       {/* Nav */}
@@ -68,20 +62,20 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
             {group.items.map(item => {
               const active = pathname === item.href
               return (
-                <Link key={item.href} href={item.href} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 20px', background: active ? 'var(--bg-3)' : 'transparent', position: 'relative', transition: 'background 0.15s' }}
+                <Link key={item.href} href={item.href} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 20px', background: active ? 'var(--bg-2)' : 'transparent', position: 'relative', transition: 'background 0.15s', borderRadius: '0' }}
                   onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)' }}
                   onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                 >
-                  {active && <div style={{ position: 'absolute', left: 0, top: '4px', bottom: '4px', width: '2px', background: 'var(--gold)', borderRadius: '0 2px 2px 0' }} />}
-                  <span style={{ color: active ? 'var(--gold)' : 'var(--text-2)', width: '18px', height: '18px', flexShrink: 0 }}>{item.icon}</span>
-                  <span style={{ fontSize: '13.5px', color: active ? 'var(--text-0)' : 'var(--text-2)', fontWeight: 500 }}>{item.label}</span>
-                  {item.badge && <span style={{ marginLeft: 'auto', fontSize: '10px', background: 'var(--gold-dim)', color: 'var(--gold)', borderRadius: '10px', padding: '1px 7px', fontWeight: 600 }}>{item.badge}</span>}
-                  {item.href === '/goals' && overdueStepCount > 0 && (
-                    <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#e05c4a', flexShrink: 0, animation: 'pulse 2s ease-in-out infinite' }} />
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#e05c4a', letterSpacing: '0.02em' }}>{overdueStepCount}</span>
-                    </span>
-                  )}
+                  <span style={{ fontSize: '14px', color: active ? 'var(--text-0)' : 'var(--text-2)', fontWeight: active ? 500 : 400 }}>{item.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {active && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />}
+                    {item.href === '/goals' && overdueStepCount > 0 && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#e05c4a', flexShrink: 0, animation: 'pulse 2s ease-in-out infinite' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#e05c4a', letterSpacing: '0.02em' }}>{overdueStepCount}</span>
+                      </span>
+                    )}
+                  </div>
                 </Link>
               )
             })}

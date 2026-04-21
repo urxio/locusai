@@ -93,161 +93,110 @@ function propsToLive(goals: Goal[], checkin: CheckIn | null, avgEnergy: number |
   }
 }
 
-/* ── segment bar ─────────────────────────────────────── */
+/* ── simple progress bar ─────────────────────────────── */
 
-function SegmentBar({
-  total,
-  filled,
+function ProgressBar({
+  pct,
   color   = '#4ade80',
-  maxBars = 12,
   loading = false,
 }: {
-  total:    number
-  filled:   number
-  color?:   string
-  maxBars?: number
+  pct:     number
+  color?:  string
   loading?: boolean
 }) {
-  const bars     = Math.min(Math.max(total, 1), maxBars)
-  const litCount = Math.min(Math.round((filled / Math.max(total, 1)) * bars), bars)
-
   return (
-    <div style={{ display: 'flex', gap: '3px', alignItems: 'stretch', width: '100%', marginTop: '12px' }}>
-      {Array.from({ length: bars }).map((_, i) => {
-        const isLit     = i < litCount
-        const isCurrent = i === litCount && litCount < bars
-        return (
-          <div
-            key={i}
-            style={{
-              flex:          1,
-              height:        '13px',
-              borderRadius:  '3px',
-              background:    loading
-                ? 'rgba(255,255,255,0.05)'
-                : isLit ? color : 'rgba(255,255,255,0.07)',
-              boxShadow:     !loading && isLit
-                ? `0 0 7px ${color}bb, 0 0 2px ${color}`
-                : 'none',
-              outline:       !loading && isCurrent
-                ? '1.5px solid rgba(255,255,255,0.22)'
-                : 'none',
-              outlineOffset: '1px',
-              transition:    'background 0.35s, box-shadow 0.35s',
-              animation:     loading ? 'statusPulse 1.4s ease-in-out infinite' : 'none',
-              animationDelay: loading ? `${i * 60}ms` : '0ms',
-            }}
-          />
-        )
-      })}
+    <div style={{ marginTop: '12px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{
+        height:     '100%',
+        width:      loading ? '30%' : `${Math.min(Math.max(pct, 0), 100)}%`,
+        borderRadius: '2px',
+        background: color,
+        transition: loading ? 'none' : 'width 0.5s var(--ease)',
+        animation:  loading ? 'statusPulse 1.4s ease-in-out infinite' : 'none',
+      }} />
     </div>
   )
 }
 
-/* ── single pill card ────────────────────────────────── */
+/* ── single stat card ────────────────────────────────── */
 
 type PillConfig = {
-  href:       string
-  icon:       React.ReactNode
-  iconBg:     string
-  label:      string
-  value:      string
-  sub:        string
-  barTotal?:  number
-  barFilled?: number
-  barColor?:  string
-  loading?:   boolean
+  href:      string
+  label:     string
+  value:     string
+  sub:       string
+  barPct?:   number
+  barColor?: string
+  loading?:  boolean
+  moodDot?:  boolean
 }
 
-function Pill({ href, icon, iconBg, label, value, sub, barTotal, barFilled, barColor, loading }: PillConfig) {
-  const hasBars = barTotal != null && barFilled != null && barColor != null
+function Pill({ href, label, value, sub, barPct, barColor, loading, moodDot }: PillConfig) {
   return (
     <a
       href={href}
       style={{
         display:        'flex',
         flexDirection:  'column',
-        flex:           '0 0 auto',
-        minWidth:       '148px',
+        flex:           1,
+        minWidth:       0,
         background:     'var(--bg-1)',
         border:         '1px solid var(--border)',
-        borderRadius:   '18px',
-        padding:        '14px 14px 13px',
+        borderRadius:   '16px',
+        padding:        '16px',
         textDecoration: 'none',
         cursor:         'pointer',
         transition:     'border-color 0.18s',
+        position:       'relative',
       }}
       onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-md)')}
       onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     >
-      {/* Top row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '9px' }}>
-        <div style={{
-          width: '28px', height: '28px', borderRadius: '8px',
-          background: iconBg, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          {icon}
-        </div>
-        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          {label}
-        </span>
-      </div>
+      {/* Label */}
+      <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
+        {label}
+      </span>
 
       {/* Value */}
-      <div style={{
-        fontSize: '21px', fontWeight: 700, color: 'var(--text-0)',
-        lineHeight: 1, letterSpacing: '-0.02em',
-        opacity: loading ? 0.4 : 1, transition: 'opacity 0.3s',
-      }}>
-        {value}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', flex: 1 }}>
+        <span style={{
+          fontFamily:   'var(--font-serif)',
+          fontSize:     '32px',
+          fontWeight:   500,
+          color:        'var(--text-0)',
+          lineHeight:   1,
+          letterSpacing:'-0.02em',
+          opacity:      loading ? 0.4 : 1,
+          transition:   'opacity 0.3s',
+        }}>
+          {value.split('/')[0].split(' ')[0]}
+        </span>
+        {value.includes('/') && (
+          <span style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: 400 }}>
+            /{value.split('/')[1]}
+          </span>
+        )}
       </div>
 
       {/* Sub */}
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '3px', lineHeight: 1.3, flex: 1 }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px', lineHeight: 1.3 }}>
         {sub}
       </div>
 
-      {/* Bars */}
-      {hasBars && (
-        <SegmentBar total={barTotal!} filled={barFilled!} color={barColor!} loading={loading} />
+      {/* Mood dot indicator */}
+      {moodDot && (
+        <div style={{
+          position: 'absolute', top: '14px', right: '14px',
+          width: '20px', height: '20px', borderRadius: '50%',
+          border: '1.5px solid var(--border)', background: 'transparent',
+        }} />
+      )}
+
+      {/* Progress bar */}
+      {barPct != null && barColor && (
+        <ProgressBar pct={barPct} color={barColor} loading={loading} />
       )}
     </a>
-  )
-}
-
-/* ── icons ───────────────────────────────────────────── */
-
-function EnergyIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 2L4 9h5l-2 5 7-8H9l2-4z" fill="#4ade8033" stroke="#4ade80" strokeWidth="1.8" />
-    </svg>
-  )
-}
-function HabitsIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#4ade80" strokeWidth="1.8" strokeLinecap="round">
-      <circle cx="8" cy="8" r="5.5" />
-      <path d="M5.5 8.2l2 1.8 3-3.5" />
-    </svg>
-  )
-}
-function GoalsIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#d4a853" strokeWidth="1.7" strokeLinecap="round">
-      <circle cx="8" cy="8" r="6" />
-      <circle cx="8" cy="8" r="3" />
-      <circle cx="8" cy="8" r="0.8" fill="#d4a853" />
-    </svg>
-  )
-}
-function MoodIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#9080c8" strokeWidth="1.7" strokeLinecap="round">
-      <path d="M2 2.5h8l3 2.5-3 2.5H2z" />
-      <path d="M5 10.5h6l3 2-3 2H5z" opacity="0.55" />
-    </svg>
   )
 }
 
@@ -317,58 +266,48 @@ export default function StatusStrip({ goals, checkin, avgEnergy, habits }: Props
 
   const pills: PillConfig[] = [
     {
-      href:      '/checkin',
-      icon:      <EnergyIcon />,
-      iconBg:    'rgba(74,222,128,0.12)',
-      label:     'Energy',
-      value:     s.energyDisplay,
-      sub:       s.energySub,
-      barTotal:  10,
-      barFilled: Math.round(s.energyVal),
-      barColor:  '#4ade80',
-      loading:   refreshing,
+      href:     '/checkin',
+      label:    'Energy',
+      value:    s.energyDisplay,
+      sub:      s.energySub,
+      barPct:   (s.energyVal / 10) * 100,
+      barColor: '#d4a853',
+      loading:  refreshing,
     },
     {
-      href:      '/habits',
-      icon:      <HabitsIcon />,
-      iconBg:    'rgba(74,222,128,0.10)',
-      label:     'Habits',
-      value:     s.habitsDisplay,
-      sub:       s.habitsSub,
-      barTotal:  Math.max(s.habitsTotal, 1),
-      barFilled: s.habitsDone,
-      barColor:  '#4ade80',
-      loading:   refreshing,
+      href:     '/habits',
+      label:    'Habits',
+      value:    s.habitsDisplay,
+      sub:      s.habitsSub,
+      barPct:   s.habitsTotal > 0 ? (s.habitsDone / s.habitsTotal) * 100 : 0,
+      barColor: 'var(--sage)',
+      loading:  refreshing,
     },
     {
-      href:      '/goals',
-      icon:      <GoalsIcon />,
-      iconBg:    'rgba(212,168,83,0.12)',
-      label:     'Goals',
-      value:     s.goalsDisplay,
-      sub:       s.goalsSub,
-      barTotal:  100,
-      barFilled: s.avgPct,
-      barColor:  '#d4a853',
-      loading:   refreshing,
+      href:     '/goals',
+      label:    'Goals',
+      value:    s.goalsDisplay,
+      sub:      s.goalsSub,
+      barPct:   s.avgPct,
+      barColor: 'var(--sage)',
+      loading:  refreshing,
     },
     {
-      href:   '/checkin',
-      icon:   <MoodIcon />,
-      iconBg: 'rgba(144,128,200,0.12)',
-      label:  'Mood',
-      value:  s.mood,
-      sub:    s.moodSub,
+      href:    '/checkin',
+      label:   'Mood',
+      value:   s.mood,
+      sub:     s.moodSub,
       loading: refreshing,
+      moodDot: true,
     },
   ]
 
   return (
-    <div style={{ marginTop: '20px' }}>
+    <div style={{ marginTop: '16px' }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
         <span style={{
-          fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
+          fontSize: '9px', fontWeight: 700, color: 'var(--text-3)',
           letterSpacing: '0.1em', textTransform: 'uppercase',
         }}>
           Today&apos;s Status
@@ -376,17 +315,8 @@ export default function StatusStrip({ goals, checkin, avgEnergy, habits }: Props
         <LiveDot refreshing={refreshing} />
       </div>
 
-      {/* Horizontal scroll row */}
-      <div style={{
-        display:                 'flex',
-        gap:                     '10px',
-        overflowX:               'auto',
-        paddingBottom:           '4px',
-        scrollbarWidth:          'none',
-        WebkitOverflowScrolling: 'touch',
-        marginLeft:              '-2px',
-        paddingLeft:             '2px',
-      } as React.CSSProperties}>
+      {/* 4-column grid */}
+      <div style={{ display: 'flex', gap: '10px' }}>
         {pills.map(p => <Pill key={p.label} {...p} />)}
       </div>
 
