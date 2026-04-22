@@ -12,6 +12,7 @@ import HabitAuditStrip from './HabitAuditStrip'
 import type { MissedHabit } from './HabitAuditStrip'
 import GoalsWeekStrip from './GoalsWeekStrip'
 import CorrelationsCard from './CorrelationsCard'
+import MemoryCard from './MemoryCard'
 
 type Props = {
   goals: Goal[]
@@ -46,6 +47,8 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
     (Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86400000) + 1) / 7
   )
 
+  const [selectedTab, setSelectedTab] = useState<'insight' | 'priorities' | 'memory'>('insight')
+
   return (
     <div style={{ display: 'flex', height: '100%', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
@@ -72,37 +75,89 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
         </div>
 
         <div className="page-pad" style={{ paddingTop: '0' }}>
-          {/* Greeting + pulse summary (uses brief insight for the AI pulse card) */}
-          <GreetingWidget
-            checkin={checkin}
-            habits={habits}
-            goals={goals}
-            brief={brief}
-            todayDate={todayDate}
-            userName={userName}
-          />
+          {/* Tab strip */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button
+              onClick={() => setSelectedTab('insight')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: selectedTab === 'insight' ? 'var(--bg-2)' : 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-1)',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              Insight
+            </button>
+            <button
+              onClick={() => setSelectedTab('priorities')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: selectedTab === 'priorities' ? 'var(--bg-2)' : 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-1)',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              Priorities
+            </button>
+            <button
+              onClick={() => setSelectedTab('memory')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: selectedTab === 'memory' ? 'var(--bg-2)' : 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-1)',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              Memory
+            </button>
+          </div>
 
-          {/* ── Yesterday's missed habits audit — shown right after greeting ── */}
-          {missedYesterday.length > 0 && (
-            <HabitAuditStrip missed={missedYesterday} yesterday={yesterday} />
+          {/* Tab content */}
+          {selectedTab === 'insight' && (
+            <>
+              <GreetingWidget
+                checkin={checkin}
+                habits={habits}
+                goals={goals}
+                brief={brief}
+                todayDate={todayDate}
+                userName={userName}
+              />
+              <CorrelationsCard memory={memory ?? null} />
+            </>
           )}
-
-          {/* ── Today's Status Strip ── */}
-          <StatusStrip
-            goals={goals}
-            checkin={checkin}
-            avgEnergy={avgEnergy}
-            habits={habits}
-          />
-
-          {/* ── Habits Today ── */}
-          <HabitsWeekStrip habits={habits} />
-
-          {/* ── Goals This Week ── */}
-          <GoalsWeekStrip goals={goalsWithSteps} />
-
-          {/* ── What Locus has noticed (correlations) ── */}
-          <CorrelationsCard memory={memory ?? null} />
+          {selectedTab === 'priorities' && (
+            <>
+              {missedYesterday.length > 0 && (
+                <HabitAuditStrip missed={missedYesterday} yesterday={yesterday} />
+              )}
+              <StatusStrip
+                goals={goals}
+                checkin={checkin}
+                avgEnergy={avgEnergy}
+                habits={habits}
+              />
+              <HabitsWeekStrip habits={habits} />
+              <GoalsWeekStrip goals={goalsWithSteps} />
+            </>
+          )}
+          {selectedTab === 'memory' && (
+            <>
+              {memory && <MemoryCard memory={memory} />}
+            </>
+          )}
 
           {/* Weekly review link */}
           <a
