@@ -21,7 +21,7 @@ const BASE: React.CSSProperties = {
   position: 'relative',
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'space-between',
+  gap: '12px',
   overflow: 'hidden',
   aspectRatio: '1 / 1',
   padding: '16px',
@@ -87,20 +87,17 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
     }
   }
 
-  /* SSR / pre-mount: render an inert placeholder so the grid stays stable */
-  if (!mounted) {
-    return <div className="bento-card glass-card-soft" style={BASE} />
-  }
+  if (!mounted) return <div className="bento-card glass-card" style={BASE} />
 
   /* All dismissed */
   if (pending.length === 0) {
     return (
-      <div className="bento-card glass-card-soft" style={BASE}>
+      <div className="bento-card glass-card" style={{ ...BASE, justifyContent: 'space-between' }}>
         <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--ink-400)' }}>Yesterday</span>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
           <div style={{
-            width: '36px', height: '36px', borderRadius: '50%',
-            background: 'oklch(0.62 0.06 165 / 0.20)',
+            width: '38px', height: '38px', borderRadius: '50%',
+            background: 'oklch(0.62 0.06 165 / 0.15)',
             border: '1.5px solid var(--sage)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -108,7 +105,7 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
               <path d="M3 8l3.5 3.5L13 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <p className="font-serif-display" style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--ink-900)', textAlign: 'center', opacity: 0.7 }}>
+          <p className="font-serif-display" style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center' }}>
             All caught up
           </p>
         </div>
@@ -120,42 +117,81 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
   const canSend = reason.trim().length > 0 && !streaming
 
   return (
-    <div className="bento-card glass-card-soft" style={BASE}>
+    <div className="bento-card glass-card" style={BASE}>
 
-      {/* Header */}
+      {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(210,130,80,0.9)', boxShadow: '0 0 6px rgba(210,130,80,0.55)', flexShrink: 0 }} />
-          <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'rgba(210,130,80,0.85)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <span style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: 'rgb(210,130,80)',
+            boxShadow: '0 0 7px rgba(210,130,80,0.7)',
+            flexShrink: 0,
+          }} />
+          <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.16em', color: 'rgb(220,145,90)' }}>
             Missed
           </span>
           {pending.length > 1 && (
-            <span style={{ fontSize: '9px', color: 'var(--ink-900)', fontWeight: 600, opacity: 0.6 }}>· {pending.length} left</span>
+            <span style={{ fontSize: '10px', color: 'var(--ink-400)', fontWeight: 500 }}>· {pending.length} left</span>
           )}
         </div>
         <button
           onClick={() => dismiss(current.id)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-900)', fontSize: '18px', lineHeight: 1, padding: '0 2px', display: 'flex', alignItems: 'center', opacity: 0.55 }}
+          style={{
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '50%', width: '22px', height: '22px',
+            cursor: 'pointer', color: 'var(--ink-400)', fontSize: '14px', lineHeight: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.15s',
+          }}
           title="Dismiss"
         >×</button>
       </div>
 
       {/* Habit identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '22px', flexShrink: 0 }}>{current.emoji || '🔄'}</span>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-900)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {current.name}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{
+          fontSize: '26px', flexShrink: 0,
+          width: '42px', height: '42px',
+          background: 'rgba(210,130,80,0.12)',
+          border: '1px solid rgba(210,130,80,0.22)',
+          borderRadius: '12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{current.emoji || '🔄'}</span>
+        <div>
+          <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink-900)', lineHeight: 1.2, margin: 0 }}>
+            {current.name}
+          </p>
+          <p style={{ fontSize: '10px', color: 'rgb(210,130,80)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '2px 0 0' }}>
+            missed yesterday
+          </p>
+        </div>
       </div>
 
-      {/* AI reply or textarea */}
+      {/* Content area */}
       {submitted ? (
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div style={{
+          flex: 1,
+          background: 'rgba(0,0,0,0.18)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '10px',
+          padding: '10px 12px',
+          overflow: 'hidden',
+        }}>
           <p style={{
-            fontSize: '11px', lineHeight: 1.6, color: 'var(--ink-900)', fontStyle: 'italic', fontWeight: 500,
+            fontSize: '12px', lineHeight: 1.6,
+            color: 'var(--ink-900)', fontStyle: 'italic',
             display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            margin: 0,
           } as React.CSSProperties}>
-            &ldquo;{aiReply.slice(0, 160)}{aiReply.length > 160 ? '…' : ''}&rdquo;
+            &ldquo;{aiReply.slice(0, 180)}{aiReply.length > 180 ? '…' : ''}&rdquo;
+            {streaming && (
+              <span style={{
+                display: 'inline-block', width: '2px', height: '0.9em',
+                background: 'var(--ink-400)', marginLeft: '2px', verticalAlign: 'middle',
+                animation: 'statusPulse 0.9s ease-in-out infinite',
+              }} />
+            )}
           </p>
         </div>
       ) : (
@@ -164,20 +200,20 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
           onChange={e => setReason(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() } }}
           placeholder="What got in the way?"
-          rows={2}
           disabled={streaming}
           style={{
             flex: 1,
-            background: 'rgba(255,255,255,0.60)',
-            border: '1px solid rgba(255,255,255,0.80)',
+            background: 'rgba(0,0,0,0.22)',
+            border: '1px solid rgba(255,255,255,0.10)',
             borderRadius: '10px',
-            padding: '7px 10px',
+            padding: '10px 12px',
             fontSize: '12px',
             color: 'var(--ink-900)',
             fontFamily: 'inherit',
             resize: 'none',
-            lineHeight: 1.4,
+            lineHeight: 1.5,
             outline: 'none',
+            transition: 'border-color 0.15s',
           } as React.CSSProperties}
         />
       )}
@@ -188,15 +224,16 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
           onClick={() => dismiss(current.id)}
           style={{
             width: '100%',
-            background: 'oklch(0.62 0.06 165 / 0.30)',
-            border: '1.5px solid var(--sage)',
+            background: 'oklch(0.62 0.06 165 / 0.18)',
+            border: '1px solid rgba(122,158,138,0.45)',
             borderRadius: '10px',
-            padding: '8px',
+            padding: '9px',
             fontSize: '12px',
-            color: 'var(--ink-900)',
+            color: 'var(--sage)',
             cursor: 'pointer',
             fontFamily: 'inherit',
-            fontWeight: 700,
+            fontWeight: 600,
+            letterSpacing: '0.02em',
           }}
         >
           {pending.length > 1 ? 'Next →' : 'Done ✓'}
@@ -207,16 +244,17 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
           disabled={!canSend}
           style={{
             width: '100%',
-            background: canSend ? 'var(--ink-900)' : 'rgba(255,255,255,0.45)',
-            border: '1px solid rgba(255,255,255,0.70)',
+            background: canSend ? 'var(--ink-900)' : 'rgba(255,255,255,0.07)',
+            border: `1px solid ${canSend ? 'transparent' : 'rgba(255,255,255,0.10)'}`,
             borderRadius: '10px',
-            padding: '8px',
+            padding: '9px',
             fontSize: '12px',
-            fontWeight: 700,
-            color: canSend ? 'var(--glass-card-bg)' : 'var(--ink-900)',
+            fontWeight: 600,
+            color: canSend ? 'var(--glass-card-bg)' : 'var(--ink-400)',
             cursor: canSend ? 'pointer' : 'default',
             fontFamily: 'inherit',
             transition: 'all 0.15s',
+            letterSpacing: '0.02em',
           }}
         >
           {streaming ? '…' : 'Send'}
