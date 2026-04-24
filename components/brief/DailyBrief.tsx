@@ -60,7 +60,7 @@ function BentoCard({
   const cls = tone === 'tint' ? 'glass-card-soft' : 'glass-card'
   const content = (
     <div
-      className={`${cls} ${className}`}
+      className={`bento-card ${cls} ${className}`}
       style={base}
       onMouseEnter={href ? e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)' } : undefined}
       onMouseLeave={href ? e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' } : undefined}
@@ -158,11 +158,20 @@ export default function DailyBrief({
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '14px 16px 16px', gap: '14px', animation: 'fadeUp 0.4s var(--ease) both' }}>
+      <style>{`
+        @media (max-width: 680px) {
+          .brief-shell { padding: 10px 10px 12px !important; gap: 10px !important; }
+          .bento-grid { grid-template-columns: repeat(2, 1fr) !important; grid-template-rows: repeat(4, 1fr) !important; gap: 10px !important; }
+          .topbar-center { display: none !important; }
+          .topbar-toggle { display: none !important; }
+          .bento-card { aspect-ratio: unset !important; min-height: 140px; }
+        }
+      `}</style>
 
       {/* ── OS Top Bar ── */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexShrink: 0 }}>
         {/* Left: brand + greeting */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <div style={{
             width: '36px', height: '36px', borderRadius: '12px',
             background: 'var(--glass-card-bg-tint)',
@@ -172,38 +181,39 @@ export default function DailyBrief({
           }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)' }} />
           </div>
-          <div className="glass-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '20px', padding: '5px 14px 5px 8px' }}>
+          <div className="glass-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '20px', padding: '5px 14px 5px 8px', minWidth: 0 }}>
             <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--ink-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--glass-card-bg)' }} />
             </span>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--ink-400)' }}>
+            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--ink-400)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {greeting}{userName ? `, ${userName.split(' ')[0]}` : ''}
             </span>
           </div>
         </div>
 
-        {/* Center: date pill */}
-        <div className="glass-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '20px', padding: '6px 16px' }}>
+        {/* Center: date pill — hidden on mobile */}
+        <div className="glass-pill topbar-center" style={{ display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '20px', padding: '6px 16px', flexShrink: 0 }}>
           {checkin && (
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />
           )}
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3, alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-900)' }}>{dayLabel} · {dateLabel}</span>
-            {checkin && <span style={{ fontSize: '10px', color: 'var(--ink-400)' }}>Check-in logged</span>}
-            {!checkin && <span style={{ fontSize: '10px', color: 'var(--ink-400)' }}>No check-in yet</span>}
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-900)', whiteSpace: 'nowrap' }}>{dayLabel} · {dateLabel}</span>
+            {checkin
+              ? <span style={{ fontSize: '10px', color: 'var(--ink-400)' }}>Check-in logged</span>
+              : <span style={{ fontSize: '10px', color: 'var(--ink-400)' }}>No check-in yet</span>}
           </div>
         </div>
 
-        {/* Right: week + search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className="glass-pill" style={{ display: 'flex', alignItems: 'center', gap: '2px', borderRadius: '20px', padding: '4px' }}>
+        {/* Right: toggle + capture */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <div className="glass-pill topbar-toggle" style={{ display: 'flex', alignItems: 'center', gap: '2px', borderRadius: '20px', padding: '4px' }}>
             <span style={{ borderRadius: '16px', padding: '5px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--ink-400)' }}>Overview</span>
             <span style={{ borderRadius: '16px', background: 'var(--ink-900)', padding: '5px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--glass-card-bg)' }}>Today</span>
           </div>
           <a href="/capture" className="glass-pill" style={{
             width: '36px', height: '36px', borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--ink-400)', textDecoration: 'none',
+            color: 'var(--ink-400)', textDecoration: 'none', flexShrink: 0,
           }}>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
               <path d="M10 4v12M4 10h12" strokeLinecap="round" />
@@ -213,7 +223,7 @@ export default function DailyBrief({
       </header>
 
       {/* ── Bento Grid ── */}
-      <div style={{
+      <div className="bento-grid" style={{
         flex: 1,
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
