@@ -25,24 +25,23 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
     <aside className="app-sidebar">
       {/* Brand mark */}
       <div style={{
-        width: '40px', height: '40px',
-        borderRadius: '14px',
+        width: '32px', height: '32px',
+        borderRadius: '10px',
         background: 'var(--glass-card-bg-tint)',
         border: '1px solid var(--glass-card-border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: '12px',
-        flexShrink: 0,
+        flexShrink: 0, marginRight: '8px',
       }}>
         <div style={{
-          width: '14px', height: '14px', borderRadius: '50%',
+          width: '10px', height: '10px', borderRadius: '50%',
           background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
         }} />
       </div>
 
-      {/* Main nav icons */}
+      {/* Main nav — horizontal */}
       <nav style={{
-        flex: 1, display: 'flex', flexDirection: 'column', gap: '2px',
-        width: '100%', padding: '0 10px', overflowY: 'auto', scrollbarWidth: 'none',
+        flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center',
+        gap: '2px', overflowX: 'auto', scrollbarWidth: 'none',
       }}>
         {MAIN_NAV.map(item => {
           const active = pathname === item.href
@@ -55,27 +54,24 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
         })}
       </nav>
 
-      {/* Bottom: settings + avatar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '0 10px' }}>
+      {/* Right: settings + avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
         <DockItem href="/settings" label="Settings" active={pathname === '/settings'}>
           <SettingsIcon />
         </DockItem>
-
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '4px' }}>
-          <div style={{
-            width: '36px', height: '36px',
-            borderRadius: '12px',
-            background: avatarUrl
-              ? `url(${avatarUrl}) center/cover no-repeat`
-              : 'linear-gradient(135deg, var(--sea-soft, #c8ddd7), var(--sage))',
-            border: '1.5px solid var(--glass-card-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '12px', fontWeight: 700,
-            color: 'var(--text-0)',
-            flexShrink: 0,
-          }}>
-            {!avatarUrl && initial}
-          </div>
+        <div style={{
+          width: '32px', height: '32px',
+          borderRadius: '10px',
+          background: avatarUrl
+            ? `url(${avatarUrl}) center/cover no-repeat`
+            : 'linear-gradient(135deg, var(--sea-soft, #c8ddd7), var(--sage))',
+          border: '1.5px solid var(--glass-card-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '11px', fontWeight: 700,
+          color: 'var(--text-0)',
+          flexShrink: 0,
+        }}>
+          {!avatarUrl && initial}
         </div>
       </div>
     </aside>
@@ -97,7 +93,7 @@ function DockItem({ href, label, active, badge = false, children }: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '100%',
+        width: '44px',
         height: '44px',
         borderRadius: '14px',
         background: active ? 'var(--nav-active-bg)' : 'transparent',
@@ -125,10 +121,10 @@ function DockItem({ href, label, active, badge = false, children }: {
       {/* Active indicator bar */}
       {active && (
         <span style={{
-          position: 'absolute', left: '-1px',
-          top: '50%', transform: 'translateY(-50%)',
-          width: '3px', height: '18px',
-          borderRadius: '0 3px 3px 0',
+          position: 'absolute', bottom: '-1px',
+          left: '50%', transform: 'translateX(-50%)',
+          width: '18px', height: '3px',
+          borderRadius: '3px 3px 0 0',
           background: 'var(--sage)',
         }} />
       )}

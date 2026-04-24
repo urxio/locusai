@@ -50,7 +50,7 @@ function BentoCard({
     justifyContent: 'space-between',
     overflow: 'hidden',
     aspectRatio: '1 / 1',
-    padding: '20px',
+    padding: '16px',
     textDecoration: 'none',
     color: 'inherit',
     cursor: href ? 'pointer' : 'default',
@@ -157,7 +157,7 @@ export default function DailyBrief({
     : null
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '14px 16px 16px', gap: '14px', animation: 'fadeUp 0.4s var(--ease) both' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '10px 12px 12px', gap: '10px', animation: 'fadeUp 0.4s var(--ease) both' }}>
       <style>{`
         @media (max-width: 680px) {
           .brief-shell { padding: 10px 10px 12px !important; gap: 10px !important; }
@@ -228,7 +228,7 @@ export default function DailyBrief({
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
         gridTemplateRows: 'repeat(2, 1fr)',
-        gap: '14px',
+        gap: '10px',
         minHeight: 0,
       }}>
 

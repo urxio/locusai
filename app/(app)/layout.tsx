@@ -63,14 +63,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
 
       <div className="app-shell">
+        <main className="app-main">
+          {children}
+        </main>
         <Sidebar
           userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
           avatarUrl={profile?.avatar_url ?? null}
           overdueStepCount={overdueCount}
         />
-        <main className="app-main">
-          {children}
-        </main>
         <BottomNav overdueStepCount={overdueCount} />
         <TimezoneSync />
       </div>
