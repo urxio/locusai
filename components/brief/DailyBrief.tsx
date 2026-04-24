@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Goal, CheckIn, HabitWithLogs, Brief, GoalWithSteps } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import type { MissedHabit } from './HabitAuditStrip'
+import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
 
 type Props = {
   goals: Goal[]
@@ -107,6 +108,27 @@ export default function DailyBrief({
   const today = todayDate || browserDate()
   const wk = weekNum(now)
 
+  const [doneMap, setDoneMap] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {}
+    habits.forEach(h => { map[h.id] = h.logs.some(l => l.logged_date === today) })
+    return map
+  })
+  const [, startTransition] = useTransition()
+
+  function toggleHabit(habitId: string) {
+    const wasDone = doneMap[habitId] ?? false
+    setDoneMap(prev => ({ ...prev, [habitId]: !wasDone }))
+    startTransition(async () => {
+      try {
+        if (wasDone) await unlogHabitAction(habitId)
+        else await logHabitAction(habitId)
+        router.refresh()
+      } catch {
+        setDoneMap(prev => ({ ...prev, [habitId]: wasDone }))
+      }
+    })
+  }
+
   useEffect(() => {
     const onVisibility = () => { if (!document.hidden) router.refresh() }
     document.addEventListener('visibilitychange', onVisibility)
@@ -119,7 +141,7 @@ export default function DailyBrief({
   const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
   const scheduledToday = habits.filter(h => h.isScheduledToday)
-  const doneToday = scheduledToday.filter(h => h.logs.some(l => l.logged_date === today))
+  const doneToday = scheduledToday.filter(h => doneMap[h.id])
   const activeGoals = goals.filter(g => g.status === 'active')
   const topGoal = activeGoals[0] ?? null
   const secondGoal = activeGoals[1] ?? null
@@ -339,14 +361,19 @@ export default function DailyBrief({
           <CardLabel title="Habits" meta={scheduledToday.length > 0 ? `${doneToday.length}/${scheduledToday.length}` : undefined} />
           <ul style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowHidden: true } as React.CSSProperties}>
             {scheduledToday.slice(0, 4).map(h => {
-              const done = h.logs.some(l => l.logged_date === today)
+              const done = doneMap[h.id] ?? false
               return (
-                <li key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <li
+                  key={h.id}
+                  onClick={() => toggleHabit(h.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}
+                >
                   <span style={{
                     width: '14px', height: '14px', borderRadius: '50%', flexShrink: 0,
                     border: done ? '1px solid var(--sage)' : '1px solid var(--ink-300)',
                     background: done ? 'oklch(0.62 0.06 165 / 0.25)' : 'rgba(255,255,255,0.50)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background 0.15s ease, border-color 0.15s ease',
                   }}>
                     {done && <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--sage)' }} />}
                   </span>
@@ -355,6 +382,7 @@ export default function DailyBrief({
                     color: done ? 'var(--ink-400)' : 'var(--ink-900)',
                     textDecoration: done ? 'line-through' : 'none',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    transition: 'color 0.15s ease',
                   }}>
                     {h.emoji ? `${h.emoji} ` : ''}{h.name}
                   </span>
