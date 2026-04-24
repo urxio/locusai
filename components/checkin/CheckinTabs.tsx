@@ -31,9 +31,7 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
         position: 'sticky',
         top: 0,
         zIndex: 10,
-        background: 'var(--bg-0)',
         padding: '16px 20px 12px',
-        borderBottom: '1px solid var(--border)',
         marginBottom: '4px',
       }}>
         <div style={{

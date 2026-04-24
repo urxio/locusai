@@ -327,18 +327,16 @@ export default function ConversationalCheckin({
               energyLabel={energyLabel}
             />
             <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-              {!showBrief && (
-                <button
-                  onClick={() => setShowBrief(true)}
-                  style={{
-                    flex: 1, background: 'var(--gold)', color: '#131110', border: 'none',
-                    borderRadius: '10px', padding: '13px', fontSize: '13.5px',
-                    fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  See daily insights →
-                </button>
-              )}
+              <button
+                onClick={() => setShowBrief(v => !v)}
+                style={{
+                  flex: 1, background: 'var(--gold)', color: '#131110', border: 'none',
+                  borderRadius: '10px', padding: '13px', fontSize: '13.5px',
+                  fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {showBrief ? 'Hide daily insights' : 'See daily insights →'}
+              </button>
               <button
                 onClick={handleRedo}
                 style={{
