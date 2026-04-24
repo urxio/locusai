@@ -5,6 +5,7 @@ import { saveJournalAction } from '@/app/actions/journal'
 import { localDateStr } from '@/lib/utils/date'
 import type { JournalEntry } from '@/lib/types'
 import FollowupQuestion from './FollowupQuestion'
+import { TabToggle, type Tab } from '@/components/checkin/CheckinTabs'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -201,9 +202,15 @@ function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismi
 export default function JournalSection({
   existing,
   recentJournals = [],
+  tab,
+  setTab,
+  todayJournalHasContent = false,
 }: {
   existing: JournalEntry | null
   recentJournals?: JournalEntry[]
+  tab?: Tab
+  setTab?: (t: Tab) => void
+  todayJournalHasContent?: boolean
 }) {
   const todayStr = localDateStr()
 
@@ -391,6 +398,26 @@ export default function JournalSection({
 
   return (
     <div style={{ maxWidth: '560px' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
+        <div>
+          <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85 }}>
+            {isToday ? 'Today' : formatDisplayDate(selectedDate)}
+          </div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.15 }}>
+            Your <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>journal.</em>
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px' }}>
+            Write freely. Locus reflects back what matters.
+          </div>
+        </div>
+        {tab && setTab && (
+          <div style={{ marginTop: '6px', flexShrink: 0 }}>
+            <TabToggle tab={tab} setTab={setTab} todayJournalHasContent={todayJournalHasContent} />
+          </div>
+        )}
+      </div>
 
       {/* Week dot-map */}
       <WeekDotMap

@@ -7,6 +7,7 @@ import { localDateStr } from '@/lib/utils/date'
 import type { CheckIn } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import PostCheckinBrief from '@/components/brief/PostCheckinBrief'
+import { TabToggle, type Tab } from '@/components/checkin/CheckinTabs'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
@@ -67,10 +68,16 @@ export default function ConversationalCheckin({
   existingCheckin,
   memory,
   hasBrief = false,
+  tab,
+  setTab,
+  todayJournalHasContent = false,
 }: {
   existingCheckin: CheckIn | null
   memory?: UserMemory | null
   hasBrief?: boolean
+  tab?: Tab
+  setTab?: (t: Tab) => void
+  todayJournalHasContent?: boolean
 }) {
   const [messages,     setMessages]     = useState<Message[]>([])
   const [input,        setInput]        = useState('')
@@ -294,26 +301,33 @@ export default function ConversationalCheckin({
     <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
       {/* ── Header ── */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{
-          fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
-          color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85,
-        }}>
-          {isRedo ? 'Updating Check-in' : existingCheckin && !isRedo ? 'Today\'s Check-in' : 'Daily Check-in'}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
+        <div>
+          <div style={{
+            fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85,
+          }}>
+            {isRedo ? 'Updating Check-in' : existingCheckin && !isRedo ? 'Today\'s Check-in' : 'Daily Check-in'}
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400,
+            color: 'var(--text-0)', lineHeight: 1.15,
+          }}>
+            How are you{' '}
+            <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>showing up</em>{' '}
+            today?
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px' }}>
+            {existingCheckin && !isRedo
+              ? 'Your check-in is logged for today.'
+              : 'Takes about 90 seconds. Helps Locus understand you better over time.'}
+          </div>
         </div>
-        <div style={{
-          fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400,
-          color: 'var(--text-0)', lineHeight: 1.15,
-        }}>
-          How are you{' '}
-          <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>showing up</em>{' '}
-          today?
-        </div>
-        <div style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '6px' }}>
-          {existingCheckin && !isRedo
-            ? 'Your check-in is logged for today.'
-            : 'Takes about 90 seconds. Helps Locus understand you better over time.'}
-        </div>
+        {tab && setTab && (
+          <div style={{ marginTop: '6px' }}>
+            <TabToggle tab={tab} setTab={setTab} todayJournalHasContent={todayJournalHasContent} />
+          </div>
+        )}
       </div>
 
       <div style={{ maxWidth: '580px' }}>

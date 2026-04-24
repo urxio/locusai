@@ -3,12 +3,11 @@
 import { useState } from 'react'
 import ConversationalCheckin from './ConversationalCheckin'
 import JournalSection from './JournalSection'
-import CheckinHistory from './CheckinHistory'
 import BriefHistory from '@/components/brief/BriefHistory'
 import type { CheckIn, JournalEntry, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 
-type Tab = 'checkin' | 'journal'
+export type Tab = 'checkin' | 'journal'
 
 type Props = {
   existingCheckin: CheckIn | null
@@ -24,68 +23,17 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
 
   return (
     <div>
-      {/* ── Sticky tab bar ── */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        background: 'oklch(0.18 0.012 60 / 0.75)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        padding: '16px 20px 12px',
-        marginBottom: '4px',
-      }}>
-        <div style={{
-          display: 'inline-flex',
-          background: 'var(--bg-2)',
-          borderRadius: '11px',
-          padding: '3px',
-          border: '1px solid var(--border)',
-          gap: '2px',
-        }}>
-          {(['checkin', 'journal'] as const).map(t => {
-            const active = tab === t
-            return (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                style={{
-                  background:    active ? 'var(--bg-0)' : 'transparent',
-                  border:        active ? '1px solid var(--border-md)' : '1px solid transparent',
-                  borderRadius:  '8px',
-                  padding:       '7px 22px',
-                  fontSize:      '13px',
-                  fontWeight:    active ? 700 : 500,
-                  color:         active ? 'var(--text-0)' : 'var(--text-3)',
-                  cursor:        'pointer',
-                  transition:    'all 0.15s ease',
-                  letterSpacing: '0.02em',
-                  whiteSpace:    'nowrap',
-                  fontFamily:    'inherit',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {t === 'checkin' ? <CheckinTabIcon active={active} /> : <JournalTabIcon active={active} />}
-                  {t === 'checkin' ? 'Check-in' : 'Journal'}
-                  {t === 'journal' && todayJournal?.content && (
-                    <span style={{
-                      width: '5px', height: '5px', borderRadius: '50%',
-                      background: 'var(--sage)', flexShrink: 0,
-                    }} />
-                  )}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
       {/* ── Content — both panels stay mounted; CSS hides the inactive one ── */}
       {/* Keeping both mounted preserves JournalSection's in-memory AI cache     */}
       <div style={{ display: tab === 'checkin' ? 'block' : 'none', animation: tab === 'checkin' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
-        <ConversationalCheckin existingCheckin={existingCheckin} memory={memory} hasBrief={hasBrief} />
+        <ConversationalCheckin
+          existingCheckin={existingCheckin}
+          memory={memory}
+          hasBrief={hasBrief}
+          tab={tab}
+          setTab={setTab}
+          todayJournalHasContent={!!todayJournal?.content}
+        />
         {pastBriefs.length > 0 && (
           <div className="page-pad" style={{ maxWidth: '860px', paddingTop: 0 }}>
             <BriefHistory briefs={pastBriefs} />
@@ -95,7 +43,13 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
 
       <div style={{ display: tab === 'journal' ? 'block' : 'none', animation: tab === 'journal' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
         <div className="page-pad" style={{ maxWidth: '860px' }}>
-          <JournalSection existing={todayJournal} recentJournals={recentJournals} />
+          <JournalSection
+            existing={todayJournal}
+            recentJournals={recentJournals}
+            tab={tab}
+            setTab={setTab}
+            todayJournalHasContent={!!todayJournal?.content}
+          />
 
           {/* History link */}
           <div style={{
@@ -131,22 +85,51 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
   )
 }
 
-function CheckinTabIcon({ active }: { active: boolean }) {
+/* ── Shared tab toggle — used in each panel's header ── */
+export function TabToggle({
+  tab,
+  setTab,
+  todayJournalHasContent,
+}: {
+  tab: Tab
+  setTab: (t: Tab) => void
+  todayJournalHasContent: boolean
+}) {
   return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"
-      style={{ opacity: active ? 1 : 0.6 }}>
-      <circle cx="8" cy="8" r="4" />
-      <path d="M8 2v1M8 13v1M2 8h1M13 8h1" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function JournalTabIcon({ active }: { active: boolean }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"
-      style={{ opacity: active ? 1 : 0.6 }}>
-      <rect x="3" y="2" width="10" height="12" rx="1.5" />
-      <path d="M6 5h4M6 8h4M6 11h2" strokeLinecap="round" />
-    </svg>
+    <div style={{
+      display: 'flex',
+      background: 'var(--bg-2)',
+      border: '1px solid var(--border)',
+      borderRadius: '9px',
+      padding: '3px',
+      gap: '2px',
+      flexShrink: 0,
+    }}>
+      {(['checkin', 'journal'] as const).map(t => {
+        const active = tab === t
+        return (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              padding: '6px 14px', borderRadius: '7px', border: 'none',
+              cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+              transition: 'all 0.15s',
+              background: active ? 'var(--bg-0)' : 'transparent',
+              color: active ? 'var(--text-0)' : 'var(--text-3)',
+              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.2)' : 'none',
+              fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', gap: '5px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t === 'checkin' ? 'Check-in' : 'Journal'}
+            {t === 'journal' && todayJournalHasContent && (
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />
+            )}
+          </button>
+        )
+      })}
+    </div>
   )
 }
