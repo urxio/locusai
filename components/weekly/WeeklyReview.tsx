@@ -203,7 +203,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
       </div>
 
       {/* ── ENERGY CHART ── */}
-      <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px 24px', marginBottom: '16px' }}>
+      <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', padding: '22px 24px', marginBottom: '16px' }}>
         <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600, marginBottom: '18px' }}>
           Energy {isPastWeek ? `week ${weekInfo.weekNumber}` : 'this week'} {avgEnergy ? `· avg ${avgEnergy}/10` : ''}
         </div>
@@ -240,7 +240,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
 
       {/* Current week: prompt to generate */}
       {!isPastWeek && !displayedReflection && !generating && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '32px', marginBottom: '16px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-xl)', padding: '32px', marginBottom: '16px', textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 300, color: 'var(--text-1)', marginBottom: '8px' }}>
             Get your AI weekly reflection
           </div>
@@ -263,7 +263,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
 
       {/* Past week: no reflection stored */}
       {isPastWeek && !displayedReflection && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: '16px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: '16px', textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-2)' }}>
             No reflection was generated for this week.
           </div>
@@ -339,7 +339,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
 
       {/* ── HABIT STREAKS ── */}
       {habitsForWeek.length > 0 && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px 24px' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', padding: '22px 24px' }}>
           <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600, marginBottom: '16px' }}>
             Habit Completions · Week {weekInfo.weekNumber}
           </div>
@@ -376,7 +376,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
       )}
 
       {weekCheckins.length === 0 && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-lg)', padding: '28px 24px', textAlign: 'center', marginTop: '16px' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', padding: '28px 24px', textAlign: 'center', marginTop: '16px' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-2)' }}>No check-ins {isPastWeek ? 'that week' : 'this week yet'}.</div>
           {!isPastWeek && <div style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '6px' }}>Check in daily to unlock your weekly AI reflection.</div>}
         </div>
@@ -384,7 +384,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
 
       {/* ── Grade ── */}
       {displayedReflection && !generating && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '18px 22px', marginTop: '16px' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', padding: '18px 22px', marginTop: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: (isPastWeek || currentGrade) ? '0' : '2px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)' }}>

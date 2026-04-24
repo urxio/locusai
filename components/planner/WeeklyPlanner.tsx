@@ -393,8 +393,8 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
         <aside style={{ width: '220px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Habits section */}
-          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
-            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--glass-card-border)' }}>
               <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>Habits</div>
             </div>
             <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -459,8 +459,8 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
           </div>
 
           {/* Goals section */}
-          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
-            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--glass-card-border)' }}>
               <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>Goals</div>
             </div>
             <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -492,8 +492,8 @@ export default function WeeklyPlanner({ habits, goals, initialPlan, weekStart: i
           </div>
 
           {/* Custom block input */}
-          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
-            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--glass-card-border)' }}>
               <div style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>Custom Block</div>
             </div>
             <div style={{ padding: '10px' }}>

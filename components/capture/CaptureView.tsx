@@ -51,7 +51,7 @@ function ReminderCard({ note, onResolve, onDelete }: { note: MemoryNote; onResol
     : null
 
   return (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px 14px', background: 'var(--bg-2)', borderRadius: '11px', border: '1px solid var(--border)' }}>
+    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px 14px', background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '11px' }}>
       {/* Date column */}
       {note.trigger_date ? (
         <div style={{ flexShrink: 0, textAlign: 'center', minWidth: '40px' }}>
@@ -89,7 +89,7 @@ function ReminderCard({ note, onResolve, onDelete }: { note: MemoryNote; onResol
 
 function IdeaCard({ note, onResolve, onDelete }: { note: MemoryNote; onResolve: () => void; onDelete: () => void }) {
   return (
-    <div style={{ background: 'var(--bg-2)', borderRadius: '11px', border: '1px solid var(--border)', padding: '13px 14px', display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', boxSizing: 'border-box' }}>
+    <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '11px', padding: '13px 14px', display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', boxSizing: 'border-box' }}>
       <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text-0)', lineHeight: 1.55, flex: 1 }}>{note.content}</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -148,7 +148,7 @@ function ResourceCard({ note, onResolve, onDelete }: { note: MemoryNote; onResol
   const textWithoutUrls = note.content.replace(URL_RE, '').trim()
 
   return (
-    <div style={{ padding: '13px 14px', background: 'var(--bg-2)', borderRadius: '11px', border: '1px solid var(--border)' }}>
+    <div style={{ padding: '13px 14px', background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '11px' }}>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(138,144,180,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#8a90b4' }}>
           <BookmarkIcon />
@@ -402,7 +402,7 @@ function Composer({ onAdded }: { onAdded: (note: MemoryNote) => void }) {
   const loading = classifying || saving
 
   return (
-    <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', marginBottom: '28px' }}>
+    <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: '16px', padding: '16px', marginBottom: '28px' }}>
       <textarea
         ref={taRef}
         value={text}

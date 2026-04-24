@@ -168,7 +168,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
         {step === 'done' && (
           <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
             {/* Summary card */}
-            <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '28px', marginBottom: '20px' }}>
+            <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-xl)', padding: '28px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(122,158,138,0.2), rgba(122,158,138,0.08))', border: '1px solid rgba(122,158,138,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>✓</div>
                 <div>
