@@ -13,6 +13,8 @@ import type { MissedHabit } from './HabitAuditStrip'
 import GoalsWeekStrip from './GoalsWeekStrip'
 import CorrelationsCard from './CorrelationsCard'
 import MemoryCard from './MemoryCard'
+import AIInsightCard from './AIInsightCard'
+import PriorityCard from './PriorityCard'
 
 type Props = {
   goals: Goal[]
@@ -76,52 +78,30 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
 
         <div className="page-pad" style={{ paddingTop: '0' }}>
           {/* Tab strip */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <button
-              onClick={() => setSelectedTab('insight')}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                background: selectedTab === 'insight' ? 'var(--bg-2)' : 'transparent',
-                border: '1px solid var(--border)',
-                color: 'var(--text-1)',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer'
-              }}
-            >
-              Insight
-            </button>
-            <button
-              onClick={() => setSelectedTab('priorities')}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                background: selectedTab === 'priorities' ? 'var(--bg-2)' : 'transparent',
-                border: '1px solid var(--border)',
-                color: 'var(--text-1)',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer'
-              }}
-            >
-              Priorities
-            </button>
-            <button
-              onClick={() => setSelectedTab('memory')}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                background: selectedTab === 'memory' ? 'var(--bg-2)' : 'transparent',
-                border: '1px solid var(--border)',
-                color: 'var(--text-1)',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer'
-              }}
-            >
-              Memory
-            </button>
+          <div style={{ display: 'flex', gap: '2px', marginBottom: '20px', background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px' }}>
+            {(['insight', 'priorities', 'memory'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setSelectedTab(tab)}
+                style={{
+                  flex: 1,
+                  padding: '7px 12px',
+                  borderRadius: '7px',
+                  background: selectedTab === tab ? 'var(--bg-0)' : 'transparent',
+                  border: 'none',
+                  boxShadow: selectedTab === tab ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                  color: selectedTab === tab ? 'var(--text-0)' : 'var(--text-3)',
+                  fontSize: '13px',
+                  fontWeight: selectedTab === tab ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s var(--ease)',
+                  textTransform: 'capitalize',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
           {/* Tab content */}
@@ -135,6 +115,9 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
                 todayDate={todayDate}
                 userName={userName}
               />
+              {brief?.insight_text && (
+                <AIInsightCard text={brief.insight_text} />
+              )}
               <CorrelationsCard memory={memory ?? null} />
             </>
           )}
@@ -143,6 +126,22 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
               {missedYesterday.length > 0 && (
                 <HabitAuditStrip missed={missedYesterday} yesterday={yesterday} />
               )}
+              {brief?.priorities && brief.priorities.length > 0 ? (
+                <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '16px', padding: '0 20px', marginBottom: '16px' }}>
+                  {brief.priorities.map((p, i) => (
+                    <PriorityCard
+                      key={i}
+                      num={i + 1}
+                      title={p.title}
+                      category={p.category}
+                      time={p.estimated_time}
+                      timeOfDay={p.time_of_day}
+                      reasoning={p.reasoning}
+                      last={i === brief.priorities.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : null}
               <StatusStrip
                 goals={goals}
                 checkin={checkin}
