@@ -3,162 +3,180 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const NAV = [
-  {
-    section: 'Rhythm',
-    items: [
-      { href: '/brief',   label: 'Home' },
-      { href: '/checkin', label: 'Check-in' },
-      { href: '/habits',  label: 'Habits' },
-      { href: '/capture', label: 'Capture' },
-    ]
-  },
-  {
-    section: 'Direction',
-    items: [
-      { href: '/goals',   label: 'Goals' },
-      { href: '/planner', label: 'Planner' },
-      { href: '/review',  label: 'Weekly Review' },
-    ]
-  },
-  {
-    section: 'Settings',
-    items: [
-      { href: '/settings', label: 'Settings' },
-    ]
-  }
+const MAIN_NAV = [
+  { href: '/brief',   label: 'Home',         icon: <HomeIcon /> },
+  { href: '/checkin', label: 'Check-in',      icon: <CheckinIcon /> },
+  { href: '/habits',  label: 'Habits',        icon: <HabitsIcon /> },
+  { href: '/capture', label: 'Capture',       icon: <CaptureIcon /> },
+  { href: '/goals',   label: 'Goals',         icon: <GoalsIcon /> },
+  { href: '/planner', label: 'Planner',       icon: <PlannerIcon /> },
+  { href: '/review',  label: 'Weekly Review', icon: <ReviewIcon /> },
 ]
 
-export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: { userName: string; avatarUrl: string | null; overdueStepCount?: number }) {
+export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
+  userName: string
+  avatarUrl: string | null
+  overdueStepCount?: number
+}) {
   const pathname = usePathname()
   const initial = userName.charAt(0).toUpperCase()
 
   return (
     <aside className="app-sidebar">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', height: '100%', padding: '24px' }}>
+      {/* Brand mark */}
+      <div style={{
+        width: '40px', height: '40px',
+        borderRadius: '14px',
+        background: 'var(--glass-card-bg-tint)',
+        border: '1px solid var(--glass-card-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        marginBottom: '12px',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: '14px', height: '14px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
+        }} />
+      </div>
 
-        {/* ── Brand ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px' }}>
-          {/* Logo box — uses CSS vars so it adapts to dark/light */}
+      {/* Main nav icons */}
+      <nav style={{
+        flex: 1, display: 'flex', flexDirection: 'column', gap: '2px',
+        width: '100%', padding: '0 10px', overflowY: 'auto', scrollbarWidth: 'none',
+      }}>
+        {MAIN_NAV.map(item => {
+          const active = pathname === item.href
+          const showBadge = item.href === '/goals' && overdueStepCount > 0
+          return (
+            <DockItem key={item.href} href={item.href} label={item.label} active={active} badge={showBadge}>
+              {item.icon}
+            </DockItem>
+          )
+        })}
+      </nav>
+
+      {/* Bottom: settings + avatar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '0 10px' }}>
+        <DockItem href="/settings" label="Settings" active={pathname === '/settings'}>
+          <SettingsIcon />
+        </DockItem>
+
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '4px' }}>
           <div style={{
+            width: '36px', height: '36px',
+            borderRadius: '12px',
+            background: avatarUrl
+              ? `url(${avatarUrl}) center/cover no-repeat`
+              : 'linear-gradient(135deg, var(--sea-soft, #c8ddd7), var(--sage))',
+            border: '1.5px solid var(--glass-card-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '40px', height: '40px', borderRadius: '16px',
-            border: '1px solid var(--logo-box-border)',
-            background: 'var(--logo-box-bg)',
-            boxShadow: '0 2px 12px rgba(110,158,145,0.15)',
+            fontSize: '12px', fontWeight: 700,
+            color: 'var(--text-0)',
             flexShrink: 0,
           }}>
-            <div style={{
-              width: '16px', height: '16px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
-            }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-            <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-0)' }}>Locus</span>
-            <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--text-3)', marginTop: '1px' }}>Life OS</span>
+            {!avatarUrl && initial}
           </div>
         </div>
-
-        {/* ── Nav ── */}
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', scrollbarWidth: 'none' }}>
-          {NAV.map(group => (
-            <div key={group.section} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {/* Section label */}
-              <div style={{
-                padding: '0 12px 4px',
-                fontSize: '10px', fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: '0.20em',
-                color: 'var(--text-3)',
-              }}>
-                {group.section}
-              </div>
-
-              {/* Items */}
-              {group.items.map(item => {
-                const active = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      borderRadius: '16px',
-                      border: active ? '1px solid var(--nav-active-border)' : '1px solid transparent',
-                      background: active ? 'var(--nav-active-bg)' : 'transparent',
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: active ? 600 : 500,
-                      color: active ? 'var(--text-0)' : 'var(--text-2)',
-                      textDecoration: 'none',
-                      boxShadow: active ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
-                      transition: 'background 0.15s, color 0.15s',
-                    }}
-                    onMouseEnter={e => {
-                      if (!active) {
-                        (e.currentTarget as HTMLElement).style.background = 'var(--nav-hover-bg)'
-                        ;(e.currentTarget as HTMLElement).style.color = 'var(--text-0)'
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!active) {
-                        (e.currentTarget as HTMLElement).style.background = 'transparent'
-                        ;(e.currentTarget as HTMLElement).style.color = 'var(--text-2)'
-                      }
-                    }}
-                  >
-                    <span>{item.label}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {active && (
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />
-                      )}
-                      {item.href === '/goals' && overdueStepCount > 0 && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#e05c4a', animation: 'pulse 2s ease-in-out infinite' }} />
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#e05c4a' }}>{overdueStepCount}</span>
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          ))}
-        </nav>
-
-        {/* ── User footer ── */}
-        <Link
-          href="/settings"
-          style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            borderRadius: '16px', border: '1px solid transparent',
-            padding: '12px',
-            textDecoration: 'none',
-            transition: 'background 0.15s',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--nav-hover-bg)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={userName} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-          ) : (
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-              background: 'var(--sun, #f0dfa0)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', fontWeight: 600, color: 'var(--text-0)',
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.6)',
-            }}>
-              {initial}
-            </div>
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '1px' }}>Settings</div>
-          </div>
-        </Link>
-
       </div>
     </aside>
   )
+}
+
+function DockItem({ href, label, active, badge = false, children }: {
+  href: string
+  label: string
+  active: boolean
+  badge?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      title={label}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '44px',
+        borderRadius: '14px',
+        background: active ? 'var(--nav-active-bg)' : 'transparent',
+        border: active ? '1px solid var(--nav-active-border)' : '1px solid transparent',
+        color: active ? 'var(--text-0)' : 'var(--text-3)',
+        textDecoration: 'none',
+        position: 'relative',
+        transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.background = 'var(--nav-hover-bg)'
+          ;(e.currentTarget as HTMLElement).style.color = 'var(--text-1)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.background = 'transparent'
+          ;(e.currentTarget as HTMLElement).style.color = 'var(--text-3)'
+        }
+      }}
+    >
+      {children}
+      {/* Active indicator bar */}
+      {active && (
+        <span style={{
+          position: 'absolute', left: '-1px',
+          top: '50%', transform: 'translateY(-50%)',
+          width: '3px', height: '18px',
+          borderRadius: '0 3px 3px 0',
+          background: 'var(--sage)',
+        }} />
+      )}
+      {/* Overdue badge */}
+      {badge && (
+        <span style={{
+          position: 'absolute', top: '8px', right: '8px',
+          width: '7px', height: '7px',
+          borderRadius: '50%',
+          background: '#e05c4a',
+          border: '1.5px solid var(--glass-card-bg)',
+          animation: 'pulse 2s ease-in-out infinite',
+        }} />
+      )}
+    </Link>
+  )
+}
+
+/* ── SVG Icons ── */
+
+function HomeIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M3 10h14M3 5h8M3 15h10" strokeLinecap="round" /></svg>
+}
+
+function CheckinIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M10 3v2M10 15v2M3 10h2M15 10h2" strokeLinecap="round" /><circle cx="10" cy="10" r="4" /></svg>
+}
+
+function HabitsIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+
+function CaptureIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M10 4v12M4 10h12" strokeLinecap="round" /></svg>
+}
+
+function GoalsIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M4 15l4-4 3 3 5-7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+
+function PlannerIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><rect x="3" y="4" width="14" height="13" rx="2" /><path d="M7 2v4M13 2v4M3 9h14" strokeLinecap="round" /></svg>
+}
+
+function ReviewIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M4 10a6 6 0 1 0 6-6" strokeLinecap="round" /><path d="M4 6v4h4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+
+function SettingsIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><circle cx="10" cy="10" r="2.5" /><path d="M10 3v2M10 15v2M3 10h2M15 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41" strokeLinecap="round" /></svg>
 }
