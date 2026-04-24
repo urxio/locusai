@@ -153,8 +153,12 @@ function WeekDotMap({
 function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismiss: () => void }) {
   return (
     <div style={{
-      marginTop: '16px', background: 'var(--bg-1)',
-      border: '1px solid var(--border-md)', borderRadius: '14px',
+      marginTop: '16px', background: 'var(--glass-card-bg)',
+      backdropFilter: 'blur(32px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+      border: '1px solid var(--glass-card-border)',
+      boxShadow: 'var(--glass-card-shadow-sm)',
+      borderRadius: '14px',
       overflow: 'hidden', animation: 'fadeUp 0.3s var(--ease) both',
     }}>
       <div style={{
@@ -521,7 +525,8 @@ export default function JournalSection({
       {reflectionLoading && !reflection && (
         <div style={{
           marginTop: '16px', padding: '14px 16px',
-          background: 'var(--bg-1)', border: '1px solid var(--border)',
+          background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+          border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)',
           borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '10px',
           animation: 'fadeUp 0.25s var(--ease) both',
         }}>
@@ -557,7 +562,8 @@ export default function JournalSection({
         <div style={{
           marginTop: '16px', padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: '10px',
-          background: 'var(--bg-1)', border: '1px solid var(--border)',
+          background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+          border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)',
           borderRadius: '12px', animation: 'fadeUp 0.25s var(--ease) both',
         }}>
           <div style={{

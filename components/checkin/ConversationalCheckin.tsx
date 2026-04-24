@@ -404,14 +404,17 @@ export default function ConversationalCheckin({
               }}>
                 {/* Chat card */}
                 <div style={{
-                  border: '1px solid var(--border-md)', borderRadius: '18px',
-                  overflow: 'hidden', background: 'var(--bg-1)',
+                  border: '1px solid var(--glass-card-border)', borderRadius: '18px',
+                  overflow: 'hidden', background: 'var(--glass-card-bg)',
+                  backdropFilter: 'blur(32px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+                  boxShadow: 'var(--glass-card-shadow-sm)',
                 }}>
                   {/* Messages */}
                   <div ref={messagesBoxRef} style={{
                     height: '300px', overflowY: 'auto',
                     display: 'flex', flexDirection: 'column',
-                    background: 'var(--bg-0)', scrollbarWidth: 'none',
+                    background: 'rgba(0,0,0,0.18)', scrollbarWidth: 'none',
                   }}>
                     <div style={{ flex: 1 }} />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 20px 16px' }}>
@@ -486,7 +489,7 @@ export default function ConversationalCheckin({
                   {/* Input */}
                   <div style={{
                     display: 'flex', alignItems: 'flex-end', gap: '10px',
-                    padding: '12px 14px', background: 'var(--bg-1)',
+                    padding: '12px 14px', background: 'transparent',
                   }}>
                     <textarea
                       ref={inputRef}
@@ -631,7 +634,10 @@ function CheckinSummaryCard({
 
   return (
     <div style={{
-      background: 'var(--bg-1)', border: '1px solid var(--border-md)',
+      background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)',
+      backdropFilter: 'blur(32px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+      boxShadow: 'var(--glass-card-shadow-sm)',
       borderRadius: '16px', padding: '20px',
     }}>
       {/* Header row */}
