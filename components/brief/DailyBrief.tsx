@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { Goal, CheckIn, HabitWithLogs, Brief, GoalWithSteps } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 import type { MissedHabit } from './HabitAuditStrip'
+import MissedHabitsCard from './MissedHabitsCard'
 import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
 
 type Props = {
@@ -741,8 +742,10 @@ export default function DailyBrief({
           </div>
         </BentoCard>
 
-        {/* 8 — Second goal or Review link */}
-        {secondGoal ? (
+        {/* 8 — Missed habits (priority), then second goal or Review link */}
+        {missedYesterday.length > 0 ? (
+          <MissedHabitsCard missed={missedYesterday} yesterday={yesterday} />
+        ) : secondGoal ? (
           <BentoCard tone="tint" href="/goals">
             <CardLabel title={secondGoal.category} meta="Goal" />
             <div>
