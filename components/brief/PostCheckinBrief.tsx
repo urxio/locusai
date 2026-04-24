@@ -89,7 +89,7 @@ export default function PostCheckinBrief({ memory }: Props) {
 
       {/* ── Brief loader / insight card ── */}
       {generating ? (
-        <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: '20px' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: '20px' }}>
           <BriefLoader onBriefReady={handleBriefReady} onError={handleGenError} />
         </div>
       ) : genError ? (
@@ -107,7 +107,7 @@ export default function PostCheckinBrief({ memory }: Props) {
 
       {/* ── Clarification note ── */}
       {(clarificationNote || noteLoading) && !generating && (
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', marginTop: '-8px', marginBottom: '16px', animation: 'fadeUp 0.25s var(--ease) both' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', marginTop: '-8px', marginBottom: '16px', animation: 'fadeUp 0.25s var(--ease) both' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
             <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', opacity: noteLoading ? 0 : 1, animation: noteLoading ? 'pulse 1s ease-in-out infinite' : 'none' }} />
             <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
@@ -150,7 +150,8 @@ export default function PostCheckinBrief({ memory }: Props) {
             Today&apos;s priorities
           </div>
           <div style={{
-            background: 'var(--bg-1)', border: '1px solid var(--border)',
+            background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+            border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)',
             borderRadius: '16px', padding: '0 24px', overflow: 'hidden',
           }}>
             {brief.priorities.map((p, i) => (
@@ -181,13 +182,14 @@ export default function PostCheckinBrief({ memory }: Props) {
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginTop: '8px', padding: '13px 16px',
-            background: 'var(--bg-1)', border: '1px solid var(--border)',
+            background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+            border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)',
             borderRadius: '12px', textDecoration: 'none',
             color: 'var(--text-1)', fontSize: '13px', fontWeight: 500,
             transition: 'border-color 0.15s',
           }}
-          onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border-md)'}
-          onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border)'}
+          onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.22)'}
+          onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--glass-card-border)'}
         >
           <span>Open full brief</span>
           <span style={{ color: 'var(--gold)' }}>→</span>

@@ -71,12 +71,15 @@ function MarkdownInsight({ text }: { text: string }) {
 export default function AIInsightCard({ text, onRegenerate, updating }: Props) {
   return (
     <div style={{
-      background:    'var(--ai-card-bg)',
-      border:        '1px solid var(--border-md)',
-      borderRadius:  'var(--radius-xl)',
-      padding:       '26px 28px',
-      position:      'relative',
-      overflow:      'hidden',
+      background:          'var(--glass-card-bg)',
+      backdropFilter:      'blur(32px) saturate(180%)',
+      WebkitBackdropFilter:'blur(32px) saturate(180%)',
+      border:              '1px solid var(--glass-card-border)',
+      boxShadow:           'var(--glass-card-shadow)',
+      borderRadius:        'var(--radius-xl)',
+      padding:             '26px 28px',
+      position:            'relative',
+      overflow:            'hidden',
       marginBottom:  '20px',
     }}>
       {/* Ambient glow */}

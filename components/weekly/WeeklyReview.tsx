@@ -272,7 +272,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
 
       {/* Generating spinner */}
       {generating && (
-        <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '40px', marginBottom: '16px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow)', borderRadius: 'var(--radius-xl)', padding: '40px', marginBottom: '16px', textAlign: 'center' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--bg-4)', borderTopColor: 'var(--gold)', animation: 'spin 0.9s linear infinite', margin: '0 auto 16px' }} />
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--text-1)' }}>
             Writing your week {weekInfo.weekNumber} reflection…
@@ -286,7 +286,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
 
       {/* Reflection card */}
       {displayedReflection && !generating && (
-        <div style={{ background: 'var(--ai-card-bg)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: '16px', animation: 'fadeUp 0.25s var(--ease) both' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: '16px', animation: 'fadeUp 0.25s var(--ease) both' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.22)', borderRadius: '20px', padding: '4px 12px 4px 8px', fontSize: '10.5px', color: 'var(--gold)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: isPastWeek ? 'none' : 'pulse 2s ease-in-out infinite' }} />
