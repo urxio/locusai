@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import type { UserMemory } from '@/lib/ai/memory'
 
-export default function MemoryCard({ memory }: { memory: UserMemory }) {
-  const [expanded, setExpanded] = useState(false)
+export default function MemoryCard({ memory, initialExpanded = false }: { memory: UserMemory; initialExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(initialExpanded)
 
   // Don't render until there's enough data to be meaningful
   if (memory.checkin_count < 5) return null

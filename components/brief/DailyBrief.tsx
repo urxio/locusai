@@ -119,6 +119,14 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
                 <AIInsightCard text={brief.insight_text} />
               )}
               <CorrelationsCard memory={memory ?? null} />
+              <StatusStrip
+                goals={goals}
+                checkin={checkin}
+                avgEnergy={avgEnergy}
+                habits={habits}
+              />
+              <HabitsWeekStrip habits={habits} />
+              <GoalsWeekStrip goals={goalsWithSteps} />
             </>
           )}
           {selectedTab === 'priorities' && (
@@ -142,19 +150,11 @@ export default function DailyBrief({ goals, checkin, avgEnergy, habits, brief, m
                   ))}
                 </div>
               ) : null}
-              <StatusStrip
-                goals={goals}
-                checkin={checkin}
-                avgEnergy={avgEnergy}
-                habits={habits}
-              />
-              <HabitsWeekStrip habits={habits} />
-              <GoalsWeekStrip goals={goalsWithSteps} />
             </>
           )}
           {selectedTab === 'memory' && (
             <>
-              {memory && <MemoryCard memory={memory} />}
+              {memory && <MemoryCard memory={memory} initialExpanded />}
             </>
           )}
 
