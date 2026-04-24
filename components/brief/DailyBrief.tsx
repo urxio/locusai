@@ -200,14 +200,13 @@ export default function DailyBrief({
             <span style={{ borderRadius: '16px', padding: '5px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--ink-400)' }}>Overview</span>
             <span style={{ borderRadius: '16px', background: 'var(--ink-900)', padding: '5px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--glass-card-bg)' }}>Today</span>
           </div>
-          <a href="/patterns" className="glass-pill" style={{
+          <a href="/capture" className="glass-pill" style={{
             width: '36px', height: '36px', borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--ink-400)', textDecoration: 'none',
           }}>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
-              <circle cx="8.5" cy="8.5" r="5.5" />
-              <path d="M14.5 14.5l3 3" strokeLinecap="round" />
+              <path d="M10 4v12M4 10h12" strokeLinecap="round" />
             </svg>
           </a>
         </div>
@@ -223,25 +222,70 @@ export default function DailyBrief({
         minHeight: 0,
       }}>
 
-        {/* 1 — Capture */}
-        <BentoCard tone="tint" href="/capture">
-          <CardLabel title="Capture" />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-            <span style={{
-              width: '44px', height: '44px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.75)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--ink-500)',
-            }}>
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
-                <path d="M10 4v12M4 10h12" strokeLinecap="round" />
-              </svg>
-            </span>
-            <p className="font-serif-display" style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center', lineHeight: 1.3 }}>
-              Capture a thought
-            </p>
-          </div>
-          <div style={{ height: '12px' }} />
+        {/* 1 — Today Pulse / Check-in */}
+        <BentoCard tone="tint" href="/checkin">
+          <CardLabel title="Today" meta={checkin ? 'Logged' : dateLabel} />
+          {checkin ? (
+            <>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                  <span className="font-serif-display" style={{ fontSize: '52px', lineHeight: 1, color: 'var(--ink-900)', fontWeight: 400 }}>
+                    {checkin.energy_level}
+                  </span>
+                  <span style={{ fontSize: '13px', color: 'var(--ink-400)' }}>/10</span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--ink-400)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                  Energy logged
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--sage)' }} />
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Done</span>
+                </span>
+                <span style={{
+                  width: '26px', height: '26px', borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.80)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', color: 'var(--ink-500)',
+                }}>→</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+                <span style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{
+                    position: 'absolute', width: '44px', height: '44px', borderRadius: '50%',
+                    background: 'oklch(0.62 0.06 165 / 0.18)',
+                    animation: 'pulse 2s ease-in-out infinite',
+                  }} />
+                  <span style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    background: 'oklch(0.62 0.06 165 / 0.30)',
+                    border: '1.5px solid var(--sage)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="var(--sage)" strokeWidth="1.6" width="14" height="14">
+                      <path d="M10 6v4l2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="10" cy="10" r="7" />
+                    </svg>
+                  </span>
+                </span>
+                <p className="font-serif-display" style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center', lineHeight: 1.4 }}>
+                  How are you<br />feeling today?
+                </p>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <span style={{
+                  width: '26px', height: '26px', borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.80)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', color: 'var(--ink-500)',
+                }}>→</span>
+              </div>
+            </>
+          )}
         </BentoCard>
 
         {/* 2 — Morning Brief (AI Insight) */}
