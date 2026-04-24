@@ -31,6 +31,9 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
         position: 'sticky',
         top: 0,
         zIndex: 10,
+        background: 'oklch(0.18 0.012 60 / 0.75)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         padding: '16px 20px 12px',
         marginBottom: '4px',
       }}>
