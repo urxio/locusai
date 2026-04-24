@@ -108,7 +108,7 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
               <path d="M3 8l3.5 3.5L13 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <p className="font-serif-display" style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center' }}>
+          <p className="font-serif-display" style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--ink-900)', textAlign: 'center', opacity: 0.7 }}>
             All caught up
           </p>
         </div>
@@ -130,12 +130,12 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
             Missed
           </span>
           {pending.length > 1 && (
-            <span style={{ fontSize: '9px', color: 'var(--ink-400)', fontWeight: 500 }}>· {pending.length} left</span>
+            <span style={{ fontSize: '9px', color: 'var(--ink-900)', fontWeight: 600, opacity: 0.6 }}>· {pending.length} left</span>
           )}
         </div>
         <button
           onClick={() => dismiss(current.id)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-400)', fontSize: '18px', lineHeight: 1, padding: '0 2px', display: 'flex', alignItems: 'center' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-900)', fontSize: '18px', lineHeight: 1, padding: '0 2px', display: 'flex', alignItems: 'center', opacity: 0.55 }}
           title="Dismiss"
         >×</button>
       </div>
@@ -152,10 +152,10 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
       {submitted ? (
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <p style={{
-            fontSize: '11px', lineHeight: 1.5, color: 'var(--ink-500)', fontStyle: 'italic',
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            fontSize: '11px', lineHeight: 1.6, color: 'var(--ink-900)', fontStyle: 'italic', fontWeight: 500,
+            display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           } as React.CSSProperties}>
-            &ldquo;{aiReply.slice(0, 120)}{aiReply.length > 120 ? '…' : ''}&rdquo;
+            &ldquo;{aiReply.slice(0, 160)}{aiReply.length > 160 ? '…' : ''}&rdquo;
           </p>
         </div>
       ) : (
@@ -168,17 +168,16 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
           disabled={streaming}
           style={{
             flex: 1,
-            background: 'rgba(255,255,255,0.35)',
-            border: '1px solid rgba(255,255,255,0.55)',
+            background: 'rgba(255,255,255,0.60)',
+            border: '1px solid rgba(255,255,255,0.80)',
             borderRadius: '10px',
             padding: '7px 10px',
-            fontSize: '11px',
+            fontSize: '12px',
             color: 'var(--ink-900)',
             fontFamily: 'inherit',
             resize: 'none',
             lineHeight: 1.4,
             outline: 'none',
-            '::placeholder': { color: 'var(--ink-400)' },
           } as React.CSSProperties}
         />
       )}
@@ -189,15 +188,15 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
           onClick={() => dismiss(current.id)}
           style={{
             width: '100%',
-            background: 'oklch(0.62 0.06 165 / 0.15)',
-            border: '1px solid rgba(122,158,138,0.40)',
+            background: 'oklch(0.62 0.06 165 / 0.30)',
+            border: '1.5px solid var(--sage)',
             borderRadius: '10px',
-            padding: '7px',
-            fontSize: '11px',
-            color: 'var(--sage)',
+            padding: '8px',
+            fontSize: '12px',
+            color: 'var(--ink-900)',
             cursor: 'pointer',
             fontFamily: 'inherit',
-            fontWeight: 600,
+            fontWeight: 700,
           }}
         >
           {pending.length > 1 ? 'Next →' : 'Done ✓'}
@@ -208,13 +207,13 @@ export default function MissedHabitsCard({ missed, yesterday }: { missed: Missed
           disabled={!canSend}
           style={{
             width: '100%',
-            background: canSend ? 'var(--ink-900)' : 'rgba(255,255,255,0.30)',
-            border: '1px solid rgba(255,255,255,0.45)',
+            background: canSend ? 'var(--ink-900)' : 'rgba(255,255,255,0.45)',
+            border: '1px solid rgba(255,255,255,0.70)',
             borderRadius: '10px',
-            padding: '7px',
-            fontSize: '11px',
-            fontWeight: 600,
-            color: canSend ? 'var(--glass-card-bg)' : 'var(--ink-400)',
+            padding: '8px',
+            fontSize: '12px',
+            fontWeight: 700,
+            color: canSend ? 'var(--glass-card-bg)' : 'var(--ink-900)',
             cursor: canSend ? 'pointer' : 'default',
             fontFamily: 'inherit',
             transition: 'all 0.15s',
