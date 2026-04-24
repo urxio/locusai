@@ -108,6 +108,7 @@ export default function DailyBrief({
   const today = todayDate || browserDate()
   const wk = weekNum(now)
 
+  const [view, setView] = useState<'today' | 'overview'>('today')
   const [doneMap, setDoneMap] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {}
     habits.forEach(h => { map[h.id] = h.logs.some(l => l.logged_date === today) })
@@ -207,8 +208,18 @@ export default function DailyBrief({
         {/* Right: toggle + capture */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <div className="glass-pill topbar-toggle" style={{ display: 'flex', alignItems: 'center', gap: '2px', borderRadius: '20px', padding: '4px' }}>
-            <span style={{ borderRadius: '16px', padding: '5px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--ink-400)' }}>Overview</span>
-            <span style={{ borderRadius: '16px', background: 'var(--ink-900)', padding: '5px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--glass-card-bg)' }}>Today</span>
+            <span
+              onClick={() => setView('overview')}
+              style={{ borderRadius: '16px', padding: '5px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', transition: 'background 0.18s, color 0.18s',
+                background: view === 'overview' ? 'var(--ink-900)' : 'transparent',
+                color: view === 'overview' ? 'var(--glass-card-bg)' : 'var(--ink-400)',
+              }}>Overview</span>
+            <span
+              onClick={() => setView('today')}
+              style={{ borderRadius: '16px', padding: '5px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', transition: 'background 0.18s, color 0.18s',
+                background: view === 'today' ? 'var(--ink-900)' : 'transparent',
+                color: view === 'today' ? 'var(--glass-card-bg)' : 'var(--ink-400)',
+              }}>Today</span>
           </div>
           <a href="/capture" className="glass-pill" style={{
             width: '36px', height: '36px', borderRadius: '50%',
@@ -223,6 +234,199 @@ export default function DailyBrief({
       </header>
 
       {/* ── Bento Grid ── */}
+      {view === 'overview' ? (
+        <div className="bento-grid" style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: '10px', minHeight: 0, animation: 'fadeUp 0.3s var(--ease) both' }}>
+
+          {/* O1 — Energy Trend */}
+          <BentoCard>
+            <CardLabel title="Energy" meta="7-day" />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span className="font-serif-display" style={{ fontSize: '48px', lineHeight: 1, color: 'var(--ink-900)', fontWeight: 400 }}>
+                  {avgEnergy != null ? avgEnergy.toFixed(1) : '—'}
+                </span>
+                {avgEnergy != null && <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>/10</span>}
+              </div>
+              <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)', marginTop: '4px' }}>
+                Weekly average
+              </p>
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '36px', marginBottom: '8px' }}>
+                {[55, 70, 45, 80, 60, 90, avgEnergy ? avgEnergy * 10 : 50].map((h, i) => (
+                  <div key={i} style={{ flex: 1, borderRadius: '2px', height: `${h}%`, background: i === 6 ? 'var(--sage)' : 'rgba(var(--ink-300-raw,180,190,185),0.50)', opacity: i === 6 ? 1 : 0.6 }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '9px', color: 'var(--ink-400)', fontWeight: 500 }}>M  T  W  T  F  S  Today</span>
+              </div>
+            </div>
+          </BentoCard>
+
+          {/* O2 — AI Insight */}
+          <BentoCard>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <h3 className="font-serif-display" style={{ fontSize: '18px', lineHeight: 1.2, color: 'var(--ink-900)', fontWeight: 400 }}>AI<br />Insight</h3>
+              <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--ink-400)' }}>Brief</span>
+            </div>
+            <p style={{ fontSize: '11px', lineHeight: 1.55, color: 'var(--ink-500)', flex: 1, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
+              {brief?.insight_text
+                ? `"${brief.insight_text.slice(0, 200)}${brief.insight_text.length > 200 ? '…' : ''}"`
+                : '"Complete a check-in to unlock your personalized AI insight."'}
+            </p>
+            <a href="/checkin" style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)', textDecoration: 'none' }}>
+              {checkin ? 'Read full brief →' : 'Check in →'}
+            </a>
+          </BentoCard>
+
+          {/* O3 — Goals Overview */}
+          <BentoCard tone="tint" href="/goals">
+            <CardLabel title="Goals" meta={`${activeGoals.length} active`} />
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+              <RingProgress value={avgGoalPct ?? 0} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {activeGoals.slice(0, 2).map(g => (
+                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.40)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: '2px', background: 'var(--ink-900)', width: `${g.progress_pct}%` }} />
+                  </div>
+                  <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--ink-500)', width: '28px', textAlign: 'right' }}>{g.progress_pct}%</span>
+                </div>
+              ))}
+              {activeGoals.length === 0 && <p style={{ fontSize: '11px', color: 'var(--ink-400)', fontStyle: 'italic' }}>No active goals</p>}
+            </div>
+          </BentoCard>
+
+          {/* O4 — Habits Performance */}
+          <BentoCard>
+            <CardLabel title="Habits" meta="This week" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--ink-500)', fontWeight: 500 }}>Completion</span>
+                  <span className="font-serif-display" style={{ fontSize: '15px', color: 'var(--ink-900)' }}>
+                    {totalHabitsWeek > 0 ? `${Math.round((totalHabitsDoneWeek / totalHabitsWeek) * 100)}%` : '—'}
+                  </span>
+                </div>
+                <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.35)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', borderRadius: '3px', background: 'linear-gradient(to right, var(--sage), oklch(0.72 0.05 165))', width: `${totalHabitsWeek > 0 ? (totalHabitsDoneWeek / totalHabitsWeek) * 100 : 0}%` }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--ink-400)' }}>Done</div>
+                  <div className="font-serif-display" style={{ fontSize: '20px', color: 'var(--ink-900)' }}>{totalHabitsDoneWeek}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--ink-400)' }}>Best streak</div>
+                  <div className="font-serif-display" style={{ fontSize: '20px', color: 'var(--ink-900)' }}>{topStreak}d</div>
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)' }}>
+              {topStreak > 3 ? `${topStreak}-day streak 🔥` : 'Keep it up'}
+            </span>
+          </BentoCard>
+
+          {/* O5 — Week Summary */}
+          <BentoCard tone="tint">
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--ink-400)' }}>Week {wk}</p>
+              <h3 className="font-serif-display" style={{ marginTop: '4px', fontSize: '16px', lineHeight: 1.3, color: 'var(--ink-900)', fontWeight: 400 }}>
+                Your week<br />at a glance
+              </h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {[
+                { label: 'Habits', value: `${totalHabitsDoneWeek}/${totalHabitsWeek}` },
+                { label: 'Goals', value: `${activeGoals.length}` },
+                { label: 'Energy', value: avgEnergy != null ? avgEnergy.toFixed(1) : '—' },
+                { label: 'Avg progress', value: avgGoalPct != null ? `${avgGoalPct}%` : '—' },
+              ].map(s => (
+                <div key={s.label} style={{ borderRadius: '10px', border: '1px solid rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.35)', padding: '8px 10px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--ink-400)' }}>{s.label}</div>
+                  <div className="font-serif-display" style={{ fontSize: '15px', lineHeight: 1.2, color: 'var(--ink-900)', fontWeight: 400 }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+          </BentoCard>
+
+          {/* O6 — Momentum / Check-in streak */}
+          <BentoCard>
+            <CardLabel title="Momentum" meta="Last 7 days" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                {(['M','T','W','T','F','S','T']).map((d, i) => {
+                  const isToday = i === 6
+                  const hasDone = isToday ? !!checkin : i < 5
+                  return (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: hasDone ? 'oklch(0.62 0.06 165 / 0.25)' : 'rgba(255,255,255,0.35)',
+                        border: isToday ? '1.5px solid var(--sage)' : '1px solid rgba(255,255,255,0.50)',
+                      }}>
+                        {hasDone && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--sage)' }} />}
+                      </div>
+                      <span style={{ fontSize: '9px', fontWeight: 500, color: isToday ? 'var(--ink-900)' : 'var(--ink-400)' }}>{d}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--ink-500)', textAlign: 'center', fontStyle: 'italic' }}>
+                {checkin ? 'Checked in today' : 'No check-in yet today'}
+              </p>
+            </div>
+            <a href="/checkin" style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)', textDecoration: 'none' }}>
+              {checkin ? 'Update check-in →' : 'Check in now →'}
+            </a>
+          </BentoCard>
+
+          {/* O7 — Top goal deep-dive */}
+          {topGoal ? (
+            <BentoCard tone="tint" href="/goals">
+              <div>
+                <h3 className="font-serif-display" style={{ fontSize: '17px', lineHeight: 1.25, color: 'var(--ink-900)', fontWeight: 400 }}>
+                  {topGoal.title.length > 32 ? topGoal.title.slice(0, 32) + '…' : topGoal.title}
+                </h3>
+                <p style={{ marginTop: '4px', fontSize: '11px', color: 'var(--ink-500)' }}>{topGoal.category} · {topGoal.timeframe}</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <RingProgress value={topGoal.progress_pct} />
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--ink-400)', marginBottom: '4px' }}>Progress</div>
+                  <div className="font-serif-display" style={{ fontSize: '26px', color: 'var(--ink-900)' }}>{topGoal.progress_pct}%</div>
+                </div>
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--ink-400)' }}>Top priority →</span>
+            </BentoCard>
+          ) : (
+            <BentoCard tone="tint" href="/goals">
+              <CardLabel title="Goals" />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <p className="font-serif-display" style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center' }}>Set your first goal</p>
+              </div>
+              <div />
+            </BentoCard>
+          )}
+
+          {/* O8 — Review */}
+          <BentoCard tone="tint" href="/review">
+            <CardLabel title="Review" meta="Weekly" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-500)' }}>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+                  <path d="M4 10a6 6 0 1 0 6-6" strokeLinecap="round" />
+                  <path d="M4 6v4h4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="font-serif-display" style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center' }}>Reflect on<br />your week</p>
+            </div>
+            <div />
+          </BentoCard>
+
+        </div>
+      ) : (
       <div className="bento-grid" style={{
         flex: 1,
         display: 'grid',
@@ -591,6 +795,7 @@ export default function DailyBrief({
           </BentoCard>
         )}
       </div>
+      )}
     </div>
   )
 }
