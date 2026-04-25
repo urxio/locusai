@@ -4,7 +4,6 @@ import { useState } from 'react'
 import ConversationalCheckin from './ConversationalCheckin'
 import JournalSection from './JournalSection'
 import BriefHistory from '@/components/brief/BriefHistory'
-import CheckinSidebar from './CheckinSidebar'
 import type { CheckIn, JournalEntry, Brief } from '@/lib/types'
 import type { UserMemory } from '@/lib/ai/memory'
 
@@ -17,42 +16,29 @@ type Props = {
   memory?:         UserMemory | null
   hasBrief?:       boolean
   pastBriefs?:     Brief[]
-  brief?:          Brief | null
 }
 
-export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false, pastBriefs = [], brief = null }: Props) {
+export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false, pastBriefs = [] }: Props) {
   const [tab, setTab] = useState<Tab>('checkin')
 
   return (
     <div>
       {/* ── Content — both panels stay mounted; CSS hides the inactive one ── */}
       {/* Keeping both mounted preserves JournalSection's in-memory AI cache     */}
-      <div style={{ display: tab === 'checkin' ? 'flex' : 'none', alignItems: 'flex-start', animation: tab === 'checkin' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
-        {/* Left: check-in form */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <ConversationalCheckin
-            existingCheckin={existingCheckin}
-            memory={memory}
-            hasBrief={hasBrief}
-            tab={tab}
-            setTab={setTab}
-            todayJournalHasContent={!!todayJournal?.content}
-          />
-          {pastBriefs.length > 0 && (
-            <div className="page-pad" style={{ maxWidth: '860px', paddingTop: 0 }}>
-              <BriefHistory briefs={pastBriefs} />
-            </div>
-          )}
-        </div>
-
-        {/* Right: insights + priorities sidebar */}
-        <div style={{
-          width: '300px', flexShrink: 0,
-          padding: '32px 24px 56px 0',
-          position: 'sticky', top: '24px',
-        }}>
-          <CheckinSidebar brief={brief} />
-        </div>
+      <div style={{ display: tab === 'checkin' ? 'block' : 'none', animation: tab === 'checkin' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
+        <ConversationalCheckin
+          existingCheckin={existingCheckin}
+          memory={memory}
+          hasBrief={hasBrief}
+          tab={tab}
+          setTab={setTab}
+          todayJournalHasContent={!!todayJournal?.content}
+        />
+        {pastBriefs.length > 0 && (
+          <div className="page-pad" style={{ maxWidth: '860px', paddingTop: 0 }}>
+            <BriefHistory briefs={pastBriefs} />
+          </div>
+        )}
       </div>
 
       <div style={{ display: tab === 'journal' ? 'block' : 'none', animation: tab === 'journal' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
