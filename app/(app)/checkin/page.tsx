@@ -29,6 +29,7 @@ export default async function CheckinPage() {
       memory={memory}
       hasBrief={!!todayBrief}
       pastBriefs={pastBriefs}
+      brief={todayBrief}
     />
   )
 }
