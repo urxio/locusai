@@ -8,20 +8,17 @@ import Link from 'next/link'
 
 type View = 'login' | 'forgot' | 'forgot-code' | 'forgot-reset' | 'magic-sent'
 
-const PHOTO = 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1200&q=85'
+const PHOTO = 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1400&q=90'
 
 /* ── Design tokens ─────────────────────────────────── */
 const C = {
-  bg:        '#0a0a0a',
-  panel:     '#111111',
   white:     '#ffffff',
-  offwhite:  'rgba(255,255,255,0.88)',
-  muted:     'rgba(255,255,255,0.42)',
-  subtle:    'rgba(255,255,255,0.18)',
-  inputBg:   'rgba(255,255,255,0.06)',
-  inputBdr:  'rgba(255,255,255,0.12)',
-  inputFocus:'rgba(255,255,255,0.38)',
-  border:    'rgba(255,255,255,0.10)',
+  offwhite:  'rgba(255,255,255,0.90)',
+  muted:     'rgba(255,255,255,0.45)',
+  inputBg:   'rgba(255,255,255,0.08)',
+  inputBdr:  'rgba(255,255,255,0.14)',
+  inputFocus:'rgba(255,255,255,0.40)',
+  divider:   'rgba(255,255,255,0.12)',
   error:     '#ff6b6b',
   errorBg:   'rgba(255,107,107,0.10)',
 }
@@ -44,7 +41,7 @@ const btnPrimary: React.CSSProperties = {
   width: '100%',
   padding: '14px',
   background: C.white,
-  color: '#0a0a0a',
+  color: '#111',
   border: 'none',
   borderRadius: '10px',
   fontSize: '14px',
@@ -57,7 +54,7 @@ const btnPrimary: React.CSSProperties = {
 
 const btnSocial: React.CSSProperties = {
   flex: 1,
-  padding: '12px 16px',
+  padding: '11px 16px',
   background: C.inputBg,
   border: `1px solid ${C.inputBdr}`,
   borderRadius: '10px',
@@ -70,13 +67,13 @@ const btnSocial: React.CSSProperties = {
   justifyContent: 'center',
   gap: '8px',
   fontFamily: 'inherit',
-  transition: 'background 0.15s, border-color 0.15s',
+  transition: 'background 0.15s',
 }
 
 /* ── Icons ─────────────────────────────────────────── */
 function LogoIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="white">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="white">
       <circle cx="8" cy="8" r="3"/>
       <circle cx="8" cy="2" r="1.2"/>
       <circle cx="8" cy="14" r="1.2"/>
@@ -105,7 +102,7 @@ function AppleIcon() {
   )
 }
 
-/* ── DarkInput helper ───────────────────────────────── */
+/* ── DarkInput ──────────────────────────────────────── */
 function DarkInput({
   type, placeholder, value, onChange, autoFocus,
 }: {
@@ -125,10 +122,7 @@ function DarkInput({
       autoFocus={autoFocus}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      style={{
-        ...inputStyle,
-        borderColor: focused ? C.inputFocus : C.inputBdr,
-      }}
+      style={{ ...inputStyle, borderColor: focused ? C.inputFocus : C.inputBdr }}
     />
   )
 }
@@ -143,7 +137,7 @@ export default function LoginPage() {
   const [confirm,  setConfirm]  = useState('')
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
-  const [keepMe,   setKeepMe]   = useState(true)
+  const [keepMe,   setKeepMe]   = useState(false)
 
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
@@ -259,267 +253,283 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      background: C.bg,
-      fontFamily: "'DM Sans', -apple-system, sans-serif",
-    }}>
-
-      {/* ── Left: form panel ── */}
+    <>
+      {/* Full-bleed background image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={PHOTO}
+        alt=""
+        style={{
+          position: 'fixed', inset: 0,
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          zIndex: 0,
+        }}
+      />
+      {/* Dark tint over background */}
       <div style={{
-        width: 'clamp(360px, 44%, 520px)',
-        flexShrink: 0,
-        background: C.panel,
+        position: 'fixed', inset: 0,
+        background: 'rgba(10,8,6,0.55)',
+        zIndex: 1,
+      }} />
+
+      {/* Page shell */}
+      <div style={{
+        position: 'relative',
+        zIndex: 2,
+        minHeight: '100vh',
         display: 'flex',
-        flexDirection: 'column',
-        padding: 'clamp(36px, 5vh, 56px) clamp(36px, 5vw, 64px)',
-        overflowY: 'auto',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}>
 
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'clamp(48px, 8vh, 80px)' }}>
+        {/* ── Floating card ── */}
+        <div style={{
+          display: 'flex',
+          width: '100%',
+          maxWidth: '900px',
+          minHeight: '580px',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)',
+        }}>
+
+          {/* ── Left: dark glass form panel ── */}
           <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: 'rgba(255,255,255,0.10)',
-            border: `1px solid ${C.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
+            flex: '0 0 clamp(320px, 48%, 440px)',
+            background: 'rgba(18,16,14,0.88)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            padding: 'clamp(32px, 4vw, 48px)',
+            display: 'flex',
+            flexDirection: 'column',
+            borderRight: '1px solid rgba(255,255,255,0.07)',
           }}>
-            <LogoIcon />
+
+            {/* Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '9px',
+                background: 'rgba(255,255,255,0.10)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <LogoIcon />
+              </div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: C.white, letterSpacing: '-0.01em', lineHeight: 1 }}>Locus</div>
+                <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.16em', color: C.muted, marginTop: '2px' }}>Life OS</div>
+              </div>
+            </div>
+
+            {/* ── Magic link sent ── */}
+            {view === 'magic-sent' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: '36px', marginBottom: '16px' }}>📬</div>
+                <h1 style={{ fontSize: '26px', fontWeight: 700, color: C.white, margin: '0 0 10px', letterSpacing: '-0.025em' }}>Check your inbox</h1>
+                <p style={{ fontSize: '14px', color: C.muted, lineHeight: 1.6, margin: '0 0 28px' }}>
+                  We sent a magic link to <strong style={{ color: C.offwhite }}>{email}</strong>.
+                </p>
+                <button onClick={() => setView('login')} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', padding: 0, textDecoration: 'underline', textUnderlineOffset: '3px', textAlign: 'left' }}>
+                  ← Back to sign in
+                </button>
+              </div>
+            )}
+
+            {/* ── Forgot: enter email ── */}
+            {view === 'forgot' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h1 style={{ fontSize: '26px', fontWeight: 700, color: C.white, margin: '0 0 8px', letterSpacing: '-0.025em' }}>Reset password</h1>
+                <p style={{ fontSize: '14px', color: C.muted, lineHeight: 1.6, margin: '0 0 28px' }}>We&apos;ll send a 6-digit code to your email.</p>
+                <form onSubmit={handleSendCode} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <DarkInput type="email" placeholder="Enter email" value={email} onChange={setEmail} autoFocus />
+                  {error && <ErrorBox msg={error} />}
+                  <button type="submit" disabled={loading} style={btnPrimary}>{loading ? 'Sending…' : 'Send code →'}</button>
+                </form>
+                <button onClick={() => { setView('login'); resetError() }} style={{ marginTop: '18px', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', padding: 0, textAlign: 'left' }}>
+                  ← Back to sign in
+                </button>
+              </div>
+            )}
+
+            {/* ── Forgot: enter code ── */}
+            {view === 'forgot-code' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h1 style={{ fontSize: '26px', fontWeight: 700, color: C.white, margin: '0 0 8px', letterSpacing: '-0.025em' }}>Enter your code</h1>
+                <p style={{ fontSize: '14px', color: C.muted, lineHeight: 1.6, margin: '0 0 28px' }}>
+                  Sent to <strong style={{ color: C.offwhite }}>{email}</strong>
+                </p>
+                <form onSubmit={handleVerifyCode} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <input
+                    type="text" inputMode="numeric" placeholder="000000"
+                    value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    required autoFocus
+                    style={{ ...inputStyle, fontSize: '24px', letterSpacing: '0.35em', textAlign: 'center' }}
+                  />
+                  {error && <ErrorBox msg={error} />}
+                  <button type="submit" disabled={loading || code.length < 6} style={{ ...btnPrimary, opacity: code.length < 6 ? 0.4 : 1 }}>
+                    {loading ? 'Verifying…' : 'Sign in →'}
+                  </button>
+                </form>
+                <button onClick={() => { setView('forgot'); resetError(); setCode('') }} style={{ marginTop: '18px', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', padding: 0, textAlign: 'left' }}>
+                  ← Resend code
+                </button>
+              </div>
+            )}
+
+            {/* ── Forgot: set new password ── */}
+            {view === 'forgot-reset' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h1 style={{ fontSize: '26px', fontWeight: 700, color: C.white, margin: '0 0 8px', letterSpacing: '-0.025em' }}>New password</h1>
+                <p style={{ fontSize: '14px', color: C.muted, lineHeight: 1.6, margin: '0 0 28px' }}>Choose a strong password for your account.</p>
+                <form onSubmit={handleSetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <DarkInput type="password" placeholder="New password (min 8 chars)" value={newPass} onChange={setNewPass} autoFocus />
+                  <DarkInput type="password" placeholder="Confirm password" value={confirm} onChange={setConfirm} />
+                  {error && <ErrorBox msg={error} />}
+                  <button type="submit" disabled={loading} style={{ ...btnPrimary, marginTop: '4px' }}>{loading ? 'Saving…' : 'Update password →'}</button>
+                </form>
+              </div>
+            )}
+
+            {/* ── Main login ── */}
+            {view === 'login' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h1 style={{
+                  fontSize: 'clamp(24px, 3vw, 32px)',
+                  fontWeight: 700,
+                  color: C.white,
+                  margin: '0 0 8px',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                }}>
+                  Sign in
+                </h1>
+                <p style={{ fontSize: '13.5px', color: C.muted, lineHeight: 1.6, margin: '0 0 28px' }}>
+                  Welcome back to your Locus account.
+                </p>
+
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <DarkInput type="email" placeholder="Enter Email" value={email} onChange={setEmail} />
+                  <DarkInput type="password" placeholder="Create Password" value={password} onChange={setPassword} />
+
+                  {/* Checkbox */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', marginTop: '4px' }}>
+                    <div
+                      onClick={() => setKeepMe(v => !v)}
+                      style={{
+                        width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0,
+                        background: keepMe ? 'rgba(255,255,255,0.88)' : 'transparent',
+                        border: `1.5px solid ${keepMe ? 'rgba(255,255,255,0.88)' : C.inputBdr}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {keepMe && (
+                        <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4l3 3 5-6" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '13px', color: C.muted }}>I Agree To The Terms &amp; Privacy Policy</span>
+                  </label>
+
+                  {error && <ErrorBox msg={error} />}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{ ...btnPrimary, marginTop: '8px' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+                  >
+                    {loading ? 'Signing in…' : 'Create Account'}
+                  </button>
+                </form>
+
+                {/* OR divider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
+                  <div style={{ flex: 1, height: '1px', background: C.divider }} />
+                  <span style={{ fontSize: '12px', color: C.muted, letterSpacing: '0.04em' }}>or sign in via</span>
+                  <div style={{ flex: 1, height: '1px', background: C.divider }} />
+                </div>
+
+                {/* Social buttons */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={handleGoogle} style={btnSocial}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
+                  >
+                    <GoogleIcon /> Google
+                  </button>
+                  <button onClick={handleApple} style={btnSocial}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
+                  >
+                    <AppleIcon /> Apple
+                  </button>
+                </div>
+
+                {/* Footer links */}
+                <p style={{ marginTop: '24px', fontSize: '13px', color: C.muted, textAlign: 'center' }}>
+                  Already Have An Account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setView('forgot'); resetError() }}
+                    style={{ background: 'none', border: 'none', padding: 0, color: '#e07a3a', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    Login
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: C.white, letterSpacing: '-0.01em', lineHeight: 1 }}>Locus</div>
-            <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.16em', color: C.muted, marginTop: '2px' }}>Life OS</div>
+
+          {/* ── Right: frosted glass image panel ── */}
+          <div className="auth-glass-panel" style={{
+            flex: 1,
+            position: 'relative',
+            display: 'none',
+            overflow: 'hidden',
+          }}>
+            {/* Background image continues through the glass */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={PHOTO}
+              alt=""
+              style={{
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center',
+              }}
+            />
+            {/* Frosted glass overlay */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              backdropFilter: 'blur(2px)',
+              WebkitBackdropFilter: 'blur(2px)',
+              background: 'rgba(255,255,255,0.04)',
+            }} />
+            {/* Inner border glow */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.10)',
+            }} />
           </div>
         </div>
-
-        {/* ── Magic link sent ── */}
-        {view === 'magic-sent' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: '40px', marginBottom: '20px' }}>📬</div>
-            <h1 style={{ fontSize: '30px', fontWeight: 700, color: C.white, margin: '0 0 12px', letterSpacing: '-0.025em' }}>
-              Check your inbox
-            </h1>
-            <p style={{ fontSize: '15px', color: C.muted, lineHeight: 1.6, margin: '0 0 32px' }}>
-              We sent a magic link to <strong style={{ color: C.offwhite }}>{email}</strong>. Click it to sign in.
-            </p>
-            <button onClick={() => setView('login')} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit', padding: 0, textAlign: 'left', textDecoration: 'underline', textUnderlineOffset: '3px' }}>
-              ← Back to sign in
-            </button>
-          </div>
-        )}
-
-        {/* ── Forgot: enter email ── */}
-        {view === 'forgot' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h1 style={{ fontSize: '30px', fontWeight: 700, color: C.white, margin: '0 0 10px', letterSpacing: '-0.025em' }}>
-              Reset password
-            </h1>
-            <p style={{ fontSize: '15px', color: C.muted, lineHeight: 1.6, margin: '0 0 32px' }}>
-              Enter your email and we&apos;ll send a 6-digit code.
-            </p>
-            <form onSubmit={handleSendCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <DarkInput type="email" placeholder="Enter email" value={email} onChange={setEmail} autoFocus />
-              {error && <ErrorBox msg={error} />}
-              <button type="submit" disabled={loading} style={btnPrimary}>{loading ? 'Sending…' : 'Send code →'}</button>
-            </form>
-            <button onClick={() => { setView('login'); resetError() }} style={{ marginTop: '20px', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', padding: 0, textAlign: 'left' }}>
-              ← Back to sign in
-            </button>
-          </div>
-        )}
-
-        {/* ── Forgot: enter code ── */}
-        {view === 'forgot-code' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h1 style={{ fontSize: '30px', fontWeight: 700, color: C.white, margin: '0 0 10px', letterSpacing: '-0.025em' }}>
-              Enter your code
-            </h1>
-            <p style={{ fontSize: '15px', color: C.muted, lineHeight: 1.6, margin: '0 0 32px' }}>
-              We sent a 6-digit code to <strong style={{ color: C.offwhite }}>{email}</strong>
-            </p>
-            <form onSubmit={handleVerifyCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <input
-                type="text" inputMode="numeric" placeholder="000000"
-                value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                required autoFocus
-                style={{ ...inputStyle, fontSize: '26px', letterSpacing: '0.35em', textAlign: 'center', paddingLeft: '14px' }}
-              />
-              {error && <ErrorBox msg={error} />}
-              <button type="submit" disabled={loading || code.length < 6} style={{ ...btnPrimary, opacity: code.length < 6 ? 0.4 : 1 }}>
-                {loading ? 'Verifying…' : 'Sign in →'}
-              </button>
-            </form>
-            <button onClick={() => { setView('forgot'); resetError(); setCode('') }} style={{ marginTop: '20px', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', padding: 0, textAlign: 'left' }}>
-              ← Resend code
-            </button>
-          </div>
-        )}
-
-        {/* ── Forgot: set new password ── */}
-        {view === 'forgot-reset' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h1 style={{ fontSize: '30px', fontWeight: 700, color: C.white, margin: '0 0 10px', letterSpacing: '-0.025em' }}>
-              New password
-            </h1>
-            <p style={{ fontSize: '15px', color: C.muted, lineHeight: 1.6, margin: '0 0 32px' }}>
-              Choose a new password for your account.
-            </p>
-            <form onSubmit={handleSetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <DarkInput type="password" placeholder="New password (min 8 chars)" value={newPass} onChange={setNewPass} autoFocus />
-              <DarkInput type="password" placeholder="Confirm password" value={confirm} onChange={setConfirm} />
-              {error && <ErrorBox msg={error} />}
-              <button type="submit" disabled={loading} style={{ ...btnPrimary, marginTop: '4px' }}>{loading ? 'Saving…' : 'Update password →'}</button>
-            </form>
-          </div>
-        )}
-
-        {/* ── Main login ── */}
-        {view === 'login' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-
-            {/* Heading */}
-            <div style={{ marginBottom: '36px' }}>
-              <h1 style={{
-                fontSize: 'clamp(28px, 3.5vw, 38px)',
-                fontWeight: 700,
-                color: C.white,
-                margin: '0 0 10px',
-                letterSpacing: '-0.03em',
-                lineHeight: 1.1,
-              }}>
-                Welcome back.
-              </h1>
-              <p style={{ fontSize: '14.5px', color: C.muted, lineHeight: 1.65, margin: 0 }}>
-                Sign in to your Locus account to continue.
-              </p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <DarkInput type="email" placeholder="Enter Email" value={email} onChange={setEmail} />
-              <DarkInput type="password" placeholder="Create Password" value={password} onChange={setPassword} />
-
-              {/* Keep me signed in */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', marginTop: '2px' }}>
-                <div
-                  onClick={() => setKeepMe(v => !v)}
-                  style={{
-                    width: '17px', height: '17px', borderRadius: '5px', flexShrink: 0,
-                    background: keepMe ? 'rgba(255,255,255,0.88)' : 'transparent',
-                    border: `1.5px solid ${keepMe ? 'rgba(255,255,255,0.88)' : C.inputBdr}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s', cursor: 'pointer',
-                  }}
-                >
-                  {keepMe && (
-                    <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4l3 3 5-6" stroke="#0a0a0a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-                <span style={{ fontSize: '13.5px', color: C.muted }}>I Agree To The Terms &amp; Privacy Policy</span>
-              </label>
-
-              {error && <ErrorBox msg={error} />}
-
-              <button
-                type="submit"
-                disabled={loading}
-                style={{ ...btnPrimary, marginTop: '8px' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.90' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
-              >
-                {loading ? 'Signing in…' : 'Sign In'}
-              </button>
-            </form>
-
-            {/* OR divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '22px 0' }}>
-              <div style={{ flex: 1, height: '1px', background: C.border }} />
-              <span style={{ fontSize: '12px', color: C.muted, letterSpacing: '0.06em' }}>or sign in via</span>
-              <div style={{ flex: 1, height: '1px', background: C.border }} />
-            </div>
-
-            {/* Social buttons */}
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={handleGoogle}
-                style={btnSocial}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.10)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
-              >
-                <GoogleIcon /> Google
-              </button>
-              <button
-                onClick={handleApple}
-                style={btnSocial}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.10)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
-              >
-                <AppleIcon /> Apple
-              </button>
-            </div>
-
-            {/* Forgot password */}
-            <div style={{ marginTop: '18px', textAlign: 'center' }}>
-              <button
-                type="button"
-                onClick={() => { setView('forgot'); resetError() }}
-                style={{ background: 'none', border: 'none', color: C.muted, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textDecoration: 'underline', textUnderlineOffset: '3px' }}
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            {/* Create account */}
-            <p style={{ marginTop: '28px', fontSize: '14px', color: C.muted, textAlign: 'center' }}>
-              Don&apos;t have an account?{' '}
-              <Link href="/signup" style={{ color: C.white, fontWeight: 600, textDecoration: 'none' }}>
-                Sign up
-              </Link>
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* ── Right: photo panel ── */}
-      <div style={{
-        flex: 1,
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'none',
-        borderRadius: '0 20px 20px 0',
-        margin: '12px 12px 12px 0',
-      }} className="auth-photo-panel">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={PHOTO}
-          alt=""
-          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '16px' }}
-        />
-        {/* Gradient overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 50%, transparent 100%)',
-          borderRadius: '16px',
-        }} />
-        {/* Subtle vignette border */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
-          borderRadius: '16px',
-        }} />
       </div>
 
       <style>{`
-        @media (min-width: 860px) {
-          .auth-photo-panel { display: block !important; }
+        @media (min-width: 740px) {
+          .auth-glass-panel { display: block !important; }
         }
-        input::placeholder { color: rgba(255,255,255,0.30); }
+        input::placeholder { color: rgba(255,255,255,0.28); }
+        * { box-sizing: border-box; }
       `}</style>
-    </div>
+    </>
   )
 }
 
