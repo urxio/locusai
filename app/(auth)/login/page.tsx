@@ -491,10 +491,10 @@ export default function LoginPage() {
           <div className="auth-glass-panel" style={{
             flex: 1,
             display: 'none',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            background: 'rgba(255,255,255,0.10)',
-            boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.18)',
+            backdropFilter: 'blur(3px)',
+            WebkitBackdropFilter: 'blur(3px)',
+            background: 'rgba(255,255,255,0.04)',
+            boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.12)',
           }} />
         </div>
       </div>
