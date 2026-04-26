@@ -439,7 +439,7 @@ export default function LoginPage() {
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
                   >
-                    {loading ? 'Signing in…' : 'Create Account'}
+                    {loading ? 'Signing in…' : 'Sign In'}
                   </button>
                 </form>
 
@@ -468,14 +468,10 @@ export default function LoginPage() {
 
                 {/* Footer links */}
                 <p style={{ marginTop: '24px', fontSize: '13px', color: C.muted, textAlign: 'center' }}>
-                  Already Have An Account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => { setView('forgot'); resetError() }}
-                    style={{ background: 'none', border: 'none', padding: 0, color: '#e07a3a', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                  >
-                    Login
-                  </button>
+                  Don&apos;t have an account?{' '}
+                  <Link href="/signup" style={{ color: '#e07a3a', fontWeight: 600, textDecoration: 'none' }}>
+                    Create one
+                  </Link>
                 </p>
               </div>
             )}
