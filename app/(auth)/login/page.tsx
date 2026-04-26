@@ -487,38 +487,15 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* ── Right: frosted glass image panel ── */}
+          {/* ── Right: pure frosted glass — background image shows through ── */}
           <div className="auth-glass-panel" style={{
             flex: 1,
-            position: 'relative',
             display: 'none',
-            overflow: 'hidden',
-          }}>
-            {/* Background image continues through the glass */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={PHOTO}
-              alt=""
-              style={{
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center',
-              }}
-            />
-            {/* Frosted glass overlay */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              backdropFilter: 'blur(2px)',
-              WebkitBackdropFilter: 'blur(2px)',
-              background: 'rgba(255,255,255,0.04)',
-            }} />
-            {/* Inner border glow */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.10)',
-            }} />
-          </div>
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            background: 'rgba(255,255,255,0.10)',
+            boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.18)',
+          }} />
         </div>
       </div>
 
