@@ -40,33 +40,13 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
       </div>
 
       <div style={{ display: tab === 'journal' ? 'block' : 'none', animation: tab === 'journal' ? 'fadeUp 0.22s var(--ease) both' : 'none' }}>
-        <div className="page-pad" style={{ maxWidth: '860px' }}>
-          <JournalSection
-            existing={todayJournal}
-            recentJournals={recentJournals}
-            tab={tab}
-            setTab={setTab}
-            todayJournalHasContent={!!todayJournal?.content}
-          />
-          <div style={{
-            maxWidth: '560px', marginTop: '36px', paddingTop: '24px',
-            borderTop: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.4 }}>
-              Past entries, mood notes, and journal reflections
-            </div>
-            <a href="/checkin/history" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none',
-              fontWeight: 600, padding: '8px 14px',
-              border: '1px solid var(--border-md)', borderRadius: '8px',
-              background: 'var(--bg-2)', flexShrink: 0,
-            }}>
-              View history →
-            </a>
-          </div>
-        </div>
+        <JournalSection
+          existing={todayJournal}
+          recentJournals={recentJournals}
+          tab={tab}
+          setTab={setTab}
+          todayJournalHasContent={!!todayJournal?.content}
+        />
       </div>
     </div>
   )

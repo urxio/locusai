@@ -505,6 +505,14 @@ input:focus,    input:focus-visible {
   align-items: start;
 }
 
+/* ── Journal two-column layout ── */
+.journal-layout {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
 @media (max-width: 900px) {
   .checkin-two-col {
     grid-template-columns: 1fr;
@@ -514,6 +522,16 @@ input:focus,    input:focus-visible {
   .checkin-two-col > div:last-child {
     height: auto !important;
     min-height: 320px;
+  }
+
+  .journal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Date sidebar collapses to a horizontal scroll strip on mobile */
+  .journal-layout > div:first-child {
+    height: auto !important;
+    min-height: unset !important;
   }
 }
 
