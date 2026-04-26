@@ -272,7 +272,7 @@ export default function ConversationalCheckin({
       <div style={{
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         gap: '16px', padding: '26px 28px 20px', flexShrink: 0,
-        borderBottom: '1px solid var(--glass-card-border)',
+        borderBottom: '1px solid var(--glass-card-border-subtle)',
       }}>
         <div>
           <div style={{
@@ -412,8 +412,10 @@ export default function ConversationalCheckin({
                             maxWidth: '75%', padding: '9px 14px',
                             borderRadius: '16px 16px 4px 16px',
                             background: 'var(--gold-dim)',
-                            border: '1px solid rgba(212,168,83,0.18)',
+                            border: '1px solid rgba(212,168,83,0.22)',
                             fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.6,
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)',
                           }}>
                             {msg.content}
                           </div>
@@ -459,7 +461,7 @@ export default function ConversationalCheckin({
             </div>
 
             {/* ── Input bar ── */}
-            <div style={{ flexShrink: 0, borderTop: '1px solid var(--glass-card-border)' }}>
+            <div style={{ flexShrink: 0, borderTop: '1px solid var(--glass-card-border-subtle)' }}>
               {error && (
                 <div style={{
                   fontSize: '13px', color: '#c08060', margin: '12px 28px 0',
@@ -486,11 +488,15 @@ export default function ConversationalCheckin({
                   disabled={streaming || isSaving}
                   rows={1}
                   style={{
-                    flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border)',
-                    borderRadius: '12px', outline: 'none',
+                    flex: 1,
+                    background: 'var(--glass-card-bg-strong)',
+                    border: '1px solid var(--glass-card-border)',
+                    borderRadius: '14px', outline: 'none',
                     fontFamily: 'var(--font-sans)', fontSize: '14px',
                     color: 'var(--text-0)', resize: 'none', lineHeight: 1.5,
                     overflow: 'hidden', padding: '10px 14px',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
                   }}
                 />
                 <button
@@ -532,8 +538,11 @@ function CheckinSummaryCard({
 
   return (
     <div style={{
-      background: 'var(--bg-2)', border: '1px solid var(--border)',
-      borderRadius: '16px', padding: '20px',
+      background: 'var(--glass-card-bg-strong)',
+      border: '1px solid var(--glass-card-border)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderRadius: '18px', padding: '20px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
         <div style={{
@@ -585,7 +594,11 @@ function CheckinSummaryCard({
 
 function SummaryTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: 'var(--bg-3)', borderRadius: '10px', padding: '12px 14px' }}>
+    <div style={{
+      background: 'var(--glass-card-bg)',
+      border: '1px solid var(--glass-card-border-subtle)',
+      borderRadius: '12px', padding: '12px 14px',
+    }}>
       <div style={{
         fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase',
         letterSpacing: '0.07em', fontWeight: 600, marginBottom: '4px',

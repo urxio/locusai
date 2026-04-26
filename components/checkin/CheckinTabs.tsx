@@ -94,45 +94,59 @@ function CheckinLayout({
       <div className="checkin-two-col">
 
         {/* ── LEFT: Chat card ── */}
-        <div style={{
+        <div className="glass-card" style={{
           height: CARD_H,
           display: 'flex', flexDirection: 'column',
-          background: 'var(--glass-card-bg)',
-          backdropFilter: 'blur(40px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-          border: '1px solid var(--glass-card-border)',
-          borderRadius: '24px',
-          boxShadow: 'var(--glass-card-shadow)',
-          overflow: 'hidden',
+          overflow: 'hidden', position: 'relative',
         }}>
-          <ConversationalCheckin
-            existingCheckin={existingCheckin}
-            memory={memory}
-            hasBrief={hasBrief}
-            tab={tab}
-            setTab={setTab}
-            todayJournalHasContent={todayJournalHasContent}
-            onCheckinSaved={onCheckinSaved}
-          />
+          {/* Card overlay gradient — matches home page bento cards */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+            background: 'var(--card-overlay)', opacity: 0.28,
+          }} />
+          {/* Top ambient glow */}
+          <div aria-hidden style={{
+            position: 'absolute', top: '-60px', left: '-40px',
+            width: '280px', height: '280px', borderRadius: '50%',
+            background: 'radial-gradient(circle, oklch(0.78 0.07 165 / 0.09) 0%, transparent 70%)',
+            pointerEvents: 'none', zIndex: 0,
+          }} />
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <ConversationalCheckin
+              existingCheckin={existingCheckin}
+              memory={memory}
+              hasBrief={hasBrief}
+              tab={tab}
+              setTab={setTab}
+              todayJournalHasContent={todayJournalHasContent}
+              onCheckinSaved={onCheckinSaved}
+            />
+          </div>
         </div>
 
         {/* ── RIGHT: Brief card (independently scrollable) ── */}
-        <div style={{
+        <div className="glass-card-soft" style={{
           height: CARD_H,
           display: 'flex', flexDirection: 'column',
-          background: 'var(--glass-card-bg)',
-          backdropFilter: 'blur(40px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-          border: '1px solid var(--glass-card-border)',
-          borderRadius: '24px',
-          boxShadow: 'var(--glass-card-shadow)',
-          overflow: 'hidden',
+          overflow: 'hidden', position: 'relative',
         }}>
+          {/* Card overlay gradient */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+            background: 'var(--card-overlay)', opacity: 0.35,
+          }} />
+          {/* Top-right ambient glow */}
+          <div aria-hidden style={{
+            position: 'absolute', top: '-50px', right: '-50px',
+            width: '220px', height: '220px', borderRadius: '50%',
+            background: 'radial-gradient(circle, oklch(0.78 0.09 75 / 0.10) 0%, transparent 70%)',
+            pointerEvents: 'none', zIndex: 0,
+          }} />
+
           {/* Card header */}
           <div style={{
-            padding: '22px 24px 16px',
-            borderBottom: '1px solid var(--glass-card-border)',
-            flexShrink: 0,
+            padding: '22px 24px 16px', flexShrink: 0, position: 'relative', zIndex: 1,
+            borderBottom: '1px solid var(--glass-card-border-subtle)',
           }}>
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '7px',
@@ -149,7 +163,7 @@ function CheckinLayout({
           </div>
 
           {/* Scrollable body */}
-          <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
+          <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 1 }}>
             {briefReady ? (
               <PostCheckinBrief memory={memory} sidebar />
             ) : (
@@ -210,21 +224,22 @@ function BriefPlaceholder() {
       </div>
 
       {/* Decorative skeleton lines */}
-      <div style={{ marginTop: '36px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.35 }}>
+      <div style={{ marginTop: '36px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.4 }}>
         {[90, 75, 82, 60].map((w, i) => (
           <div key={i} style={{
-            height: '9px', borderRadius: '6px',
+            height: '8px', borderRadius: '6px',
             background: 'var(--glass-card-border)',
             width: `${w}%`, margin: '0 auto',
-            animation: `pulse 2s ease-in-out ${i * 0.15}s infinite`,
+            animation: `pulse 2.4s ease-in-out ${i * 0.18}s infinite`,
           }} />
         ))}
-        <div style={{ marginTop: '16px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+        <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
           {[1, 2, 3].map(i => (
             <div key={i} style={{
-              height: '56px', flex: 1, borderRadius: '10px',
-              background: 'var(--glass-card-border)',
-              animation: `pulse 2s ease-in-out ${i * 0.2}s infinite`,
+              height: '52px', flex: 1, borderRadius: '12px',
+              background: 'var(--glass-card-bg-strong)',
+              border: '1px solid var(--glass-card-border-subtle)',
+              animation: `pulse 2.4s ease-in-out ${i * 0.22}s infinite`,
             }} />
           ))}
         </div>
