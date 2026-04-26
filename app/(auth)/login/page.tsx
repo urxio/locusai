@@ -266,12 +266,6 @@ export default function LoginPage() {
           zIndex: 0,
         }}
       />
-      {/* Dark tint over background */}
-      <div style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(10,8,6,0.55)',
-        zIndex: 1,
-      }} />
 
       {/* Page shell */}
       <div style={{
