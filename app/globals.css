@@ -498,19 +498,22 @@ input:focus,    input:focus-visible {
 }
 
 /* ── Check-in two-column responsive ── */
-.checkin-card {
+.checkin-two-col {
   display: grid;
   grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
-  .checkin-card {
+  .checkin-two-col {
     grid-template-columns: 1fr;
   }
 
-  .checkin-sidebar {
-    border-top: 1px solid var(--glass-card-border);
-    border-left: none !important;
+  /* On mobile, brief card reverts to natural height */
+  .checkin-two-col > div:last-child {
+    height: auto !important;
+    min-height: 320px;
   }
 }
 

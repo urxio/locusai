@@ -87,26 +87,23 @@ function CheckinLayout({
   onCheckinSaved: () => void
   pastBriefs: Brief[]
 }) {
+  const CARD_H = 'min(680px, calc(100vh - 156px))'
+
   return (
     <div className="page-pad" style={{ maxWidth: '1180px' }}>
+      <div className="checkin-two-col">
 
-      {/* ── Outer glass card ── */}
-      <div className="checkin-card" style={{
-        minHeight: '580px',
-        background: 'var(--glass-card-bg)',
-        backdropFilter: 'blur(40px) saturate(200%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-        border: '1px solid var(--glass-card-border)',
-        borderRadius: '24px',
-        boxShadow: 'var(--glass-card-shadow)',
-        overflow: 'hidden',
-      }}>
-
-        {/* ── LEFT: Chat panel ── */}
+        {/* ── LEFT: Chat card ── */}
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
+          height: CARD_H,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--glass-card-bg)',
+          backdropFilter: 'blur(40px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          border: '1px solid var(--glass-card-border)',
+          borderRadius: '24px',
+          boxShadow: 'var(--glass-card-shadow)',
+          overflow: 'hidden',
         }}>
           <ConversationalCheckin
             existingCheckin={existingCheckin}
@@ -119,17 +116,21 @@ function CheckinLayout({
           />
         </div>
 
-        {/* ── RIGHT: Brief sidebar ── */}
-        <div className="checkin-sidebar" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'rgba(255,255,255,0.015)',
-          borderLeft: '1px solid var(--glass-card-border)',
+        {/* ── RIGHT: Brief card (independently scrollable) ── */}
+        <div style={{
+          height: CARD_H,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--glass-card-bg)',
+          backdropFilter: 'blur(40px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          border: '1px solid var(--glass-card-border)',
+          borderRadius: '24px',
+          boxShadow: 'var(--glass-card-shadow)',
           overflow: 'hidden',
         }}>
-          {/* Sidebar header */}
+          {/* Card header */}
           <div style={{
-            padding: '26px 24px 18px',
+            padding: '22px 24px 16px',
             borderBottom: '1px solid var(--glass-card-border)',
             flexShrink: 0,
           }}>
@@ -147,8 +148,8 @@ function CheckinLayout({
             </div>
           </div>
 
-          {/* Sidebar body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0', scrollbarWidth: 'none' }}>
+          {/* Scrollable body */}
+          <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
             {briefReady ? (
               <PostCheckinBrief memory={memory} sidebar />
             ) : (
@@ -159,7 +160,7 @@ function CheckinLayout({
 
       </div>
 
-      {/* Past briefs below the card */}
+      {/* Past briefs below */}
       {pastBriefs.length > 0 && (
         <div style={{ marginTop: '24px' }}>
           <BriefHistory briefs={pastBriefs} />
