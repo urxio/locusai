@@ -497,6 +497,23 @@ input:focus,    input:focus-visible {
   box-shadow: var(--glass-card-shadow);
 }
 
+/* ── Check-in two-column responsive ── */
+.checkin-card {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+}
+
+@media (max-width: 900px) {
+  .checkin-card {
+    grid-template-columns: 1fr;
+  }
+
+  .checkin-sidebar {
+    border-top: 1px solid var(--glass-card-border);
+    border-left: none !important;
+  }
+}
+
 /* ── MOBILE BREAKPOINT ── */
 @media (max-width: 768px) {
   .app-sidebar {

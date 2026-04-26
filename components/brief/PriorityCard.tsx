@@ -16,21 +16,26 @@ type Props = {
   timeOfDay?: string
   reasoning?: string
   last?: boolean
+  compact?: boolean
 }
 
-export default function PriorityCard({ num, title, category, time, timeOfDay, reasoning, last }: Props) {
+export default function PriorityCard({ num, title, category, time, timeOfDay, reasoning, last, compact = false }: Props) {
   const colors = CATEGORY_COLORS[category] ?? { tag: 'var(--bg-3)', border: 'var(--text-3)' }
   const rankStr = String(num).padStart(2, '0')
 
   return (
     <div style={{
-      display: 'flex', gap: '20px', alignItems: 'flex-start',
-      padding: '24px 0', borderBottom: last ? 'none' : '1px solid var(--border)',
+      display: 'flex', gap: compact ? '12px' : '20px', alignItems: 'flex-start',
+      padding: compact ? '14px 0' : '24px 0',
+      borderBottom: last ? 'none' : '1px solid var(--border)',
     }}>
-      {/* Large serif rank */}
+      {/* Rank */}
       <div style={{
-        fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 300, lineHeight: 1,
-        color: 'var(--text-3)', opacity: 0.4, flexShrink: 0, width: '48px',
+        fontFamily: 'var(--font-serif)',
+        fontSize: compact ? '26px' : '42px',
+        fontWeight: 300, lineHeight: 1,
+        color: 'var(--text-3)', opacity: 0.4, flexShrink: 0,
+        width: compact ? '30px' : '48px',
         textAlign: 'right', letterSpacing: '-0.02em', paddingTop: '2px',
       }}>
         {rankStr}
@@ -38,23 +43,31 @@ export default function PriorityCard({ num, title, category, time, timeOfDay, re
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3, marginBottom: '6px', letterSpacing: '-0.01em' }}>
+        <div style={{
+          fontSize: compact ? '13.5px' : '16px', fontWeight: 600,
+          color: 'var(--text-0)', lineHeight: 1.3,
+          marginBottom: compact ? '4px' : '6px', letterSpacing: '-0.01em',
+        }}>
           {title}
         </div>
-        {reasoning && (
+        {reasoning && !compact && (
           <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.65, fontStyle: 'italic' }}>
             {reasoning}
           </p>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', background: colors.tag, color: colors.border }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '9.5px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            background: colors.tag, color: colors.border,
+          }}>
             {category}
           </span>
           {time && time !== '—' && (
-            <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>{time}</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{time}</span>
           )}
-          {timeOfDay && timeOfDay !== 'flexible' && timeOfDay !== 'anytime' && (
-            <span style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>· {timeOfDay}</span>
+          {!compact && timeOfDay && timeOfDay !== 'flexible' && timeOfDay !== 'anytime' && (
+            <span style={{ fontSize: '11px', color: 'var(--text-3)', textTransform: 'capitalize' }}>· {timeOfDay}</span>
           )}
         </div>
       </div>

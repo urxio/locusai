@@ -11,9 +11,10 @@ import MemoryCard from './MemoryCard'
 
 type Props = {
   memory?: UserMemory | null
+  sidebar?: boolean
 }
 
-export default function PostCheckinBrief({ memory }: Props) {
+export default function PostCheckinBrief({ memory, sidebar = false }: Props) {
   const [brief, setBrief] = useState<Brief | null>(null)
   const [generating, setGenerating] = useState(true)
   const [genError, setGenError] = useState<string | null>(null)
@@ -65,31 +66,34 @@ export default function PostCheckinBrief({ memory }: Props) {
     }
   }
 
-  return (
-    <div style={{ marginTop: '32px', animation: 'fadeUp 0.4s var(--ease) both', animationDelay: '0.15s' }}>
+  const wrapStyle: React.CSSProperties = sidebar
+    ? { padding: '20px 22px 28px', animation: 'fadeUp 0.4s var(--ease) both', animationDelay: '0.15s' }
+    : { marginTop: '32px', animation: 'fadeUp 0.4s var(--ease) both', animationDelay: '0.15s' }
 
-      {/* ── Section divider ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        marginBottom: '20px',
-      }}>
-        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
-          background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.2)',
-          borderRadius: '20px', padding: '3px 10px 3px 7px',
-          fontSize: '10px', color: 'var(--gold)', fontWeight: 700,
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: generating ? 'pulse 1s ease-in-out infinite' : 'none' }} />
-          Daily Brief
+  return (
+    <div style={wrapStyle}>
+
+      {/* ── Section divider (standalone mode only) ── */}
+      {!sidebar && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.2)',
+            borderRadius: '20px', padding: '3px 10px 3px 7px',
+            fontSize: '10px', color: 'var(--gold)', fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>
+            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: generating ? 'pulse 1s ease-in-out infinite' : 'none' }} />
+            Daily Brief
+          </div>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
         </div>
-        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-      </div>
+      )}
 
       {/* ── Brief loader / insight card ── */}
       {generating ? (
-        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: '20px' }}>
+        <div style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: sidebar ? 'none' : '1px solid var(--glass-card-border)', boxShadow: sidebar ? 'none' : 'var(--glass-card-shadow)', borderRadius: sidebar ? '0' : 'var(--radius-xl)', overflow: 'hidden', marginBottom: sidebar ? '0' : '20px' }}>
           <BriefLoader onBriefReady={handleBriefReady} onError={handleGenError} />
         </div>
       ) : genError ? (
@@ -102,7 +106,7 @@ export default function PostCheckinBrief({ memory }: Props) {
           </a>
         </div>
       ) : brief ? (
-        <AIInsightCard text={brief.insight_text} />
+        <AIInsightCard text={brief.insight_text} sidebar={sidebar} />
       ) : null}
 
       {/* ── Clarification note ── */}
@@ -145,11 +149,17 @@ export default function PostCheckinBrief({ memory }: Props) {
 
       {/* ── Today's priorities ── */}
       {brief?.priorities && brief.priorities.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
+        <div style={{ marginBottom: '24px', marginTop: sidebar ? '20px' : '0' }}>
+          <div style={{
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--text-3)',
+            marginBottom: sidebar ? '0' : '10px',
+            padding: sidebar ? '0 0 10px' : '0',
+            borderBottom: sidebar ? '1px solid var(--border)' : 'none',
+          }}>
             Today&apos;s priorities
           </div>
-          <div style={{
+          <div style={sidebar ? {} : {
             background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
             border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)',
             borderRadius: '16px', padding: '0 24px', overflow: 'hidden',
@@ -164,6 +174,7 @@ export default function PostCheckinBrief({ memory }: Props) {
                 timeOfDay={p.time_of_day}
                 reasoning={p.reasoning}
                 last={i === brief.priorities!.length - 1}
+                compact={sidebar}
               />
             ))}
           </div>
