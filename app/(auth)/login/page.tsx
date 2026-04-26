@@ -286,8 +286,7 @@ export default function LoginPage() {
           maxWidth: '900px',
           minHeight: '580px',
           borderRadius: '20px',
-          overflow: 'hidden',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.55)',
         }}>
 
           {/* ── Left: dark glass form panel ── */}
@@ -299,7 +298,9 @@ export default function LoginPage() {
             padding: 'clamp(32px, 4vw, 48px)',
             display: 'flex',
             flexDirection: 'column',
-            borderRight: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: '20px 0 0 20px',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRight: 'none',
           }}>
 
             {/* Logo */}
@@ -484,7 +485,9 @@ export default function LoginPage() {
             backdropFilter: 'blur(1px)',
             WebkitBackdropFilter: 'blur(1px)',
             background: 'rgba(255,255,255,0.02)',
-            boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.10)',
+            borderRadius: '0 20px 20px 0',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderLeft: 'none',
           }} />
         </div>
       </div>
