@@ -8,7 +8,7 @@ import Link from 'next/link'
 
 type View = 'login' | 'forgot' | 'forgot-code' | 'forgot-reset' | 'magic-sent'
 
-const PHOTO = 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1400&q=90'
+const PHOTO = '/login-bg.jpg'
 
 /* ── Design tokens ─────────────────────────────────── */
 const C = {
