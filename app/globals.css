@@ -706,6 +706,16 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
 }
 
+/* Back button in breadcrumb — desktop hidden, mobile visible */
+.capture-back-btn {
+  display: none;
+}
+
+/* Mobile search toggle in note list header — desktop hidden, tablet/mobile visible */
+.capture-mobile-search-btn {
+  display: none;
+}
+
 /* Contenteditable placeholder */
 [contenteditable][data-placeholder]:empty::before {
   content: attr(data-placeholder);
@@ -717,10 +727,16 @@ input[type="range"]::-moz-range-thumb {
   .capture-left-nav {
     display: none;
   }
+  .capture-mobile-search-btn {
+    display: flex;
+  }
 }
 
 @media (max-width: 640px) {
   .capture-note-list-hidden-mobile {
     display: none;
+  }
+  .capture-back-btn {
+    display: flex;
   }
 }

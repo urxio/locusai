@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition } from 'react'
 import Link from 'next/link'
 import type { MemoryNote } from '@/lib/types'
-import { createMemoryNote, resolveMemoryNote, deleteMemoryNote } from '@/app/actions/memory-notes'
+import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags } from '@/app/actions/memory-notes'
 import { useToast } from '@/components/ui/ToastContext'
 
 // ── Type config ───────────────────────────────────────────────────────────────
@@ -62,13 +62,8 @@ function LeftNav({
 
   return (
     <div style={{
-      width: '210px',
-      flexShrink: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '20px 12px',
-      borderRight: '1px solid var(--glass-card-border)',
-      overflowY: 'auto',
+      width: '210px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+      padding: '20px 12px', borderRight: '1px solid var(--glass-card-border)', overflowY: 'auto',
     }}>
       {/* User row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 8px 18px', marginBottom: '4px' }}>
@@ -97,13 +92,9 @@ function LeftNav({
           onChange={e => onSearch(e.target.value)}
           style={{
             width: '100%', boxSizing: 'border-box',
-            padding: '8px 10px 8px 30px',
-            borderRadius: '8px',
-            border: '1px solid var(--border)',
-            background: 'var(--bg-1)',
-            color: 'var(--text-0)',
-            fontSize: '12.5px',
-            fontFamily: 'var(--font-sans)',
+            padding: '8px 10px 8px 30px', borderRadius: '8px',
+            border: '1px solid var(--border)', background: 'var(--bg-1)',
+            color: 'var(--text-0)', fontSize: '12.5px', fontFamily: 'var(--font-sans)',
           }}
         />
       </div>
@@ -122,8 +113,7 @@ function LeftNav({
                 padding: '9px 10px', borderRadius: '8px', border: 'none',
                 background: isActive ? 'var(--bg-2)' : 'transparent',
                 color: isActive ? 'var(--text-0)' : 'var(--text-2)',
-                cursor: 'pointer', fontSize: '13px',
-                fontWeight: isActive ? 600 : 400,
+                cursor: 'pointer', fontSize: '13px', fontWeight: isActive ? 600 : 400,
                 textAlign: 'left', transition: 'background 0.12s',
               }}
             >
@@ -136,7 +126,8 @@ function LeftNav({
                   {count}
                 </span>
               )}
-              <span style={{ fontSize: '12px', color: 'var(--text-3)', opacity: 0.5, letterSpacing: '2px', lineHeight: 1, flexShrink: 0 }}>···</span>
+              {/* ··· is purely decorative — clicking anywhere on the row changes folder */}
+              <span style={{ fontSize: '12px', color: 'var(--text-3)', opacity: 0.4, letterSpacing: '2px', lineHeight: 1, flexShrink: 0 }}>···</span>
             </button>
           )
           return item.href
@@ -166,6 +157,7 @@ function LeftNav({
 
 function NoteListPanel({
   notes, selectedId, composerActive, onSelect, onNewNote, folderLabel,
+  searchQuery, onSearch,
 }: {
   notes: MemoryNote[]
   selectedId: string | null
@@ -173,7 +165,11 @@ function NoteListPanel({
   onSelect: (note: MemoryNote) => void
   onNewNote: () => void
   folderLabel: string
+  searchQuery: string
+  onSearch: (q: string) => void
 }) {
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+
   return (
     <div style={{
       width: '275px', flexShrink: 0, display: 'flex', flexDirection: 'column',
@@ -181,9 +177,48 @@ function NoteListPanel({
     }}>
       {/* Header */}
       <div style={{ padding: '20px 16px 12px', flexShrink: 0 }}>
-        <h2 style={{ margin: '0 0 14px', fontSize: '22px', fontFamily: 'var(--font-serif)', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.01em' }}>
-          {folderLabel}
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+          <h2 style={{ margin: 0, fontSize: '22px', fontFamily: 'var(--font-serif)', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.01em', flex: 1 }}>
+            {folderLabel}
+          </h2>
+          {/* Search toggle — only visible when left nav is hidden (mobile/tablet) */}
+          <button
+            className="capture-mobile-search-btn"
+            onClick={() => setMobileSearchOpen(o => !o)}
+            title="Search"
+            style={{
+              width: 30, height: 30, borderRadius: '8px', border: '1px solid var(--border)',
+              background: mobileSearchOpen ? 'var(--bg-2)' : 'transparent',
+              color: 'var(--text-2)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <SearchMagIcon />
+          </button>
+        </div>
+
+        {/* Mobile search input — shown when toggled */}
+        {mobileSearchOpen && (
+          <div style={{ position: 'relative', marginBottom: '12px' }}>
+            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none', display: 'flex' }}>
+              <SearchMagIcon />
+            </span>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search notes…"
+              value={searchQuery}
+              onChange={e => onSearch(e.target.value)}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '8px 10px 8px 30px', borderRadius: '8px',
+                border: '1px solid var(--border)', background: 'var(--bg-1)',
+                color: 'var(--text-0)', fontSize: '12.5px', fontFamily: 'var(--font-sans)',
+              }}
+            />
+          </div>
+        )}
+
         <button
           onClick={onNewNote}
           style={{
@@ -192,8 +227,7 @@ function NoteListPanel({
             border: `1px dashed ${composerActive ? 'var(--gold)' : 'var(--border-md)'}`,
             background: composerActive ? 'rgba(212,168,83,0.06)' : 'transparent',
             color: composerActive ? 'var(--gold)' : 'var(--text-2)',
-            cursor: 'pointer', fontSize: '13px', fontWeight: 500,
-            transition: 'all 0.15s',
+            cursor: 'pointer', fontSize: '13px', fontWeight: 500, transition: 'all 0.15s',
           }}
         >
           <PlusSmallIcon /> Add new note
@@ -205,7 +239,7 @@ function NoteListPanel({
         {notes.length === 0 ? (
           <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
             <div style={{ fontSize: '28px', marginBottom: '10px', opacity: 0.3 }}>◎</div>
-            Nothing here yet.
+            {searchQuery ? 'No notes match your search.' : 'Nothing here yet.'}
           </div>
         ) : notes.map(note => {
           const title = noteTitle(note.content)
@@ -262,6 +296,8 @@ function NoteListPanel({
 
 // ── Editor Toolbar ────────────────────────────────────────────────────────────
 
+const FONT_SIZE_MAP: Record<string, string> = { '12': '1', '14': '2', '16': '3', '18': '4', '20': '5', '24': '6', '32': '7' }
+
 function EditorToolbar({ targetRef, disabled }: { targetRef?: React.RefObject<HTMLDivElement | null>; disabled?: boolean }) {
   function exec(cmd: string, value?: string) {
     if (disabled || !targetRef?.current) return
@@ -274,8 +310,7 @@ function EditorToolbar({ targetRef, disabled }: { targetRef?: React.RefObject<HT
     border: 'none', borderRadius: '5px', background: 'transparent',
     cursor: disabled ? 'default' : 'pointer',
     color: disabled ? 'var(--text-3)' : 'var(--text-1)',
-    fontSize: '13px', fontWeight: 700, transition: 'background 0.1s',
-    flexShrink: 0,
+    fontSize: '13px', fontWeight: 700, transition: 'background 0.1s', flexShrink: 0,
   }
   const sep = <div style={{ width: '1px', height: '18px', background: 'var(--border)', margin: '0 3px', flexShrink: 0 }} />
 
@@ -286,22 +321,26 @@ function EditorToolbar({ targetRef, disabled }: { targetRef?: React.RefObject<HT
       borderRadius: '10px', border: '1px solid var(--border)',
       marginBottom: '16px', flexWrap: 'wrap',
     }}>
+      {/* Font family — applies to current selection */}
       <select
         defaultValue="Encode Sans"
         disabled={disabled}
+        onChange={e => exec('fontName', e.target.value)}
         style={{ border: 'none', background: 'transparent', color: 'var(--text-1)', fontSize: '12px', cursor: disabled ? 'default' : 'pointer', outline: 'none', padding: '0 4px', maxWidth: '96px', fontFamily: 'var(--font-sans)' }}
       >
-        <option>Encode Sans</option>
-        <option>Georgia</option>
-        <option>Courier New</option>
+        <option value="Encode Sans">Encode Sans</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Courier New">Courier New</option>
       </select>
       {sep}
+      {/* Font size — maps px labels to HTML 1-7 size scale */}
       <select
         defaultValue="16"
         disabled={disabled}
+        onChange={e => exec('fontSize', FONT_SIZE_MAP[e.target.value] ?? '3')}
         style={{ border: 'none', background: 'transparent', color: 'var(--text-1)', fontSize: '12px', cursor: disabled ? 'default' : 'pointer', outline: 'none', padding: '0 4px', maxWidth: '42px', fontFamily: 'var(--font-sans)' }}
       >
-        {[12, 14, 16, 18, 20, 24, 32].map(s => <option key={s}>{s}</option>)}
+        {[12, 14, 16, 18, 20, 24, 32].map(s => <option key={s} value={s}>{s}</option>)}
       </select>
       {sep}
       <button style={btn} onClick={() => exec('bold')} title="Bold"><strong>B</strong></button>
@@ -327,7 +366,7 @@ function EditorToolbar({ targetRef, disabled }: { targetRef?: React.RefObject<HT
 // ── Note Detail Panel ─────────────────────────────────────────────────────────
 
 function NoteDetail({
-  note, folderLabel, userName, avatarUrl, onResolve, onDelete,
+  note, folderLabel, userName, avatarUrl, onResolve, onDelete, onBack, onTagsUpdated,
 }: {
   note: MemoryNote
   folderLabel: string
@@ -335,23 +374,61 @@ function NoteDetail({
   avatarUrl: string | null
   onResolve: () => void
   onDelete: () => void
+  onBack: () => void
+  onTagsUpdated: (id: string, tags: string[]) => void
 }) {
   const title = noteTitle(note.content)
   const meta = TYPE_META[note.type]
   const [menuOpen, setMenuOpen] = useState(false)
+  const [localTags, setLocalTags] = useState<string[]>(note.ai_tags)
+  const [addingTag, setAddingTag] = useState(false)
+  const [newTag, setNewTag] = useState('')
+  const [, startTagSave] = useTransition()
+
+  function commitTag(tag: string) {
+    const trimmed = tag.trim().toLowerCase()
+    if (!trimmed || localTags.includes(trimmed)) { setNewTag(''); setAddingTag(false); return }
+    const updated = [...localTags, trimmed]
+    setLocalTags(updated)
+    setNewTag('')
+    setAddingTag(false)
+    onTagsUpdated(note.id, updated)
+    startTagSave(async () => { await updateMemoryNoteTags(note.id, updated) })
+  }
+
+  function removeTag(tag: string) {
+    const updated = localTags.filter(t => t !== tag)
+    setLocalTags(updated)
+    onTagsUpdated(note.id, updated)
+    startTagSave(async () => { await updateMemoryNoteTags(note.id, updated) })
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Breadcrumb bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 24px', borderBottom: '1px solid var(--glass-card-border-subtle)',
-        flexShrink: 0,
+        padding: '14px 24px', borderBottom: '1px solid var(--glass-card-border-subtle)', flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-3)', overflow: 'hidden' }}>
-          <span style={{ whiteSpace: 'nowrap' }}>{folderLabel}</span>
-          <span>›</span>
-          <span style={{ color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+          {/* Back button — only visible on mobile */}
+          <button
+            className="capture-back-btn"
+            onClick={onBack}
+            title="Back to list"
+            style={{
+              width: 28, height: 28, border: '1px solid var(--border)', borderRadius: '7px',
+              background: 'transparent', color: 'var(--text-2)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <ChevronLeftIcon />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-3)', overflow: 'hidden', minWidth: 0 }}>
+            <span style={{ whiteSpace: 'nowrap' }}>{folderLabel}</span>
+            <span>›</span>
+            <span style={{ color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+          </div>
         </div>
         <div style={{ position: 'relative', flexShrink: 0, marginLeft: '12px' }}>
           <button
@@ -422,23 +499,52 @@ function NoteDetail({
           )}
         </div>
 
-        {/* Tags */}
+        {/* Tags — fully interactive */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', paddingBottom: '20px', borderBottom: '1px solid var(--border)', marginBottom: '24px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-3)', minWidth: '36px', flexShrink: 0 }}>Tags</span>
+          {/* Type badge (non-removable) */}
           <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '5px', background: meta.bg, color: meta.color, fontWeight: 600, letterSpacing: '0.04em' }}>
             {meta.label.slice(0, -1)}
           </span>
-          {note.ai_tags.map(tag => (
-            <span key={tag} style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--text-1)', border: '1px solid var(--border)' }}>
+          {localTags.map(tag => (
+            <span
+              key={tag}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 10px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--text-1)', border: '1px solid var(--border)' }}
+            >
               {tag}
+              <button
+                onClick={() => removeTag(tag)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-3)', fontSize: '14px', lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center' }}
+                title="Remove tag"
+              >
+                ×
+              </button>
             </span>
           ))}
-          <button style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '6px', border: '1px dashed var(--border-md)', background: 'transparent', color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '14px', lineHeight: 1, marginTop: '-1px' }}>+</span> Add new tag
-          </button>
+          {addingTag ? (
+            <input
+              autoFocus
+              value={newTag}
+              onChange={e => setNewTag(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitTag(newTag) }
+                if (e.key === 'Escape') { setNewTag(''); setAddingTag(false) }
+              }}
+              onBlur={() => commitTag(newTag)}
+              placeholder="tag name…"
+              style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', border: '1px solid var(--gold)', background: 'transparent', color: 'var(--text-0)', width: '90px', outline: 'none', fontFamily: 'var(--font-sans)' }}
+            />
+          ) : (
+            <button
+              onClick={() => setAddingTag(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '6px', border: '1px dashed var(--border-md)', background: 'transparent', color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer' }}
+            >
+              <span style={{ fontSize: '14px', lineHeight: 1, marginTop: '-1px' }}>+</span> Add new tag
+            </button>
+          )}
         </div>
 
-        {/* Editor toolbar (display-only for existing notes) */}
+        {/* Toolbar — disabled for read-only existing notes */}
         <EditorToolbar disabled />
 
         {/* Note content */}
@@ -450,13 +556,14 @@ function NoteDetail({
   )
 }
 
-// ── Composer Panel (new note in detail area) ──────────────────────────────────
+// ── Composer Panel ────────────────────────────────────────────────────────────
 
 function ComposerPanel({
-  onAdded, onCancel, userName, avatarUrl, folderLabel,
+  onAdded, onCancel, onBack, userName, avatarUrl, folderLabel,
 }: {
   onAdded: (note: MemoryNote) => void
   onCancel: () => void
+  onBack: () => void
   userName: string
   avatarUrl: string | null
   folderLabel: string
@@ -466,6 +573,7 @@ function ComposerPanel({
   const toast = useToast()
   const editorRef = useRef<HTMLDivElement>(null)
   const clarifyRef = useRef<HTMLInputElement>(null)
+  const [hasContent, setHasContent] = useState(false)
   const [classifying, setClassifying] = useState(false)
   const [classified, setClassified] = useState<Classified | null>(null)
   const [clarifyAnswer, setClarifyAnswer] = useState('')
@@ -476,6 +584,8 @@ function ComposerPanel({
 
   const waitingForClarification = !!classified?.clarifying_question
   const loading = classifying || saving
+  const canSave = hasContent && !loading
+  const classifiedMeta = classified ? TYPE_META[classified.type] : null
 
   function preClassifyLocal(content: string): MemoryNote['type'] | null {
     const lower = content.toLowerCase()
@@ -538,6 +648,7 @@ function ComposerPanel({
         if (note) {
           onAdded(note)
           if (editorRef.current) editorRef.current.innerHTML = ''
+          setHasContent(false)
           setClassified(null)
           setClarifyAnswer('')
           setExtraTags([])
@@ -553,29 +664,46 @@ function ComposerPanel({
 
   function handleSkipClarification() {
     if (!classified) return
-    const content = getContent()
-    save(content, { ...classified, clarifying_question: null })
+    save(getContent(), { ...classified, clarifying_question: null })
   }
 
-  const content = typeof window !== 'undefined' ? (editorRef.current?.innerText?.trim() ?? '') : ''
-  const classifiedMeta = classified ? TYPE_META[classified.type] : null
+  function commitExtraTag(tag: string) {
+    const trimmed = tag.trim().toLowerCase()
+    if (trimmed && !extraTags.includes(trimmed)) setExtraTags(prev => [...prev, trimmed])
+    setCustomTag('')
+    setAddingTag(false)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Breadcrumb bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 24px', borderBottom: '1px solid var(--glass-card-border-subtle)',
-        flexShrink: 0,
+        padding: '14px 24px', borderBottom: '1px solid var(--glass-card-border-subtle)', flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-3)' }}>
-          <span>{folderLabel}</span>
-          <span>›</span>
-          <span style={{ color: 'var(--gold)' }}>New Note</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflow: 'hidden' }}>
+          {/* Back button — only visible on mobile */}
+          <button
+            className="capture-back-btn"
+            onClick={onBack}
+            title="Back to list"
+            style={{
+              width: 28, height: 28, border: '1px solid var(--border)', borderRadius: '7px',
+              background: 'transparent', color: 'var(--text-2)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <ChevronLeftIcon />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-3)' }}>
+            <span>{folderLabel}</span>
+            <span>›</span>
+            <span style={{ color: 'var(--gold)' }}>New Note</span>
+          </div>
         </div>
         <button
           onClick={onCancel}
-          style={{ fontSize: '12px', color: 'var(--text-3)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px' }}
+          style={{ fontSize: '12px', color: 'var(--text-3)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', flexShrink: 0 }}
         >
           Cancel
         </button>
@@ -583,7 +711,6 @@ function ComposerPanel({
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 40px' }}>
-        {/* Placeholder title */}
         <div style={{ fontSize: '28px', fontFamily: 'var(--font-serif)', fontWeight: 700, color: 'var(--text-3)', marginBottom: '20px', letterSpacing: '-0.01em' }}>
           New Note
         </div>
@@ -621,7 +748,7 @@ function ComposerPanel({
             </span>
           ))}
           {extraTags.map(tag => (
-            <span key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 10px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--text-1)', border: '1px solid var(--border)' }}>
+            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 10px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--text-1)', border: '1px solid var(--border)' }}>
               {tag}
               <button onClick={() => setExtraTags(prev => prev.filter(t => t !== tag))} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-3)', fontSize: '14px', lineHeight: 1, padding: 0 }}>×</button>
             </span>
@@ -632,14 +759,10 @@ function ComposerPanel({
               value={customTag}
               onChange={e => setCustomTag(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter' && customTag.trim()) {
-                  setExtraTags(prev => [...prev, customTag.trim()])
-                  setCustomTag('')
-                  setAddingTag(false)
-                }
+                if (e.key === 'Enter' && customTag.trim()) { e.preventDefault(); commitExtraTag(customTag) }
                 if (e.key === 'Escape') { setCustomTag(''); setAddingTag(false) }
               }}
-              onBlur={() => { if (customTag.trim()) { setExtraTags(prev => [...prev, customTag.trim()]) } setCustomTag(''); setAddingTag(false) }}
+              onBlur={() => commitExtraTag(customTag)}
               placeholder="tag name…"
               style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', border: '1px solid var(--gold)', background: 'transparent', color: 'var(--text-0)', width: '90px', outline: 'none', fontFamily: 'var(--font-sans)' }}
             />
@@ -650,7 +773,7 @@ function ComposerPanel({
           )}
         </div>
 
-        {/* Toolbar */}
+        {/* Toolbar — active, wired to editor */}
         <EditorToolbar targetRef={editorRef} />
 
         {/* Contenteditable editor */}
@@ -658,17 +781,14 @@ function ComposerPanel({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
+          onInput={e => setHasContent((e.currentTarget as HTMLDivElement).innerText.trim().length > 0)}
           onKeyDown={e => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleSave() }
           }}
           data-placeholder="Jot something down — a reminder, a resource, an idea…"
           style={{
-            minHeight: '140px',
-            fontSize: '14.5px',
-            color: 'var(--text-0)',
-            lineHeight: 1.75,
-            outline: 'none',
-            fontFamily: 'var(--font-sans)',
+            minHeight: '140px', fontSize: '14.5px', color: 'var(--text-0)',
+            lineHeight: 1.75, outline: 'none', fontFamily: 'var(--font-sans)',
           }}
         />
 
@@ -710,13 +830,13 @@ function ComposerPanel({
         </button>
         <button
           onClick={handleSave}
-          disabled={loading}
+          disabled={!canSave}
           style={{
             padding: '8px 20px', borderRadius: '9px', border: 'none',
-            background: loading ? 'var(--bg-3)' : 'var(--gold)',
-            color: loading ? 'var(--text-3)' : '#1a1a1a',
+            background: canSave ? 'var(--gold)' : 'var(--bg-3)',
+            color: canSave ? '#1a1a1a' : 'var(--text-3)',
             fontSize: '13px', fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: canSave ? 'pointer' : 'not-allowed',
             transition: 'all 0.15s', minWidth: '90px',
           }}
         >
@@ -750,9 +870,7 @@ function EmptyDetail({ onNewNote }: { onNewNote: () => void }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function CaptureView({
-  initialNotes,
-  userName,
-  avatarUrl,
+  initialNotes, userName, avatarUrl,
 }: {
   initialNotes: MemoryNote[]
   userName: string
@@ -801,6 +919,15 @@ export default function CaptureView({
     if (selectedNoteId === id) setSelectedNoteId(null)
   }
 
+  function handleTagsUpdated(id: string, tags: string[]) {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ai_tags: tags } : n))
+  }
+
+  function handleBack() {
+    setSelectedNoteId(null)
+    setComposerOpen(false)
+  }
+
   return (
     <div style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{
@@ -812,7 +939,7 @@ export default function CaptureView({
         boxShadow: 'var(--glass-card-shadow)',
         borderRadius: 'var(--radius-card)',
       }}>
-        {/* Left nav — hidden on mobile */}
+        {/* Left nav — hidden on tablet/mobile */}
         <div className="capture-left-nav">
           <LeftNav
             folder={selectedFolder}
@@ -825,7 +952,7 @@ export default function CaptureView({
           />
         </div>
 
-        {/* Note list — hidden on mobile when detail is open */}
+        {/* Note list — hidden on mobile when detail/composer is open */}
         <div className={`capture-note-list${(composerOpen || selectedNote) ? ' capture-note-list-hidden-mobile' : ''}`}>
           <NoteListPanel
             notes={filteredNotes}
@@ -834,27 +961,33 @@ export default function CaptureView({
             onSelect={note => { setSelectedNoteId(note.id); setComposerOpen(false) }}
             onNewNote={() => { setComposerOpen(true); setSelectedNoteId(null) }}
             folderLabel={folderLabel}
+            searchQuery={searchQuery}
+            onSearch={setSearchQuery}
           />
         </div>
 
-        {/* Detail panel */}
+        {/* Detail / Composer */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {composerOpen ? (
             <ComposerPanel
               onAdded={handleAdded}
               onCancel={() => setComposerOpen(false)}
+              onBack={handleBack}
               userName={userName}
               avatarUrl={avatarUrl}
               folderLabel={folderLabel}
             />
           ) : selectedNote ? (
             <NoteDetail
+              key={selectedNote.id}
               note={selectedNote}
               folderLabel={folderLabel}
               userName={userName}
               avatarUrl={avatarUrl}
               onResolve={() => handleResolve(selectedNote.id)}
               onDelete={() => handleDelete(selectedNote.id)}
+              onBack={handleBack}
+              onTagsUpdated={handleTagsUpdated}
             />
           ) : (
             <EmptyDetail onNewNote={() => setComposerOpen(true)} />
@@ -884,6 +1017,9 @@ function NavPencilIcon() {
 }
 function ChevronDownIcon() {
   return <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+}
+function ChevronLeftIcon() {
+  return <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 4l-4 4 4 4"/></svg>
 }
 function SearchMagIcon() {
   return <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></svg>
