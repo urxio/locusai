@@ -53,6 +53,24 @@ export async function deleteMemoryNote(id: string): Promise<void> {
   revalidatePath('/capture')
 }
 
+export async function updateMemoryNote(id: string, content: string): Promise<MemoryNote | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('memory_notes')
+    .update({ content })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) { console.error('updateMemoryNote:', error); return null }
+  revalidatePath('/capture')
+  return data
+}
+
 export async function updateMemoryNoteTags(id: string, tags: string[]): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

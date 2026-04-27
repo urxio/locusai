@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useState, useRef, useTransition, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import type { MemoryNote } from '@/lib/types'
-import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags } from '@/app/actions/memory-notes'
+import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags, updateMemoryNote } from '@/app/actions/memory-notes'
 import { useToast } from '@/components/ui/ToastContext'
 
 // ── Type config ───────────────────────────────────────────────────────────────
@@ -37,6 +37,41 @@ function fmtDate(iso: string) {
 function fmtShortDate(iso: string) {
   const d = new Date(iso)
   return { day: d.getDate(), month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() }
+}
+
+function getClientToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+type Urgency = 'overdue' | 'today' | 'tomorrow' | 'soon' | null
+
+function noteUrgency(note: MemoryNote, today: string): Urgency {
+  if (note.type !== 'reminder' || !note.trigger_date) return null
+  const diff = Math.round((new Date(note.trigger_date + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000)
+  if (diff < 0) return 'overdue'
+  if (diff === 0) return 'today'
+  if (diff === 1) return 'tomorrow'
+  if (diff <= 7) return 'soon'
+  return null
+}
+
+const URGENCY_META: Record<Exclude<Urgency, null>, { label: string; color: string; bg: string }> = {
+  overdue:  { label: 'Overdue',   color: '#e05c5c', bg: 'rgba(224,92,92,0.12)' },
+  today:    { label: 'Due today', color: '#e07a2f', bg: 'rgba(224,122,47,0.12)' },
+  tomorrow: { label: 'Tomorrow',  color: '#d4a853', bg: 'rgba(212,168,83,0.12)' },
+  soon:     { label: 'This week', color: '#9aa46a', bg: 'rgba(154,164,106,0.12)' },
+}
+
+function urgencySort(note: MemoryNote, today: string): number {
+  if (note.type !== 'reminder') return 10
+  if (!note.trigger_date) return 5
+  const u = noteUrgency(note, today)
+  if (u === 'overdue') return 0
+  if (u === 'today') return 1
+  if (u === 'tomorrow') return 2
+  if (u === 'soon') return 3
+  return 4
 }
 
 // ── Left Nav Panel ────────────────────────────────────────────────────────────
@@ -157,7 +192,7 @@ function LeftNav({
 
 function NoteListPanel({
   notes, selectedId, composerActive, onSelect, onNewNote, folderLabel,
-  searchQuery, onSearch,
+  searchQuery, onSearch, today,
 }: {
   notes: MemoryNote[]
   selectedId: string | null
@@ -167,6 +202,7 @@ function NoteListPanel({
   folderLabel: string
   searchQuery: string
   onSearch: (q: string) => void
+  today: string
 }) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
@@ -234,6 +270,30 @@ function NoteListPanel({
         </button>
       </div>
 
+      {/* Urgent reminders banner */}
+      {(() => {
+        const urgent = notes.filter(n => {
+          const u = noteUrgency(n, today)
+          return u === 'overdue' || u === 'today'
+        })
+        if (urgent.length === 0) return null
+        return (
+          <div style={{
+            margin: '0 12px 8px',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            background: 'rgba(224,92,92,0.10)',
+            border: '1px solid rgba(224,92,92,0.25)',
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <span style={{ fontSize: '14px', lineHeight: 1 }}>⏰</span>
+            <span style={{ fontSize: '12px', color: '#e05c5c', fontWeight: 600, lineHeight: 1.3 }}>
+              {urgent.length === 1 ? '1 reminder needs attention' : `${urgent.length} reminders need attention`}
+            </span>
+          </div>
+        )
+      })()}
+
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {notes.length === 0 ? (
@@ -247,6 +307,8 @@ function NoteListPanel({
           const { day, month } = fmtShortDate(note.created_at)
           const isSelected = !composerActive && note.id === selectedId
           const meta = TYPE_META[note.type]
+          const urgency = noteUrgency(note, today)
+          const urgencyMeta = urgency ? URGENCY_META[urgency] : null
 
           return (
             <button
@@ -256,12 +318,19 @@ function NoteListPanel({
                 width: '100%', textAlign: 'left', display: 'block',
                 padding: '14px 16px', border: 'none',
                 borderBottom: '1px solid var(--glass-card-border-subtle)',
-                background: isSelected ? 'var(--bg-2)' : 'transparent',
+                background: isSelected
+                  ? 'var(--bg-2)'
+                  : urgency === 'overdue' || urgency === 'today'
+                    ? 'rgba(224,92,92,0.04)'
+                    : 'transparent',
                 cursor: 'pointer', position: 'relative', transition: 'background 0.12s',
               }}
             >
               {isSelected && (
-                <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '3px', borderRadius: '0 3px 3px 0', background: 'var(--gold)' }} />
+                <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '3px', borderRadius: '0 3px 3px 0', background: urgencyMeta ? urgencyMeta.color : 'var(--gold)' }} />
+              )}
+              {!isSelected && urgency && (
+                <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '2px', borderRadius: '0 2px 2px 0', background: urgencyMeta!.color, opacity: 0.5 }} />
               )}
               <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '5px' }}>
                 {day} {month}
@@ -275,14 +344,19 @@ function NoteListPanel({
                 </div>
               )}
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                {note.ai_tags.slice(0, 3).map(tag => (
+                {urgencyMeta && (
+                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', background: urgencyMeta.bg, color: urgencyMeta.color, fontWeight: 600 }}>
+                    {urgencyMeta.label}
+                  </span>
+                )}
+                {note.ai_tags.slice(0, urgencyMeta ? 2 : 3).map(tag => (
                   <span key={tag} style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', background: meta.bg, color: meta.color, fontWeight: 500 }}>
                     {tag}
                   </span>
                 ))}
-                {note.ai_tags.length > 3 && (
+                {note.ai_tags.length > (urgencyMeta ? 2 : 3) && (
                   <span style={{ fontSize: '10px', color: 'var(--text-3)', padding: '2px 4px' }}>
-                    +{note.ai_tags.length - 3} more
+                    +{note.ai_tags.length - (urgencyMeta ? 2 : 3)} more
                   </span>
                 )}
               </div>
@@ -366,7 +440,7 @@ function EditorToolbar({ targetRef, disabled }: { targetRef?: React.RefObject<HT
 // ── Note Detail Panel ─────────────────────────────────────────────────────────
 
 function NoteDetail({
-  note, folderLabel, userName, avatarUrl, onResolve, onDelete, onBack, onTagsUpdated,
+  note, folderLabel, userName, avatarUrl, onResolve, onDelete, onBack, onTagsUpdated, onNoteUpdated,
 }: {
   note: MemoryNote
   folderLabel: string
@@ -376,14 +450,53 @@ function NoteDetail({
   onDelete: () => void
   onBack: () => void
   onTagsUpdated: (id: string, tags: string[]) => void
+  onNoteUpdated: (id: string, content: string) => void
 }) {
-  const title = noteTitle(note.content)
   const meta = TYPE_META[note.type]
   const [menuOpen, setMenuOpen] = useState(false)
   const [localTags, setLocalTags] = useState<string[]>(note.ai_tags)
   const [addingTag, setAddingTag] = useState(false)
   const [newTag, setNewTag] = useState('')
   const [, startTagSave] = useTransition()
+
+  // ── Edit state ──────────────────────────────────────────────────────────────
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editBodyInit, setEditBodyInit] = useState('')
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [saving, startSave] = useTransition()
+
+  useEffect(() => {
+    if (editing && bodyRef.current) {
+      bodyRef.current.innerText = editBodyInit
+    }
+  }, [editing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startEditing() {
+    const lines = note.content.split('\n')
+    setEditTitle(lines[0])
+    setEditBodyInit(lines.slice(1).join('\n'))
+    setEditing(true)
+  }
+
+  function cancelEditing() {
+    setEditing(false)
+  }
+
+  function handleSave() {
+    const bodyText = bodyRef.current?.innerText?.trim() ?? ''
+    const newContent = editTitle.trim()
+      ? (bodyText ? `${editTitle.trim()}\n${bodyText}` : editTitle.trim())
+      : bodyText
+    if (!newContent) return
+    startSave(async () => {
+      const updated = await updateMemoryNote(note.id, newContent)
+      if (updated) {
+        onNoteUpdated(note.id, newContent)
+        setEditing(false)
+      }
+    })
+  }
 
   function commitTag(tag: string) {
     const trimmed = tag.trim().toLowerCase()
@@ -403,6 +516,8 @@ function NoteDetail({
     startTagSave(async () => { await updateMemoryNoteTags(note.id, updated) })
   }
 
+  const displayTitle = noteTitle(note.content)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Breadcrumb bar */}
@@ -411,7 +526,6 @@ function NoteDetail({
         padding: '14px 24px', borderBottom: '1px solid var(--glass-card-border-subtle)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-          {/* Back button — only visible on mobile */}
           <button
             className="capture-back-btn"
             onClick={onBack}
@@ -427,41 +541,76 @@ function NoteDetail({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-3)', overflow: 'hidden', minWidth: 0 }}>
             <span style={{ whiteSpace: 'nowrap' }}>{folderLabel}</span>
             <span>›</span>
-            <span style={{ color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+            <span style={{ color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayTitle}</span>
           </div>
         </div>
-        <div style={{ position: 'relative', flexShrink: 0, marginLeft: '12px' }}>
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            style={{
-              width: '30px', height: '30px', borderRadius: '8px',
-              border: '1px solid var(--border)',
-              background: menuOpen ? 'var(--bg-2)' : 'transparent',
-              color: 'var(--text-2)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '15px', letterSpacing: '2px', lineHeight: 1,
-            }}
-          >
-            ···
-          </button>
-          {menuOpen && (
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
+          {editing ? (
             <>
-              <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-              <div style={{
-                position: 'absolute', right: 0, top: '36px', zIndex: 50,
-                background: 'var(--glass-card-bg-strong)',
-                backdropFilter: 'blur(32px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-                border: '1px solid var(--glass-card-border)',
-                borderRadius: '10px', boxShadow: 'var(--glass-card-shadow-sm)',
-                minWidth: '148px', overflow: 'hidden',
-              }}>
-                <button onClick={() => { setMenuOpen(false); onResolve() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: 'var(--text-1)', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <SmallCheckIcon /> Mark done
+              <button
+                onClick={cancelEditing}
+                disabled={saving}
+                style={{ padding: '5px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{ padding: '5px 14px', borderRadius: '8px', border: 'none', background: 'var(--gold)', color: '#1a1a1a', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={startEditing}
+                title="Edit note"
+                style={{
+                  padding: '5px 14px', borderRadius: '8px', border: '1px solid var(--border)',
+                  background: 'transparent', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                }}
+              >
+                <NavPencilIcon /> Edit
+              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setMenuOpen(o => !o)}
+                  style={{
+                    width: '30px', height: '30px', borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: menuOpen ? 'var(--bg-2)' : 'transparent',
+                    color: 'var(--text-2)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '15px', letterSpacing: '2px', lineHeight: 1,
+                  }}
+                >
+                  ···
                 </button>
-                <button onClick={() => { setMenuOpen(false); onDelete() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: '#e05c4a', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <TrashIcon /> Delete note
-                </button>
+                {menuOpen && (
+                  <>
+                    <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                    <div style={{
+                      position: 'absolute', right: 0, top: '36px', zIndex: 50,
+                      background: 'var(--glass-card-bg-strong)',
+                      backdropFilter: 'blur(32px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+                      border: '1px solid var(--glass-card-border)',
+                      borderRadius: '10px', boxShadow: 'var(--glass-card-shadow-sm)',
+                      minWidth: '148px', overflow: 'hidden',
+                    }}>
+                      <button onClick={() => { setMenuOpen(false); onResolve() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: 'var(--text-1)', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <SmallCheckIcon /> Mark done
+                      </button>
+                      <button onClick={() => { setMenuOpen(false); onDelete() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: '#e05c4a', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <TrashIcon /> Delete note
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -470,9 +619,27 @@ function NoteDetail({
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 28px 48px' }}>
-        <h1 style={{ margin: '0 0 24px', fontSize: '30px', fontFamily: 'var(--font-serif)', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
-          {title}
-        </h1>
+        {editing ? (
+          <input
+            autoFocus
+            value={editTitle}
+            onChange={e => setEditTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); bodyRef.current?.focus() } }}
+            placeholder="Title…"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              margin: '0 0 20px', padding: '0',
+              fontSize: '30px', fontFamily: 'var(--font-serif)', fontWeight: 700,
+              color: 'var(--text-0)', lineHeight: 1.25, letterSpacing: '-0.01em',
+              border: 'none', borderBottom: '2px solid var(--gold)',
+              background: 'transparent', outline: 'none',
+            }}
+          />
+        ) : (
+          <h1 style={{ margin: '0 0 24px', fontSize: '30px', fontFamily: 'var(--font-serif)', fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+            {displayTitle}
+          </h1>
+        )}
 
         {/* Metadata */}
         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px 12px', marginBottom: '20px', fontSize: '13px', alignItems: 'center' }}>
@@ -502,7 +669,6 @@ function NoteDetail({
         {/* Tags — fully interactive */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', paddingBottom: '20px', borderBottom: '1px solid var(--border)', marginBottom: '24px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-3)', minWidth: '36px', flexShrink: 0 }}>Tags</span>
-          {/* Type badge (non-removable) */}
           <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '5px', background: meta.bg, color: meta.color, fontWeight: 600, letterSpacing: '0.04em' }}>
             {meta.label.slice(0, -1)}
           </span>
@@ -544,12 +710,25 @@ function NoteDetail({
           )}
         </div>
 
-        {/* Toolbar — disabled for read-only existing notes */}
-        <EditorToolbar disabled />
+        {/* Toolbar — active only when editing */}
+        <EditorToolbar targetRef={bodyRef} disabled={!editing} />
 
-        {/* Note content */}
-        <div style={{ fontSize: '14.5px', color: 'var(--text-0)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
-          {note.content}
+        {/* Note body */}
+        <div
+          ref={bodyRef}
+          contentEditable={editing}
+          suppressContentEditableWarning
+          style={{
+            fontSize: '14.5px', color: 'var(--text-0)', lineHeight: 1.75,
+            whiteSpace: 'pre-wrap', outline: 'none',
+            minHeight: editing ? '120px' : undefined,
+            borderRadius: editing ? '8px' : undefined,
+            padding: editing ? '10px 12px' : undefined,
+            border: editing ? '1px solid var(--border)' : undefined,
+            background: editing ? 'var(--bg-1)' : undefined,
+          }}
+        >
+          {editing ? undefined : note.content.split('\n').slice(1).join('\n') || note.content}
         </div>
       </div>
     </div>
@@ -882,14 +1061,24 @@ export default function CaptureView({
   const [composerOpen, setComposerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredNotes = notes.filter(n => {
-    if (selectedFolder !== 'all' && n.type !== selectedFolder) return false
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      return n.content.toLowerCase().includes(q) || n.ai_tags.some(t => t.toLowerCase().includes(q))
-    }
-    return true
-  })
+  const today = useMemo(() => getClientToday(), [])
+
+  const filteredNotes = useMemo(() => {
+    const base = notes.filter(n => {
+      if (selectedFolder !== 'all' && n.type !== selectedFolder) return false
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        return n.content.toLowerCase().includes(q) || n.ai_tags.some(t => t.toLowerCase().includes(q))
+      }
+      return true
+    })
+    return base.slice().sort((a, b) => {
+      const ua = urgencySort(a, today)
+      const ub = urgencySort(b, today)
+      if (ua !== ub) return ua - ub
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }, [notes, selectedFolder, searchQuery, today])
 
   const selectedNote = notes.find(n => n.id === selectedNoteId) ?? null
   const folderLabel = selectedFolder === 'all' ? 'My Notes' : TYPE_META[selectedFolder]?.label ?? 'Notes'
@@ -921,6 +1110,10 @@ export default function CaptureView({
 
   function handleTagsUpdated(id: string, tags: string[]) {
     setNotes(prev => prev.map(n => n.id === id ? { ...n, ai_tags: tags } : n))
+  }
+
+  function handleNoteUpdated(id: string, content: string) {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, content } : n))
   }
 
   function handleBack() {
@@ -963,6 +1156,7 @@ export default function CaptureView({
             folderLabel={folderLabel}
             searchQuery={searchQuery}
             onSearch={setSearchQuery}
+            today={today}
           />
         </div>
 
@@ -988,6 +1182,7 @@ export default function CaptureView({
               onDelete={() => handleDelete(selectedNote.id)}
               onBack={handleBack}
               onTagsUpdated={handleTagsUpdated}
+              onNoteUpdated={handleNoteUpdated}
             />
           ) : (
             <EmptyDetail onNewNote={() => setComposerOpen(true)} />
