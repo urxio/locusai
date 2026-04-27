@@ -348,7 +348,14 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
   const doneLast28      = scheduledLast28.filter(d => loggedDates.has(d))
   const progressPct     = scheduledLast28.length > 0 ? Math.round((doneLast28.length / scheduledLast28.length) * 100) : 0
 
-  // Month calendar data
+  // Current month (always fixed to today's month for the inline grid)
+  const todayDateObj = new Date(today + 'T12:00:00')
+  const curYear        = todayDateObj.getFullYear()
+  const curMonth       = todayDateObj.getMonth()
+  const curFirstDow    = new Date(curYear, curMonth, 1).getDay()
+  const curDaysInMonth = new Date(curYear, curMonth + 1, 0).getDate()
+
+  // Month calendar data (for the "Month ▾" dropdown, tracks monthOffset)
   const baseDate = new Date(today + 'T12:00:00')
   baseDate.setDate(1)
   baseDate.setMonth(baseDate.getMonth() + monthOffset)
@@ -462,64 +469,52 @@ function HabitCard({ habit, loggedDates, streak, colorIndex, last28, today, pend
         </div>
       </div>
 
-      {/* ── 28-day contribution grid ── */}
+      {/* ── Current month mini-calendar ── */}
       <div style={{ marginTop: '18px' }}>
-        {/* Day-of-week labels (align to first day in last28) */}
-        {(() => {
-          const firstDow28 = new Date(last28[0] + 'T12:00:00').getDay()
-          const paddingCells = Array.from({ length: firstDow28 })
-          const allCells = [...paddingCells, ...last28]
-          const cols = 7
-          const rows = Math.ceil(allCells.length / cols)
-
-          return (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 12px)', gap: '3px', marginBottom: '3px' }}>
-                {DOW_LABELS.map((d, i) => (
-                  <div key={i} style={{ width: '12px', textAlign: 'center', fontSize: '8px', color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.02em' }}>{d}</div>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 12px)', gap: '3px' }}>
-                {/* Padding cells before first day */}
-                {paddingCells.map((_, i) => (
-                  <div key={`pad-${i}`} style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-                ))}
-                {/* Actual day cells */}
-                {last28.map(date => {
-                  const done      = loggedDates.has(date)
-                  const isToday   = date === today
-                  const scheduled = isScheduledOn(date, habit.days_of_week ?? null)
-                  const pending   = pendingSet.has(`${habit.id}:${date}`)
-                  return (
-                    <div
-                      key={date}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => onToggle(date)}
-                      onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onToggle(date)}
-                      title={`${date} — ${done ? 'logged ✓' : scheduled ? 'not logged' : 'not scheduled'}`}
-                      style={{
-                        width: '12px', height: '12px',
-                        borderRadius: '3px',
-                        border: isToday ? `1.5px solid ${habitColor}` : 'none',
-                        background: done
-                          ? habitColor
-                          : scheduled
-                            ? 'var(--bg-3)'
-                            : 'var(--bg-2)',
-                        cursor: pending ? 'wait' : 'pointer',
-                        opacity: pending ? 0.4 : scheduled ? 1 : 0.25,
-                        transition: 'background 0.15s, opacity 0.15s',
-                        flexShrink: 0,
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  )
-                })}
-              </div>
-            </>
-          )
-        })()}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 12px)', gap: '3px', marginBottom: '3px' }}>
+          {DOW_LABELS.map((d, i) => (
+            <div key={i} style={{ width: '12px', textAlign: 'center', fontSize: '8px', color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.02em' }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 12px)', gap: '3px' }}>
+          {Array.from({ length: curFirstDow }, (_, i) => (
+            <div key={`pad-${i}`} style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+          ))}
+          {Array.from({ length: curDaysInMonth }, (_, i) => {
+            const dayNum  = i + 1
+            const dateStr = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+            const done      = loggedDates.has(dateStr)
+            const isToday   = dateStr === today
+            const isFuture  = dateStr > today
+            const scheduled = isScheduledOn(dateStr, habit.days_of_week ?? null)
+            const pending   = pendingSet.has(`${habit.id}:${dateStr}`)
+            return (
+              <div
+                key={dateStr}
+                role="button"
+                tabIndex={isFuture ? -1 : 0}
+                onClick={() => !isFuture && onToggle(dateStr)}
+                onKeyDown={e => !isFuture && (e.key === 'Enter' || e.key === ' ') && onToggle(dateStr)}
+                title={`${dateStr} — ${done ? 'logged ✓' : scheduled ? 'not logged' : 'not scheduled'}`}
+                style={{
+                  width: '12px', height: '12px',
+                  borderRadius: '3px',
+                  border: isToday ? `1.5px solid ${habitColor}` : 'none',
+                  background: done
+                    ? habitColor
+                    : scheduled && !isFuture
+                      ? 'var(--bg-3)'
+                      : 'var(--bg-2)',
+                  cursor: pending ? 'wait' : isFuture ? 'default' : 'pointer',
+                  opacity: pending ? 0.4 : isFuture ? 0.2 : scheduled ? 1 : 0.25,
+                  transition: 'background 0.15s, opacity 0.15s',
+                  flexShrink: 0,
+                  boxSizing: 'border-box',
+                }}
+              />
+            )
+          })}
+        </div>
       </div>
 
       {/* ── Progress + month toggle ── */}
