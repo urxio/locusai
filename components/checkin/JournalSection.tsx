@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { saveJournalAction } from '@/app/actions/journal'
 import { localDateStr } from '@/lib/utils/date'
 import type { JournalEntry } from '@/lib/types'
@@ -48,6 +48,14 @@ function getWeekDays(todayStr: string, weekOffset = 0): Array<{
 
 // ─── Date sidebar ─────────────────────────────────────────────────────────────
 
+function weekLabel(offset: number): string {
+  if (offset === 0) return 'This week'
+  if (offset === -1) return 'Last week'
+  return `${Math.abs(offset)} weeks ago`
+}
+
+const WEEKS_BACK = 12
+
 function DateSidebar({
   todayStr, selectedDate, recentJournals, tab, setTab, todayJournalHasContent,
   onSelectDate,
@@ -61,10 +69,17 @@ function DateSidebar({
   onSelectDate: (date: string) => void
 }) {
   const journalDates = new Set(recentJournals.filter(j => j.content.trim()).map(j => j.date))
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const todayRowRef = useRef<HTMLButtonElement>(null)
 
-  // Build two weeks of days: this week + last week
-  const thisWeek = getWeekDays(todayStr, 0)
-  const lastWeek = getWeekDays(todayStr, -1)
+  const weeks = Array.from({ length: WEEKS_BACK + 1 }, (_, i) => ({
+    offset: -i,
+    days: getWeekDays(todayStr, -i),
+  }))
+
+  useLayoutEffect(() => {
+    todayRowRef.current?.scrollIntoView({ block: 'center' })
+  }, [])
 
   function DayRow({ dateStr, isToday, isFuture }: { dateStr: string; isToday: boolean; isFuture: boolean }) {
     const isSelected = dateStr === selectedDate
@@ -73,6 +88,7 @@ function DateSidebar({
 
     return (
       <button
+        ref={isToday ? todayRowRef : undefined}
         onClick={() => clickable && onSelectDate(dateStr)}
         disabled={!clickable}
         style={{
@@ -89,7 +105,6 @@ function DateSidebar({
         onMouseEnter={e => { if (clickable && !isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--glass-card-bg)' }}
         onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
       >
-        {/* Day name */}
         <span style={{
           fontSize: '11px', fontWeight: 600, width: '22px', textAlign: 'center', flexShrink: 0,
           color: isSelected ? 'var(--text-0)' : isToday ? 'var(--gold)' : 'var(--text-3)',
@@ -98,7 +113,6 @@ function DateSidebar({
           {formatDayName(dateStr)}
         </span>
 
-        {/* Date */}
         <span style={{
           fontSize: '12.5px', flex: 1, textAlign: 'left',
           color: isSelected ? 'var(--text-0)' : 'var(--text-2)',
@@ -107,7 +121,6 @@ function DateSidebar({
           {isToday ? 'Today' : formatShortDate(dateStr)}
         </span>
 
-        {/* Entry dot */}
         {hasEntry && (
           <span style={{
             width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
@@ -149,30 +162,21 @@ function DateSidebar({
         )}
       </div>
 
-      {/* Date list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 6px', scrollbarWidth: 'none' }}>
-        {/* This week */}
-        <div style={{
-          fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em',
-          textTransform: 'uppercase', color: 'var(--text-3)',
-          padding: '4px 12px 6px', opacity: 0.6,
-        }}>
-          This week
-        </div>
-        {thisWeek.map(day => (
-          <DayRow key={day.dateStr} dateStr={day.dateStr} isToday={day.isToday} isFuture={day.isFuture} />
-        ))}
-
-        {/* Last week */}
-        <div style={{
-          fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em',
-          textTransform: 'uppercase', color: 'var(--text-3)',
-          padding: '14px 12px 6px', opacity: 0.6,
-        }}>
-          Last week
-        </div>
-        {lastWeek.map(day => (
-          <DayRow key={day.dateStr} dateStr={day.dateStr} isToday={false} isFuture={false} />
+      {/* Date list — scrollable */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 6px', scrollbarWidth: 'none' }}>
+        {weeks.map(({ offset, days }) => (
+          <div key={offset}>
+            <div style={{
+              fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: 'var(--text-3)',
+              padding: offset === 0 ? '4px 12px 6px' : '14px 12px 6px', opacity: 0.6,
+            }}>
+              {weekLabel(offset)}
+            </div>
+            {days.map(day => (
+              <DayRow key={day.dateStr} dateStr={day.dateStr} isToday={day.isToday} isFuture={day.isFuture} />
+            ))}
+          </div>
         ))}
       </div>
     </div>
