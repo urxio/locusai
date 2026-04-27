@@ -696,3 +696,31 @@ input[type="range"]::-moz-range-thumb {
   border: none;
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
+
+/* ── CAPTURE PAGE — three-panel note-taking layout ── */
+.capture-left-nav {
+  display: flex;
+}
+
+.capture-note-list {
+  display: flex;
+}
+
+/* Contenteditable placeholder */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .capture-left-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .capture-note-list-hidden-mobile {
+    display: none;
+  }
+}

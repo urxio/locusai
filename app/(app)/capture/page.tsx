@@ -9,7 +9,16 @@ export default async function CapturePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const notes = await getActiveMemoryNotes(user.id)
+  const [notes, { data: profile }] = await Promise.all([
+    getActiveMemoryNotes(user.id),
+    supabase.from('users').select('name, avatar_url').eq('id', user.id).single(),
+  ])
 
-  return <CaptureView initialNotes={notes} />
+  return (
+    <CaptureView
+      initialNotes={notes}
+      userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
+      avatarUrl={profile?.avatar_url ?? null}
+    />
+  )
 }
