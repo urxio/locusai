@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { MemoryNote } from '@/lib/types'
-import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags, updateMemoryNote } from '@/app/actions/memory-notes'
+import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags, updateMemoryNote, updateMemoryNoteType } from '@/app/actions/memory-notes'
 import { useToast } from '@/components/ui/ToastContext'
 
 // ── Type config ───────────────────────────────────────────────────────────────
@@ -523,7 +523,7 @@ function EditorToolbar({ targetRef, disabled }: { targetRef?: React.RefObject<HT
 // ── Note Detail Panel ─────────────────────────────────────────────────────────
 
 function NoteDetail({
-  note, folderLabel, userName, avatarUrl, onResolve, onDelete, onBack, onTagsUpdated, onNoteUpdated,
+  note, folderLabel, userName, avatarUrl, onResolve, onDelete, onBack, onTagsUpdated, onNoteUpdated, onNoteMoved, customFolders,
 }: {
   note: MemoryNote
   folderLabel: string
@@ -534,9 +534,12 @@ function NoteDetail({
   onBack: () => void
   onTagsUpdated: (id: string, tags: string[]) => void
   onNoteUpdated: (id: string, content: string) => void
+  onNoteMoved: (id: string, updates: Partial<Pick<MemoryNote, 'type' | 'ai_tags'>>) => void
+  customFolders: string[]
 }) {
   const meta = TYPE_META[note.type]
   const [menuOpen, setMenuOpen] = useState(false)
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [localTags, setLocalTags] = useState<string[]>(note.ai_tags)
   const [addingTag, setAddingTag] = useState(false)
   const [newTag, setNewTag] = useState('')
@@ -675,7 +678,7 @@ function NoteDetail({
                 </button>
                 {menuOpen && (
                   <>
-                    <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                    <div onClick={() => { setMenuOpen(false); setMoveMenuOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
                     <div style={{
                       position: 'absolute', right: 0, top: '36px', zIndex: 50,
                       background: 'var(--glass-card-bg-strong)',
@@ -683,14 +686,75 @@ function NoteDetail({
                       WebkitBackdropFilter: 'blur(32px) saturate(180%)',
                       border: '1px solid var(--glass-card-border)',
                       borderRadius: '10px', boxShadow: 'var(--glass-card-shadow-sm)',
-                      minWidth: '148px', overflow: 'hidden',
+                      minWidth: '180px', overflow: 'hidden',
                     }}>
-                      <button onClick={() => { setMenuOpen(false); onResolve() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: 'var(--text-1)', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <SmallCheckIcon /> Mark done
-                      </button>
-                      <button onClick={() => { setMenuOpen(false); onDelete() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: '#e05c4a', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <TrashIcon /> Delete note
-                      </button>
+                      {!moveMenuOpen ? (
+                        <>
+                          <button onClick={() => { setMenuOpen(false); onResolve() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: 'var(--text-1)', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <SmallCheckIcon /> Mark done
+                          </button>
+                          <button onClick={() => setMoveMenuOpen(true)} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: 'var(--text-1)', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MoveIcon /> Move to folder</span>
+                            <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>›</span>
+                          </button>
+                          <div style={{ height: '1px', background: 'var(--border)', margin: '2px 0' }} />
+                          <button onClick={() => { setMenuOpen(false); onDelete() }} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: '#e05c4a', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <TrashIcon /> Delete note
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => setMoveMenuOpen(false)} style={{ width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer', fontSize: '12px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid var(--border)' }}>
+                            <ChevronLeftIcon /> Move to…
+                          </button>
+                          {(['reminder', 'idea', 'resource'] as const).map(t => {
+                            const m = TYPE_META[t]
+                            const isCurrent = note.type === t && customFolders.every(f => !note.ai_tags.includes(f))
+                            return (
+                              <button
+                                key={t}
+                                onClick={() => {
+                                  setMenuOpen(false)
+                                  setMoveMenuOpen(false)
+                                  updateMemoryNoteType(note.id, t)
+                                  onNoteMoved(note.id, { type: t })
+                                }}
+                                style={{ width: '100%', padding: '9px 14px', border: 'none', background: isCurrent ? 'var(--bg-2)' : 'transparent', color: isCurrent ? m.color : 'var(--text-1)', cursor: isCurrent ? 'default' : 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+                              >
+                                <span style={{ color: m.color, display: 'flex' }}>{t === 'reminder' ? <NavCheckIcon /> : t === 'idea' ? <NavBulbIcon /> : <NavBookmarkIcon />}</span>
+                                {m.label.slice(0, -1)}
+                                {isCurrent && <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text-3)' }}>current</span>}
+                              </button>
+                            )
+                          })}
+                          {customFolders.length > 0 && (
+                            <>
+                              <div style={{ height: '1px', background: 'var(--border)', margin: '2px 0' }} />
+                              {customFolders.map(f => {
+                                const inFolder = note.ai_tags.includes(f)
+                                return (
+                                  <button
+                                    key={f}
+                                    onClick={() => {
+                                      if (inFolder) return
+                                      setMenuOpen(false)
+                                      setMoveMenuOpen(false)
+                                      const newTags = [...new Set([...note.ai_tags, f])]
+                                      updateMemoryNoteTags(note.id, newTags)
+                                      onNoteMoved(note.id, { ai_tags: newTags })
+                                    }}
+                                    style={{ width: '100%', padding: '9px 14px', border: 'none', background: inFolder ? 'var(--bg-2)' : 'transparent', color: inFolder ? 'var(--text-3)' : 'var(--text-1)', cursor: inFolder ? 'default' : 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}
+                                  >
+                                    <span style={{ color: 'var(--text-3)', display: 'flex', flexShrink: 0 }}><FolderIcon /></span>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f}</span>
+                                    {inFolder && <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text-3)', flexShrink: 0 }}>current</span>}
+                                  </button>
+                                )
+                              })}
+                            </>
+                          )}
+                        </>
+                      )}
                     </div>
                   </>
                 )}
@@ -1209,6 +1273,10 @@ export default function CaptureView({
     setNotes(prev => prev.map(n => n.id === id ? { ...n, content } : n))
   }
 
+  function handleNoteMoved(id: string, updates: Partial<Pick<MemoryNote, 'type' | 'ai_tags'>>) {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n))
+  }
+
   function handleBack() {
     setSelectedNoteId(null)
     setComposerOpen(false)
@@ -1279,6 +1347,8 @@ export default function CaptureView({
               onBack={handleBack}
               onTagsUpdated={handleTagsUpdated}
               onNoteUpdated={handleNoteUpdated}
+              onNoteMoved={handleNoteMoved}
+              customFolders={customFolders}
             />
           ) : (
             <EmptyDetail onNewNote={() => setComposerOpen(true)} />
@@ -1293,6 +1363,9 @@ export default function CaptureView({
 
 function FolderIcon() {
   return <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4.5A1.5 1.5 0 013.5 3h3l1.5 2H13a1.5 1.5 0 011.5 1.5v5A1.5 1.5 0 0113 13H3a1.5 1.5 0 01-1.5-1.5v-7z"/></svg>
+}
+function MoveIcon() {
+  return <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M1 3.5A1.5 1.5 0 012.5 2h2.7l1.3 1.8H11A1.5 1.5 0 0112.5 5v5A1.5 1.5 0 0111 11.5H3A1.5 1.5 0 011.5 10V3.5z"/><path d="M5 7h4M7 5l2 2-2 2"/></svg>
 }
 function NavNotesIcon() {
   return <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="12" height="13" rx="2"/><path d="M5 6h6M5 9h4"/></svg>
