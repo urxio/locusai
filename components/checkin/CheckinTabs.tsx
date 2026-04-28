@@ -17,10 +17,11 @@ type Props = {
   memory?:         UserMemory | null
   hasBrief?:       boolean
   pastBriefs?:     Brief[]
+  initialTab?:     Tab
 }
 
-export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false, pastBriefs = [] }: Props) {
-  const [tab, setTab] = useState<Tab>('checkin')
+export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false, pastBriefs = [], initialTab = 'checkin' }: Props) {
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [briefReady, setBriefReady] = useState(hasBrief || !!existingCheckin)
 
   return (

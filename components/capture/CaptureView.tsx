@@ -2,6 +2,7 @@
 
 import { useState, useRef, useTransition, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { MemoryNote } from '@/lib/types'
 import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags, updateMemoryNote } from '@/app/actions/memory-notes'
 import { useToast } from '@/components/ui/ToastContext'
@@ -87,12 +88,13 @@ function LeftNav({
   searchQuery: string
   onSearch: (q: string) => void
 }) {
+  const router = useRouter()
   const navItems: { id: Folder | 'journal'; label: string; icon: React.ReactNode; href?: string }[] = [
     { id: 'all',      label: 'My Notes',    icon: <NavNotesIcon /> },
     { id: 'reminder', label: 'Reminders',   icon: <NavCheckIcon /> },
     { id: 'idea',     label: 'Ideas',       icon: <NavBulbIcon /> },
     { id: 'resource', label: 'Resources',   icon: <NavBookmarkIcon /> },
-    { id: 'journal',  label: 'Journal',     icon: <NavPencilIcon />, href: '/journal' },
+    { id: 'journal',  label: 'Journal',     icon: <NavPencilIcon />, href: '/checkin?tab=journal' },
   ]
 
   return (
@@ -139,10 +141,10 @@ function LeftNav({
         {navItems.map(item => {
           const isActive = folder === item.id
           const count = noteCounts[item.id] ?? 0
-          const btn = (
+          return (
             <button
               key={item.id}
-              onClick={() => !item.href && onFolder(item.id as Folder)}
+              onClick={() => item.href ? router.push(item.href) : onFolder(item.id as Folder)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
                 padding: '9px 10px', borderRadius: '8px', border: 'none',
@@ -161,13 +163,9 @@ function LeftNav({
                   {count}
                 </span>
               )}
-              {/* ··· is purely decorative — clicking anywhere on the row changes folder */}
               <span style={{ fontSize: '12px', color: 'var(--text-3)', opacity: 0.4, letterSpacing: '2px', lineHeight: 1, flexShrink: 0 }}>···</span>
             </button>
           )
-          return item.href
-            ? <Link key={item.id} href={item.href} style={{ textDecoration: 'none' }}>{btn}</Link>
-            : btn
         })}
       </div>
 
