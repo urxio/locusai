@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useTransition, useMemo, useEffect } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { MemoryNote } from '@/lib/types'
 import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags, updateMemoryNote } from '@/app/actions/memory-notes'
@@ -15,7 +14,7 @@ const TYPE_META = {
   resource: { label: 'Resources', color: '#8a90b4', bg: 'rgba(138,144,180,0.12)', icon: <BookmarkNavIcon /> },
 }
 
-type Folder = 'all' | 'reminder' | 'idea' | 'resource'
+type Folder = 'all' | 'reminder' | 'idea' | 'resource' | (string & {})
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -78,7 +77,7 @@ function urgencySort(note: MemoryNote, today: string): number {
 // ── Left Nav Panel ────────────────────────────────────────────────────────────
 
 function LeftNav({
-  folder, onFolder, userName, avatarUrl, noteCounts, searchQuery, onSearch,
+  folder, onFolder, userName, avatarUrl, noteCounts, searchQuery, onSearch, customFolders, onAddFolder, onRemoveFolder,
 }: {
   folder: Folder
   onFolder: (f: Folder) => void
@@ -87,9 +86,22 @@ function LeftNav({
   noteCounts: Record<string, number>
   searchQuery: string
   onSearch: (q: string) => void
+  customFolders: string[]
+  onAddFolder: (name: string) => void
+  onRemoveFolder: (name: string) => void
 }) {
   const router = useRouter()
-  const navItems: { id: Folder | 'journal'; label: string; icon: React.ReactNode; href?: string }[] = [
+  const [addingFolder, setAddingFolder] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+
+  function commitFolder() {
+    const name = newFolderName.trim()
+    if (name && !customFolders.includes(name)) onAddFolder(name)
+    setNewFolderName('')
+    setAddingFolder(false)
+  }
+
+  const navItems: { id: string; label: string; icon: React.ReactNode; href?: string }[] = [
     { id: 'all',      label: 'My Notes',    icon: <NavNotesIcon /> },
     { id: 'reminder', label: 'Reminders',   icon: <NavCheckIcon /> },
     { id: 'idea',     label: 'Ideas',       icon: <NavBulbIcon /> },
@@ -144,7 +156,7 @@ function LeftNav({
           return (
             <button
               key={item.id}
-              onClick={() => item.href ? router.push(item.href) : onFolder(item.id as Folder)}
+              onClick={() => item.href ? router.push(item.href) : onFolder(item.id)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
                 padding: '9px 10px', borderRadius: '8px', border: 'none',
@@ -167,20 +179,93 @@ function LeftNav({
             </button>
           )
         })}
+
+        {/* Custom tag folders */}
+        {customFolders.map(name => {
+          const isActive = folder === name
+          const count = noteCounts[name] ?? 0
+          return (
+            <div key={name} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <button
+                onClick={() => onFolder(name)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: '9px',
+                  padding: '9px 10px', borderRadius: '8px', border: 'none',
+                  background: isActive ? 'var(--bg-2)' : 'transparent',
+                  color: isActive ? 'var(--text-0)' : 'var(--text-2)',
+                  cursor: 'pointer', fontSize: '13px', fontWeight: isActive ? 600 : 400,
+                  textAlign: 'left', transition: 'background 0.12s',
+                }}
+              >
+                <span style={{ color: isActive ? 'var(--gold)' : 'var(--text-3)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <FolderIcon />
+                </span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                {count > 0 && (
+                  <span style={{ fontSize: '10px', color: 'var(--text-3)', background: 'var(--bg-3)', borderRadius: '10px', padding: '1px 6px', flexShrink: 0 }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => onRemoveFolder(name)}
+                title="Remove folder"
+                style={{
+                  position: 'absolute', right: '6px',
+                  width: '18px', height: '18px', borderRadius: '4px', border: 'none',
+                  background: 'transparent', color: 'var(--text-3)',
+                  cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  opacity: 0, transition: 'opacity 0.1s',
+                }}
+                className="folder-remove-btn"
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
+
+        {/* Inline new folder input */}
+        {addingFolder && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}>
+            <span style={{ color: 'var(--text-3)', display: 'flex', flexShrink: 0 }}><FolderIcon /></span>
+            <input
+              autoFocus
+              value={newFolderName}
+              onChange={e => setNewFolderName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitFolder() }
+                if (e.key === 'Escape') { setNewFolderName(''); setAddingFolder(false) }
+              }}
+              onBlur={commitFolder}
+              placeholder="Folder name…"
+              style={{
+                flex: 1, fontSize: '13px', padding: '5px 8px', borderRadius: '6px',
+                border: '1px solid var(--gold)', background: 'transparent',
+                color: 'var(--text-0)', outline: 'none', fontFamily: 'var(--font-sans)',
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div style={{ flex: 1 }} />
 
       {/* Bottom actions */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <button style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '9px 10px', border: 'none', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer', borderRadius: '8px', fontSize: '13px', width: '100%', textAlign: 'left' }}>
+        <button
+          onClick={() => setAddingFolder(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '9px 10px', border: 'none', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer', borderRadius: '8px', fontSize: '13px', width: '100%', textAlign: 'left' }}
+        >
           <PlusSmallIcon /> Add new folder
         </button>
-        <Link href="/settings" style={{ textDecoration: 'none' }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '9px 10px', border: 'none', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer', borderRadius: '8px', fontSize: '13px', width: '100%', textAlign: 'left' }}>
-            <GearIcon /> Settings
-          </button>
-        </Link>
+        <button
+          onClick={() => router.push('/settings')}
+          style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '9px 10px', border: 'none', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer', borderRadius: '8px', fontSize: '13px', width: '100%', textAlign: 'left' }}
+        >
+          <GearIcon /> Settings
+        </button>
       </div>
     </div>
   )
@@ -1055,15 +1140,22 @@ export default function CaptureView({
 }) {
   const [notes, setNotes] = useState<MemoryNote[]>(initialNotes)
   const [selectedFolder, setSelectedFolder] = useState<Folder>('all')
+  const [customFolders, setCustomFolders] = useState<string[]>([])
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
   const today = useMemo(() => getClientToday(), [])
 
+  const builtinFolders = new Set(['all', 'reminder', 'idea', 'resource'])
+
   const filteredNotes = useMemo(() => {
     const base = notes.filter(n => {
-      if (selectedFolder !== 'all' && n.type !== selectedFolder) return false
+      if (builtinFolders.has(selectedFolder)) {
+        if (selectedFolder !== 'all' && n.type !== selectedFolder) return false
+      } else {
+        if (!n.ai_tags.some(t => t.toLowerCase() === selectedFolder.toLowerCase())) return false
+      }
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         return n.content.toLowerCase().includes(q) || n.ai_tags.some(t => t.toLowerCase().includes(q))
@@ -1079,13 +1171,16 @@ export default function CaptureView({
   }, [notes, selectedFolder, searchQuery, today])
 
   const selectedNote = notes.find(n => n.id === selectedNoteId) ?? null
-  const folderLabel = selectedFolder === 'all' ? 'My Notes' : TYPE_META[selectedFolder]?.label ?? 'Notes'
+  const folderLabel = selectedFolder === 'all'
+    ? 'My Notes'
+    : TYPE_META[selectedFolder as 'reminder' | 'idea' | 'resource']?.label ?? selectedFolder
 
-  const noteCounts = {
+  const noteCounts: Record<string, number> = {
     all: notes.length,
     reminder: notes.filter(n => n.type === 'reminder').length,
     idea:     notes.filter(n => n.type === 'idea').length,
     resource: notes.filter(n => n.type === 'resource').length,
+    ...Object.fromEntries(customFolders.map(f => [f, notes.filter(n => n.ai_tags.some(t => t.toLowerCase() === f.toLowerCase())).length])),
   }
 
   function handleAdded(note: MemoryNote) {
@@ -1140,6 +1235,9 @@ export default function CaptureView({
             noteCounts={noteCounts}
             searchQuery={searchQuery}
             onSearch={setSearchQuery}
+            customFolders={customFolders}
+            onAddFolder={name => { setCustomFolders(prev => [...prev, name]); setSelectedFolder(name); setSelectedNoteId(null); setComposerOpen(false) }}
+            onRemoveFolder={name => { setCustomFolders(prev => prev.filter(f => f !== name)); if (selectedFolder === name) setSelectedFolder('all') }}
           />
         </div>
 
@@ -1193,6 +1291,9 @@ export default function CaptureView({
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
+function FolderIcon() {
+  return <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4.5A1.5 1.5 0 013.5 3h3l1.5 2H13a1.5 1.5 0 011.5 1.5v5A1.5 1.5 0 0113 13H3a1.5 1.5 0 01-1.5-1.5v-7z"/></svg>
+}
 function NavNotesIcon() {
   return <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="12" height="13" rx="2"/><path d="M5 6h6M5 9h4"/></svg>
 }
