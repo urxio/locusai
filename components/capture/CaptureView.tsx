@@ -1204,10 +1204,17 @@ export default function CaptureView({
 }) {
   const [notes, setNotes] = useState<MemoryNote[]>(initialNotes)
   const [selectedFolder, setSelectedFolder] = useState<Folder>('all')
-  const [customFolders, setCustomFolders] = useState<string[]>([])
+  const [customFolders, setCustomFolders] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try { return JSON.parse(localStorage.getItem('capture-custom-folders') ?? '[]') } catch { return [] }
+  })
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem('capture-custom-folders', JSON.stringify(customFolders))
+  }, [customFolders])
 
   const today = useMemo(() => getClientToday(), [])
 
