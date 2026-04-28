@@ -4,6 +4,7 @@ import { useState, useRef, useTransition, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { MemoryNote } from '@/lib/types'
 import { createMemoryNote, resolveMemoryNote, deleteMemoryNote, updateMemoryNoteTags, updateMemoryNote, updateMemoryNoteType } from '@/app/actions/memory-notes'
+import { updateCaptureFolders } from '@/app/actions/capture-folders'
 import { useToast } from '@/components/ui/ToastContext'
 
 // ── Type config ───────────────────────────────────────────────────────────────
@@ -1196,25 +1197,24 @@ function EmptyDetail({ onNewNote }: { onNewNote: () => void }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function CaptureView({
-  initialNotes, userName, avatarUrl,
+  initialNotes, userName, avatarUrl, initialFolders = [],
 }: {
   initialNotes: MemoryNote[]
   userName: string
   avatarUrl: string | null
+  initialFolders?: string[]
 }) {
   const [notes, setNotes] = useState<MemoryNote[]>(initialNotes)
   const [selectedFolder, setSelectedFolder] = useState<Folder>('all')
-  const [customFolders, setCustomFolders] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return []
-    try { return JSON.parse(localStorage.getItem('capture-custom-folders') ?? '[]') } catch { return [] }
-  })
+  const [customFolders, setCustomFolders] = useState<string[]>(initialFolders)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    localStorage.setItem('capture-custom-folders', JSON.stringify(customFolders))
-  }, [customFolders])
+  function persistFolders(folders: string[]) {
+    setCustomFolders(folders)
+    updateCaptureFolders(folders)
+  }
 
   const today = useMemo(() => getClientToday(), [])
 
@@ -1311,8 +1311,8 @@ export default function CaptureView({
             searchQuery={searchQuery}
             onSearch={setSearchQuery}
             customFolders={customFolders}
-            onAddFolder={name => { setCustomFolders(prev => [...prev, name]); setSelectedFolder(name); setSelectedNoteId(null); setComposerOpen(false) }}
-            onRemoveFolder={name => { setCustomFolders(prev => prev.filter(f => f !== name)); if (selectedFolder === name) setSelectedFolder('all') }}
+            onAddFolder={name => { const next = [...customFolders, name]; persistFolders(next); setSelectedFolder(name); setSelectedNoteId(null); setComposerOpen(false) }}
+            onRemoveFolder={name => { const next = customFolders.filter(f => f !== name); persistFolders(next); if (selectedFolder === name) setSelectedFolder('all') }}
           />
         </div>
 
