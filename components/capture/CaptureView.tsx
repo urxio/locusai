@@ -78,7 +78,7 @@ function urgencySort(note: MemoryNote, today: string): number {
 // ── Left Nav Panel ────────────────────────────────────────────────────────────
 
 function LeftNav({
-  folder, onFolder, userName, avatarUrl, noteCounts, searchQuery, onSearch, customFolders, onAddFolder, onRemoveFolder,
+  folder, onFolder, userName, avatarUrl, noteCounts, searchQuery, onSearch, customFolders, onAddFolder, onRemoveFolder, allTags,
 }: {
   folder: Folder
   onFolder: (f: Folder) => void
@@ -90,6 +90,7 @@ function LeftNav({
   customFolders: string[]
   onAddFolder: (name: string) => void
   onRemoveFolder: (name: string) => void
+  allTags: { name: string; count: number }[]
 }) {
   const router = useRouter()
   const [addingFolder, setAddingFolder] = useState(false)
@@ -250,6 +251,50 @@ function LeftNav({
           </div>
         )}
       </div>
+
+      {/* Tags section */}
+      {allTags.length > 0 && (
+        <div style={{ marginTop: '20px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '0 10px 8px',
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: 'var(--text-3)',
+          }}>
+            <TagIcon /> Tags
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', padding: '0 6px' }}>
+            {allTags.map(({ name, count }) => {
+              const isActive = folder === name
+              return (
+                <button
+                  key={name}
+                  onClick={() => onFolder(isActive ? 'all' : name)}
+                  title={`${count} note${count !== 1 ? 's' : ''}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    padding: '3px 9px', borderRadius: '20px', border: 'none',
+                    fontSize: '11.5px', fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer', transition: 'all 0.12s',
+                    background: isActive ? 'var(--gold)' : 'var(--bg-2)',
+                    color: isActive ? '#1a1a1a' : 'var(--text-2)',
+                    boxShadow: isActive ? '0 1px 4px rgba(212,168,83,0.3)' : 'none',
+                  }}
+                >
+                  {name}
+                  <span style={{
+                    fontSize: '10px',
+                    color: isActive ? 'rgba(26,26,26,0.6)' : 'var(--text-3)',
+                    fontWeight: 400,
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ flex: 1 }} />
 
@@ -1220,6 +1265,14 @@ export default function CaptureView({
 
   const builtinFolders = new Set(['all', 'reminder', 'idea', 'resource'])
 
+  const allTags = useMemo(() => {
+    const counts: Record<string, number> = {}
+    notes.forEach(n => n.ai_tags.forEach(t => { counts[t] = (counts[t] ?? 0) + 1 }))
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+  }, [notes])
+
   const filteredNotes = useMemo(() => {
     const base = notes.filter(n => {
       if (builtinFolders.has(selectedFolder)) {
@@ -1313,6 +1366,7 @@ export default function CaptureView({
             customFolders={customFolders}
             onAddFolder={name => { const next = [...customFolders, name]; persistFolders(next); setSelectedFolder(name); setSelectedNoteId(null); setComposerOpen(false) }}
             onRemoveFolder={name => { const next = customFolders.filter(f => f !== name); persistFolders(next); if (selectedFolder === name) setSelectedFolder('all') }}
+            allTags={allTags}
           />
         </div>
 
@@ -1373,6 +1427,9 @@ function FolderIcon() {
 }
 function MoveIcon() {
   return <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M1 3.5A1.5 1.5 0 012.5 2h2.7l1.3 1.8H11A1.5 1.5 0 0112.5 5v5A1.5 1.5 0 0111 11.5H3A1.5 1.5 0 011.5 10V3.5z"/><path d="M5 7h4M7 5l2 2-2 2"/></svg>
+}
+function TagIcon() {
+  return <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M1.5 1.5h5l5.5 5.5a1.4 1.4 0 010 2L9 12a1.4 1.4 0 01-2 0L1.5 6.5v-5z"/><circle cx="4.5" cy="4.5" r="1" fill="currentColor" stroke="none"/></svg>
 }
 function NavNotesIcon() {
   return <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="12" height="13" rx="2"/><path d="M5 6h6M5 9h4"/></svg>
