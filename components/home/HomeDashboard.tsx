@@ -3,30 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import ThemeToggle from '@/components/layout/ThemeToggle'
 import type { Goal, CheckIn, HabitWithLogs, Brief, MemoryNote } from '@/lib/types'
 
 /* ── Helpers ─────────────────────────────────────────── */
-
-function getGreeting(hour: number): string {
-  if (hour < 12) return 'Good Morning'
-  if (hour < 17) return 'Good Afternoon'
-  return 'Good Evening'
-}
-
-function getWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-}
-
-function getSeason(month: number): string {
-  if (month < 3 || month === 11) return 'Winter'
-  if (month < 6) return 'Spring'
-  if (month < 9) return 'Summer'
-  return 'Autumn'
-}
 
 function formatDate(date: Date): { dayName: string; month: string; day: number } {
   return {
@@ -359,9 +338,6 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName,
   useEffect(() => { setNow(new Date()) }, [])
 
   const hour      = now.getHours()
-  const greeting  = getGreeting(hour)
-  const week      = getWeekNumber(now)
-  const season    = getSeason(now.getMonth())
   const { dayName, month, day } = formatDate(now)
 
   /* ── Live stats (seeded from SSR props instantly) ── */
@@ -469,45 +445,6 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName,
 
   return (
     <div className="page-pad home-dashboard" style={{ maxWidth: '900px', width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
-
-      {/* ── Header ── */}
-      <header style={{
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-        marginBottom: '28px', gap: '16px',
-        animation: 'fadeUp 0.35s var(--ease) both',
-      }}>
-        <div>
-          <div style={{
-            fontSize: '10px', fontWeight: 700,
-            color: 'var(--text-3)', letterSpacing: '0.18em',
-            textTransform: 'uppercase', marginBottom: '5px',
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
-            <span>{greeting}</span>
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span>Today</span>
-          </div>
-          <h1 style={{
-            fontSize: 'clamp(28px, 5vw, 42px)',
-            fontWeight: 700, letterSpacing: '-0.03em',
-            color: 'var(--text-0)', lineHeight: 1.05, margin: 0,
-          }}>
-            {dayName}, {month} {day}
-          </h1>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>
-              Week {week}
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>
-              {season} · Clear sky
-            </div>
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
 
       {/* ── Pulse card ── */}
       <div
