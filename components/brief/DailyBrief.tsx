@@ -281,7 +281,7 @@ export default function DailyBrief({
           {brief?.insight_text ? (
             <p
               className="font-serif-display"
-              style={{ fontSize: '18px', lineHeight: 1.75, color: 'var(--ink-500)', fontWeight: 400, margin: 0, whiteSpace: 'pre-wrap' }}
+              style={{ fontSize: '20px', lineHeight: 1.8, color: 'var(--ink-900)', fontWeight: 400, margin: 0, whiteSpace: 'pre-wrap' }}
             >
               {renderMessage(brief.insight_text)}
             </p>
@@ -308,7 +308,7 @@ export default function DailyBrief({
               </div>
               <p
                 className="font-serif-display"
-                style={{ fontSize: '18px', lineHeight: 1.75, color: 'var(--ink-400)', fontStyle: 'italic', margin: 0 }}
+                style={{ fontSize: '20px', lineHeight: 1.8, color: 'var(--ink-500)', fontStyle: 'italic', margin: 0 }}
               >
                 {greeting}{userName ? `, ${userName.split(' ')[0]}` : ''}. Your morning message is on its way.
               </p>
