@@ -343,7 +343,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
   ]
 
   return (
-    <div className="page-pad home-dashboard" style={{ maxWidth: '900px' }}>
+    <div className="page-pad home-dashboard" style={{ maxWidth: '900px', width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
 
       {/* ── Header ── */}
       <header style={{
