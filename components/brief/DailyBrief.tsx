@@ -13,6 +13,7 @@ type Props = {
   avgEnergy: number | null
   habits: HabitWithLogs[]
   brief?: Brief | null
+  recentBriefs?: Brief[]
   memory?: UserMemory | null
   todayDate?: string
   yesterday?: string
@@ -25,6 +26,15 @@ type Props = {
 function browserDate() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function friendlyDate(dateStr: string): string {
+  const today = new Date()
+  const d = new Date(dateStr + 'T12:00:00')
+  const diffDays = Math.round((today.getTime() - d.getTime()) / 86400000)
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays <= 6) return d.toLocaleDateString('en-US', { weekday: 'long' })
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function renderMessage(text: string) {
@@ -90,19 +100,94 @@ function ActionRow({
   )
 }
 
+function MailboxEntry({ brief, isFirst }: { brief: Brief; isFirst: boolean }) {
+  const [open, setOpen] = useState(false)
+  const preview = brief.insight_text?.replace(/\*\*/g, '').slice(0, 90) + '…'
+
+  return (
+    <div
+      style={{
+        borderRadius: '12px',
+        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgba(255,255,255,0.025)',
+        overflow: 'hidden',
+        transition: 'border-color 0.15s',
+      }}
+    >
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+          padding: '12px 14px', background: 'none', border: 'none',
+          cursor: 'pointer', color: 'inherit', textAlign: 'left',
+        }}
+      >
+        {/* Envelope dot */}
+        <div style={{
+          width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+          background: isFirst ? 'var(--sage)' : 'rgba(255,255,255,0.20)',
+        }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-400)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            {friendlyDate(brief.brief_date)}
+          </div>
+          {!open && (
+            <div style={{ fontSize: '13px', color: 'var(--ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {preview}
+            </div>
+          )}
+        </div>
+        <svg
+          viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" width="12" height="12"
+          style={{ color: 'var(--ink-400)', flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        >
+          <path d="M3 6l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 14px 14px 34px' }}>
+          <p
+            className="font-serif-display"
+            style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--ink-500)', margin: 0, whiteSpace: 'pre-wrap' }}
+          >
+            {renderMessage(brief.insight_text)}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DailyBrief({
-  goals, checkin, avgEnergy, habits, brief, todayDate, yesterday = '', userName, missedYesterday = [],
+  goals, checkin, habits, brief, recentBriefs = [], todayDate, userName, missedYesterday = [],
 }: Props) {
   const router = useRouter()
   const now = new Date()
   const today = todayDate || browserDate()
 
+  const [isGenerating, setIsGenerating] = useState(false)
   const [doneMap, setDoneMap] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {}
     habits.forEach(h => { map[h.id] = h.logs.some(l => l.logged_date === today) })
     return map
   })
   const [, startTransition] = useTransition()
+
+  // Auto-generate a brief if none exists yet today
+  useEffect(() => {
+    if (!brief && !isGenerating) {
+      setIsGenerating(true)
+      fetch('/api/brief/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: false }),
+      })
+        .then(() => router.refresh())
+        .catch(() => setIsGenerating(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function toggleHabit(habitId: string) {
     const wasDone = doneMap[habitId] ?? false
@@ -191,37 +276,42 @@ export default function DailyBrief({
       {/* ── Scrollable body ── */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', minHeight: 0 }}>
 
-        {/* ── Morning Message ── */}
+        {/* ── Today's message ── */}
         <div style={{ padding: '4px 2px' }}>
           {brief?.insight_text ? (
             <p
               className="font-serif-display"
-              style={{
-                fontSize: '18px',
-                lineHeight: 1.75,
-                color: 'var(--ink-500)',
-                fontWeight: 400,
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-              }}
+              style={{ fontSize: '18px', lineHeight: 1.75, color: 'var(--ink-500)', fontWeight: 400, margin: 0, whiteSpace: 'pre-wrap' }}
             >
               {renderMessage(brief.insight_text)}
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Typing indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                  {[0, 1, 2].map(i => (
+                    <span
+                      key={i}
+                      style={{
+                        width: '7px', height: '7px', borderRadius: '50%',
+                        background: 'var(--sage)',
+                        opacity: 0.5,
+                        animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <span style={{ fontSize: '13px', color: 'var(--ink-400)' }}>
+                  {isGenerating ? 'Locus is writing your message…' : 'Preparing your message…'}
+                </span>
+              </div>
               <p
                 className="font-serif-display"
-                style={{ fontSize: '18px', lineHeight: 1.75, color: 'var(--ink-500)', fontStyle: 'italic', margin: 0 }}
+                style={{ fontSize: '18px', lineHeight: 1.75, color: 'var(--ink-400)', fontStyle: 'italic', margin: 0 }}
               >
-                {checkin
-                  ? 'Your morning message is being prepared…'
-                  : `${greeting}${userName ? `, ${userName.split(' ')[0]}` : ''}. Check in to unlock your personalized message for today.`}
+                {greeting}{userName ? `, ${userName.split(' ')[0]}` : ''}. Your morning message is on its way.
               </p>
-              {!checkin && (
-                <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>
-                  Locus will write you a personal note once it knows how you&apos;re feeling.
-                </span>
-              )}
             </div>
           )}
         </div>
@@ -232,7 +322,6 @@ export default function DailyBrief({
         {/* ── Action rows ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-          {/* Habits */}
           {scheduledToday.length > 0 && (
             <ActionRow
               href="/habits"
@@ -255,7 +344,6 @@ export default function DailyBrief({
             />
           )}
 
-          {/* Top goal */}
           {topGoal && (
             <ActionRow
               href="/goals"
@@ -270,7 +358,6 @@ export default function DailyBrief({
             />
           )}
 
-          {/* Missed yesterday */}
           {missedYesterday.length > 0 && (
             <ActionRow
               href="/checkin"
@@ -285,7 +372,6 @@ export default function DailyBrief({
             />
           )}
 
-          {/* Check in */}
           {!checkin && (
             <ActionRow
               href="/checkin"
@@ -296,12 +382,11 @@ export default function DailyBrief({
                   <circle cx="10" cy="10" r="7" />
                 </svg>
               }
-              label="Ready to start your day?"
-              sublabel="Log your energy and unlock your morning message"
+              label="Log how you're feeling"
+              sublabel="Let Locus know your energy to update today's message"
             />
           )}
 
-          {/* No goals yet */}
           {activeGoals.length === 0 && (
             <ActionRow
               href="/goals"
@@ -315,7 +400,6 @@ export default function DailyBrief({
             />
           )}
 
-          {/* No habits yet */}
           {habits.length === 0 && (
             <ActionRow
               href="/habits"
@@ -328,8 +412,30 @@ export default function DailyBrief({
               sublabel="Small daily actions compound into big results"
             />
           )}
-
         </div>
+
+        {/* ── Mailbox ── */}
+        {recentBriefs.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13"
+                style={{ color: 'var(--ink-400)', flexShrink: 0 }}>
+                <path d="M2 6l8 5 8-5" strokeLinecap="round" />
+                <rect x="2" y="4" width="16" height="12" rx="2" />
+              </svg>
+              <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.16em', color: 'var(--ink-400)' }}>
+                Previous messages
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {recentBriefs.map((b, i) => (
+                <MailboxEntry key={b.id} brief={b} isFirst={i === 0} />
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )

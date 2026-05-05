@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveGoals, getActiveGoalsWithSteps } from '@/lib/db/goals'
 import { getTodayCheckin, getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
-import { getTodayBrief } from '@/lib/db/briefs'
+import { getTodayBrief, getRecentBriefs } from '@/lib/db/briefs'
 import { readUserMemory } from '@/lib/ai/memory'
 import { getUserLocalDate } from '@/lib/db/users'
 import DailyBrief from '@/components/brief/DailyBrief'
@@ -20,13 +20,14 @@ async function BriefContent() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [goals, goalsWithSteps, checkin, recentCheckins, habits, brief, memory, todayDate, profile] = await Promise.all([
+  const [goals, goalsWithSteps, checkin, recentCheckins, habits, brief, recentBriefs, memory, todayDate, profile] = await Promise.all([
     getActiveGoals(user.id),
     getActiveGoalsWithSteps(user.id),
     getTodayCheckin(user.id),
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
     getTodayBrief(user.id),
+    getRecentBriefs(user.id, 10),
     readUserMemory(user.id),
     getUserLocalDate(user.id),
     // cover_url only — safest query that always works
@@ -89,6 +90,7 @@ async function BriefContent() {
       avgEnergy={avgEnergy}
       habits={habits}
       brief={brief}
+      recentBriefs={recentBriefs}
       memory={memory}
       todayDate={todayDate}
       yesterday={yesterday}
