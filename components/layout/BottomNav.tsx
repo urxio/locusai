@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
+  { href: '/',         label: 'Home',     icon: <HomeIcon /> },
   { href: '/checkin',  label: 'Check-in', icon: <CheckinIcon /> },
   { href: '/habits',   label: 'Habits',   icon: <HabitsIcon /> },
   { href: '/capture',  label: 'Capture',  icon: <CaptureIcon /> },
@@ -49,6 +50,15 @@ export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?:
 }
 
 function label(item: { label: string }) { return item.label }
+
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20">
+      <path d="M3 10l7-7 7 7v7H3z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20v-6h4v6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 function CheckinIcon() {
   return (
