@@ -3,15 +3,9 @@ import { getTodayCheckin, getRecentCheckins } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getActiveGoals } from '@/lib/db/goals'
 import { getUserLocalDate } from '@/lib/db/users'
+import { moodWord } from '@/lib/utils/mood'
 
 export const dynamic = 'force-dynamic'
-
-function moodWord(note: string | null): string {
-  if (!note) return '—'
-  const cleaned = note.replace(/^(feeling|i('m| am|feel)\s+)/i, '').trim()
-  const words   = cleaned.split(/[\s,;.]+/).filter(Boolean)
-  return words.slice(0, 2).join(' ') || '—'
-}
 
 export async function GET() {
   const supabase = await createClient()

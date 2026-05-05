@@ -46,13 +46,6 @@ function isHabitOnDay(habit: HabitWithLogs, dow: number): boolean {
   return habit.days_of_week.includes(dow)
 }
 
-function getMondayDow(weekStartStr: string): number {
-  // weekStart is always Monday, so day offset 0 = Mon = DOW 1
-  // We display DOW 1..7 (Mon..Sun) for the 7 columns
-  // Column index 0 → Monday (DOW 1), ... 6 → Sunday (DOW 0)
-  return 0 // unused — we compute by column index
-}
-
 // Column index (0-6) to day of week number (0=Sun…6=Sat)
 // Week starts Monday, so col 0 = Monday (1), col 6 = Sunday (0)
 function colToDow(col: number): number {

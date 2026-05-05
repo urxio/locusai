@@ -39,6 +39,27 @@ export function localDateStr(d: Date = new Date()): string {
 /**
  * Returns a date `n` days before `fromDate` (YYYY-MM-DD string), in the given timezone.
  */
+/**
+ * ISO 8601 week number for the given date.
+ */
+export function getWeekNumber(d: Date): number {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+  return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
+/**
+ * Returns the date of Monday of the week containing `date`, as a 'YYYY-MM-DD' string.
+ */
+export function getMondayOfWeek(date: Date = new Date()): string {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d.toISOString().split('T')[0]
+}
+
 export function daysAgoInTz(days: number, timezone = 'UTC'): string {
   const d = new Date()
   d.setDate(d.getDate() - days)

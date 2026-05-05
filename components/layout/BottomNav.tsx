@@ -42,16 +42,13 @@ export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?:
                 }} />
               )}
             </span>
-            <span className="bottom-nav-label">{label(item)}</span>
+            <span className="bottom-nav-label">{item.label}</span>
           </Link>
         )
       })}
     </nav>
   )
 }
-
-function label(item: { label: string }) { return item.label }
-
 
 function HomeIcon() {
   return (

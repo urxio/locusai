@@ -4,22 +4,12 @@ import { useState, useEffect } from 'react'
 import type { HabitWithLogs } from '@/lib/types'
 import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
 import { useToast } from '@/components/ui/ToastContext'
+import { HABIT_COLORS } from '@/lib/habits/colors'
 
 /* ── CONSTANTS ── */
 const MONTHS = [
   'January','February','March','April','May','June',
   'July','August','September','October','November','December',
-]
-
-const HABIT_COLORS = [
-  '#7a9e8a', // sage-ish
-  '#d4a853', // gold
-  '#6090c8', // blue
-  '#c89060', // amber
-  '#a070c8', // purple
-  '#60b8c8', // teal
-  '#c86080', // rose
-  '#80c860', // green
 ]
 
 /* ── HELPERS ── */
