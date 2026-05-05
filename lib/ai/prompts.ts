@@ -37,7 +37,7 @@ INTELLIGENCE RULES
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
 
 {
-  "insight_text": "<A warm, personal morning message written directly to the user — like a voice note from a coach who has been paying close attention. Open with a personal greeting using their first name if you know it (e.g. 'Morning Billy,' or 'Good morning,') then the day and date on a new line. Then write 4-6 natural sentences in flowing prose that weave together: their predicted or actual energy level for today, anything meaningful from their recent journal or mood, specific memory notes or captures they stored (name them explicitly — this is the moment they feel truly seen), progress on their goals, and how habits are going. Reference real names — of people, goals, habits — naturally, as if you remember because you do. End with a warm, specific forward-looking note that invites action without demanding it (e.g. 'Let me know how it goes when you check in tonight.'). No bullet lists, no headers, no structured formatting. Use **bold** for at most 2 key things you want them to notice. Use emojis very sparingly (0-1 total, only if genuinely warm). This should feel like reading a thoughtful message from someone who knows you — not a dashboard summary.>",
+  "insight_text": "<A personal morning message, written like a casual text from a coach who genuinely knows this person. Tone: direct, warm, specific — the way a close friend who has been paying attention would write, not a professional advisor.\n\nTWO DISTINCT STATES — pick one based on TODAY'S CHECK-IN:\n\nSTATE A — NO CHECK-IN YET (TODAY'S CHECK-IN shows 'Not completed'):\nThis person just woke up. Write a forward-looking, predictive message. Structure naturally:\n1. Open with first name and the actual day + date as written in the DATE line (e.g. 'Morning Billy, today is Monday, May 4.')\n2. Make an energy prediction based on yesterday's journal, recent check-ins, or day-of-week patterns — phrase it as a guess ('I expect your energy to be around a 7 today')\n3. Reference any memory notes / captures explicitly by name — this is the moment they feel truly seen ('I see you captured a reminder about Jane's event')\n4. If there's relevant relationship context in memory, weave it in naturally ('From your journals you mentioned you like Jane and want to make a good impression')\n5. Mention habits and goals casually — a count or a name, not a full list\n6. End with an invitation to check in, NOT a command ('Let me know how the day goes when you're ready to check in')\nDO NOT say they logged anything, did anything, or completed anything today — they haven't yet.\n\nSTATE B — CHECK-IN LOGGED (TODAY'S CHECK-IN has real energy/mood data):\nThis person has already checked in. Respond to what they shared. Reference their actual energy level, mood note, and blockers. Acknowledge what's going on for them today, connect it to patterns, then frame the rest of the day. End with an encouraging or grounding note.\n\nBOTH STATES: Write in flowing prose only. No bullet lists, no headers. Use **bold** for at most 2 specific things (a name, a goal, a key insight). Use emojis max once, only if naturally warm. Keep it under 120 words — punchy, not exhaustive. It must feel like something a real person wrote, not a generated summary.>",
   "priorities": [
     {
       "title": "<specific, actionable task — max 12 words>",
@@ -158,7 +158,9 @@ export function buildUserMessage(ctx: BriefContext): string {
     lines.push('')
   }
 
-  lines.push(`DATE: ${today}`)
+  const dateObj = new Date(today + 'T12:00:00')
+  const humanDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  lines.push(`DATE: ${humanDate} (${today})`)
   lines.push('─'.repeat(40))
 
   // ── TODAY'S CHECK-IN ──
