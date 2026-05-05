@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
@@ -45,6 +46,46 @@ function todayStr() {
   return new Date().toISOString().split('T')[0]
 }
 
+/* ── Live data shape (mirrors /api/status) ───────────── */
+
+type LiveData = {
+  energy:      number | null
+  avgEnergy:   number | null
+  habitsDone:  number
+  habitsTotal: number
+  habitsAll:   number
+  goalsActive: number
+  avgPct:      number | null
+  mood:        string
+  hasCheckin:  boolean
+}
+
+/* Seed LiveData from SSR props — no flicker on first paint */
+function propsToLive(
+  goals: Goal[],
+  checkin: CheckIn | null,
+  habits: HabitWithLogs[],
+): LiveData {
+  const today          = todayStr()
+  const scheduledToday = habits.filter(h => h.isScheduledToday)
+  const doneToday      = scheduledToday.filter(h => h.logs.some(l => l.logged_date === today))
+  const active         = goals.filter(g => g.status === 'active')
+  const avgPct         = active.length
+    ? Math.round(active.reduce((s, g) => s + g.progress_pct, 0) / active.length)
+    : null
+  return {
+    energy:      checkin?.energy_level ?? null,
+    avgEnergy:   null,
+    habitsDone:  doneToday.length,
+    habitsTotal: scheduledToday.length,
+    habitsAll:   habits.length,
+    goalsActive: active.length,
+    avgPct,
+    mood:        moodWord(checkin?.mood_note ?? null),
+    hasCheckin:  !!checkin,
+  }
+}
+
 /* ── Progress bar ─────────────────────────────────────── */
 
 function Bar({ pct, warm }: { pct: number; warm?: boolean }) {
@@ -68,16 +109,17 @@ function Bar({ pct, warm }: { pct: number; warm?: boolean }) {
 /* ── Stat pill ────────────────────────────────────────── */
 
 function StatPill({
-  href, label, mainVal, unit, sub, barPct, warm, moodDot,
+  href, label, mainVal, unit, sub, barPct, warm, moodDot, refreshing,
 }: {
-  href: string
-  label: string
-  mainVal: string
-  unit?: string
-  sub: string
-  barPct?: number
-  warm?: boolean
-  moodDot?: boolean
+  href:       string
+  label:      string
+  mainVal:    string
+  unit?:      string
+  sub:        string
+  barPct?:    number
+  warm?:      boolean
+  moodDot?:   boolean
+  refreshing: boolean
 }) {
   return (
     <a
@@ -135,7 +177,11 @@ function StatPill({
       </div>
 
       {/* Value row */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', marginBottom: '8px' }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', gap: '3px', marginBottom: '8px',
+        opacity: refreshing ? 0.55 : 1,
+        transition: 'opacity 0.3s',
+      }}>
         <span style={{
           fontSize: '30px', fontWeight: 700, letterSpacing: '-0.02em',
           color: 'var(--text-0)', lineHeight: 1,
@@ -150,13 +196,31 @@ function StatPill({
       </div>
 
       {/* Sub label */}
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3, marginBottom: barPct != null ? '14px' : '0' }}>
+      <div style={{
+        fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3,
+        marginBottom: barPct != null ? '14px' : '0',
+      }}>
         {sub}
       </div>
 
       {/* Progress bar */}
       {barPct != null && <Bar pct={barPct} warm={warm} />}
     </a>
+  )
+}
+
+/* ── Live dot indicator ───────────────────────────────── */
+
+function LiveDot({ refreshing }: { refreshing: boolean }) {
+  return (
+    <div style={{
+      width: '6px', height: '6px', borderRadius: '50%',
+      background: refreshing ? 'var(--gold)' : 'var(--sage)',
+      boxShadow: refreshing ? '0 0 6px var(--gold)' : '0 0 5px var(--sage)',
+      transition: 'background 0.3s, box-shadow 0.3s',
+      animation: refreshing ? 'homePulse 0.8s ease-in-out infinite' : 'none',
+      flexShrink: 0,
+    }} />
   )
 }
 
@@ -169,13 +233,12 @@ type Props = {
   brief?:  Brief | null
 }
 
+const POLL_MS = 60_000
+
 export default function HomeDashboard({ goals, checkin, habits, brief }: Props) {
   const [now, setNow] = useState(() => new Date())
 
-  useEffect(() => {
-    /* update greeting/date after hydration so server/client match */
-    setNow(new Date())
-  }, [])
+  useEffect(() => { setNow(new Date()) }, [])
 
   const hour      = now.getHours()
   const greeting  = getGreeting(hour)
@@ -183,68 +246,98 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
   const season    = getSeason(now.getMonth())
   const { dayName, month, day } = formatDate(now)
 
-  /* ── Derived stats ── */
-  const today           = todayStr()
-  const activeGoals     = goals.filter(g => g.status === 'active')
-  const scheduledHabits = habits.filter(h => h.isScheduledToday)
-  const doneHabits      = scheduledHabits.filter(h => h.logs.some(l => l.logged_date === today))
+  /* ── Live stats (seeded from SSR props instantly) ── */
+  const [live, setLive]          = useState<LiveData>(() => propsToLive(goals, checkin, habits))
+  const [refreshing, setRefresh] = useState(false)
+  const fetchingRef              = useRef(false)
 
-  const goalsCount  = activeGoals.length
-  const habitsCount = scheduledHabits.length
-  const habitsDone  = doneHabits.length
+  const router = useRouter()
 
-  const avgGoalPct = activeGoals.length
-    ? Math.round(activeGoals.reduce((s, g) => s + g.progress_pct, 0) / activeGoals.length)
-    : 0
+  const refresh = useCallback(async () => {
+    if (fetchingRef.current) return
+    fetchingRef.current = true
+    setRefresh(true)
+    try {
+      const res = await fetch('/api/status', { cache: 'no-store' })
+      if (res.ok) setLive(await res.json())
+      // Also invalidate the server component cache so SSR props re-fetch
+      router.refresh()
+    } catch { /* keep last known data */ }
+    finally {
+      fetchingRef.current = false
+      setRefresh(false)
+    }
+  }, [router])
 
-  const energyLevel = checkin?.energy_level ?? null
-  const mood        = moodWord(checkin?.mood_note ?? null)
+  useEffect(() => {
+    refresh()
+    const onVisible = () => { if (!document.hidden) refresh() }
+    const onFocus   = () => refresh()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onFocus)
+    const timer = setInterval(refresh, POLL_MS)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onFocus)
+      clearInterval(timer)
+    }
+  }, [refresh])
 
-  /* ── Hero pulse text ── */
+  /* ── Derived display values from live data ── */
+  const energyVal     = live.energy ?? live.avgEnergy
+  const energyDisplay = energyVal != null ? `${energyVal}` : '—'
+  const energyUnit    = energyVal != null ? '/10' : undefined
+  const energySub     = live.energy ? 'Today' : live.avgEnergy ? '7-day avg' : 'No check-in yet'
+  const energyBarPct  = energyVal != null ? (energyVal / 10) * 100 : 0
+
+  const habitsDisplay = live.habitsTotal > 0
+    ? `${live.habitsDone}`
+    : live.habitsAll > 0 ? `${live.habitsAll}` : '—'
+  const habitsUnit    = live.habitsTotal > 0
+    ? `/${live.habitsTotal}`
+    : live.habitsAll > 0 ? ' total' : undefined
+  const habitsSub     = live.habitsTotal > 0 ? 'done today' : 'habits'
+  const habitsBarPct  = live.habitsTotal > 0 ? (live.habitsDone / live.habitsTotal) * 100 : 0
+
+  const goalsDisplay  = live.goalsActive > 0 ? `${live.goalsActive}` : '—'
+  const goalsSub      = live.goalsActive > 0
+    ? live.avgPct != null ? `${live.avgPct}% avg` : 'active'
+    : 'no active goals'
+  const goalsBarPct   = live.avgPct ?? 0
+
+  /* ── Pulse card headline ── */
   const timePart = hour < 12
     ? 'The morning is clear.'
-    : hour < 17
-    ? 'The afternoon is yours.'
-    : 'Wind down with intention.'
+    : hour < 17 ? 'The afternoon is yours.' : 'Wind down with intention.'
 
-  const hasBothData = goalsCount > 0 && habitsCount > 0
-  const hasGoals    = goalsCount > 0
-  const hasHabits   = habitsCount > 0
+  const hasBothData = live.goalsActive > 0 && live.habitsTotal > 0
+  const hasGoals    = live.goalsActive > 0
+  const hasHabits   = live.habitsTotal > 0 || live.habitsAll > 0
 
-  /* ── Brief insight snippet ── */
   const insightText = brief?.insight_text
     ? brief.insight_text.split('.').slice(0, 2).join('.') + '.'
     : null
 
-  /* ── Stat pill data ── */
   const stats = [
     {
       href: '/checkin', label: 'Energy',
-      mainVal: energyLevel != null ? `${energyLevel}` : '—',
-      unit: energyLevel != null ? '/10' : undefined,
-      sub: energyLevel != null ? 'Today' : 'No check-in yet',
-      barPct: energyLevel != null ? (energyLevel / 10) * 100 : 0,
-      warm: true,
+      mainVal: energyDisplay, unit: energyUnit, sub: energySub,
+      barPct: energyBarPct, warm: true,
     },
     {
       href: '/habits', label: 'Habits',
-      mainVal: habitsCount > 0 ? `${habitsDone}` : habits.length > 0 ? `${habits.length}` : '—',
-      unit: habitsCount > 0 ? `/${habitsCount}` : habitsCount === 0 && habits.length > 0 ? ' total' : undefined,
-      sub: habitsCount > 0 ? 'done today' : 'habits',
-      barPct: habitsCount > 0 ? (habitsDone / habitsCount) * 100 : 0,
+      mainVal: habitsDisplay, unit: habitsUnit, sub: habitsSub,
+      barPct: habitsBarPct,
     },
     {
       href: '/goals', label: 'Goals',
-      mainVal: goalsCount > 0 ? `${goalsCount}` : '—',
-      sub: goalsCount > 0
-        ? avgGoalPct > 0 ? `${avgGoalPct}% avg` : 'active'
-        : 'no active goals',
-      barPct: avgGoalPct,
+      mainVal: goalsDisplay, sub: goalsSub,
+      barPct: goalsBarPct,
     },
     {
       href: '/checkin', label: 'Mood',
-      mainVal: mood,
-      sub: checkin ? 'last check-in' : 'no check-in yet',
+      mainVal: live.mood,
+      sub: live.hasCheckin ? 'last check-in' : 'no check-in yet',
       moodDot: true,
     },
   ]
@@ -258,7 +351,6 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
         marginBottom: '28px', gap: '16px',
         animation: 'fadeUp 0.35s var(--ease) both',
       }}>
-        {/* Left: eyebrow + date */}
         <div>
           <div style={{
             fontSize: '10px', fontWeight: 700,
@@ -273,18 +365,13 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
           <h1 style={{
             fontSize: 'clamp(28px, 5vw, 42px)',
             fontWeight: 700, letterSpacing: '-0.03em',
-            color: 'var(--text-0)', lineHeight: 1.05,
-            margin: 0,
+            color: 'var(--text-0)', lineHeight: 1.05, margin: 0,
           }}>
             {dayName}, {month} {day}
           </h1>
         </div>
 
-        {/* Right: week + season + theme toggle */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '14px',
-          flexShrink: 0,
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>
               Week {week}
@@ -302,75 +389,60 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
         className="glass-card home-pulse-card"
         style={{
           padding: 'clamp(28px, 4vw, 44px)',
-          position: 'relative',
-          overflow: 'hidden',
+          position: 'relative', overflow: 'hidden',
           marginBottom: '14px',
           animation: 'fadeUp 0.4s var(--ease) 0.05s both',
         }}
       >
-        {/* Ambient top-right warm glow */}
         <div aria-hidden style={{
           position: 'absolute', top: '-80px', right: '-80px',
           width: '320px', height: '320px', borderRadius: '50%',
           background: 'radial-gradient(circle, oklch(0.78 0.09 75 / 0.10) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
-        {/* Ambient bottom-left sage glow */}
         <div aria-hidden style={{
           position: 'absolute', bottom: '-60px', left: '-60px',
           width: '240px', height: '240px', borderRadius: '50%',
           background: 'radial-gradient(circle, oklch(0.78 0.07 165 / 0.09) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
-        {/* Card overlay shimmer */}
         <div aria-hidden style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
           background: 'var(--card-overlay)', opacity: 0.28,
         }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* ── AI pulse badge ── */}
+          {/* AI pulse badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '7px',
-            background: 'var(--bg-2)',
-            border: '1px solid var(--border)',
-            borderRadius: '20px',
-            padding: '5px 13px 5px 9px',
-            marginBottom: '22px',
+            background: 'var(--bg-2)', border: '1px solid var(--border)',
+            borderRadius: '20px', padding: '5px 13px 5px 9px', marginBottom: '22px',
           }}>
             <div style={{
               width: '7px', height: '7px', borderRadius: '50%',
               background: 'var(--sage)',
-              animation: 'homePulse 2.4s ease-in-out infinite',
-              flexShrink: 0,
+              animation: 'homePulse 2.4s ease-in-out infinite', flexShrink: 0,
             }} />
-            <span style={{
-              fontSize: '11px', fontWeight: 600,
-              color: 'var(--text-2)', letterSpacing: '0.04em',
-            }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', letterSpacing: '0.04em' }}>
               Locus AI · Today&apos;s pulse
             </span>
           </div>
 
-          {/* ── Main serif headline ── */}
+          {/* Serif headline */}
           <div style={{
-            fontSize: 'clamp(20px, 3.2vw, 30px)',
-            fontWeight: 500,
-            lineHeight: 1.4,
-            color: 'var(--text-0)',
-            marginBottom: '14px',
-            fontFamily: 'var(--font-serif)',
-            maxWidth: '640px',
+            fontSize: 'clamp(20px, 3.2vw, 30px)', fontWeight: 500, lineHeight: 1.4,
+            color: 'var(--text-0)', marginBottom: '14px',
+            fontFamily: 'var(--font-serif)', maxWidth: '640px',
           }}>
             {hasBothData ? (
               <>
                 You have{' '}
                 <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>
-                  {goalsCount} {goalsCount !== 1 ? 'goals' : 'goal'}
+                  {live.goalsActive} {live.goalsActive !== 1 ? 'goals' : 'goal'}
                 </a>
                 {' '}and{' '}
                 <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>
-                  {habitsCount} {habitsCount !== 1 ? 'habits' : 'habit'}
+                  {live.habitsTotal} {live.habitsTotal !== 1 ? 'habits' : 'habit'}
                 </a>
                 {' '}aligned for today. {timePart}
               </>
@@ -378,7 +450,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
               <>
                 You have{' '}
                 <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>
-                  {goalsCount} active {goalsCount !== 1 ? 'goals' : 'goal'}
+                  {live.goalsActive} active {live.goalsActive !== 1 ? 'goals' : 'goal'}
                 </a>
                 {' '}to work toward. {timePart}
               </>
@@ -386,9 +458,9 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
               <>
                 You have{' '}
                 <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>
-                  {habitsCount} {habitsCount !== 1 ? 'habits' : 'habit'}
+                  {live.habitsAll} {live.habitsAll !== 1 ? 'habits' : 'habit'}
                 </a>
-                {' '}scheduled for today. {timePart}
+                {' '}to build on. {timePart}
               </>
             ) : (
               <>
@@ -401,7 +473,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
             )}
           </div>
 
-          {/* ── Subtitle / insight ── */}
+          {/* Insight / subtitle */}
           <p style={{
             fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.75,
             margin: '0 0 28px', maxWidth: '520px',
@@ -415,62 +487,37 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
             )}
           </p>
 
-          {/* ── CTA buttons ── */}
+          {/* CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {checkin ? (
-              <Link
-                href="/checkin"
-                id="home-view-brief-btn"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  background: 'var(--text-0)', color: 'var(--bg-0)',
-                  borderRadius: '14px', padding: '11px 22px',
-                  fontSize: '14px', fontWeight: 600,
-                  textDecoration: 'none',
-                  transition: 'opacity 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-              >
-                View Brief
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </Link>
-            ) : (
-              <Link
-                href="/checkin"
-                id="home-start-checkin-btn"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  background: 'var(--text-0)', color: 'var(--bg-0)',
-                  borderRadius: '14px', padding: '11px 22px',
-                  fontSize: '14px', fontWeight: 600,
-                  textDecoration: 'none',
-                  transition: 'opacity 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-              >
-                Start Check-in
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </Link>
-            )}
+            <Link
+              href="/checkin"
+              id="home-checkin-btn"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: 'var(--text-0)', color: 'var(--bg-0)',
+                borderRadius: '14px', padding: '11px 22px',
+                fontSize: '14px', fontWeight: 600, textDecoration: 'none',
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              {live.hasCheckin ? 'View Brief' : 'Start Check-in'}
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
 
-            {!checkin && (
+            {!live.hasCheckin && (
               <Link
                 href="/goals"
                 id="home-skip-btn"
                 style={{
                   display: 'inline-flex', alignItems: 'center',
-                  background: 'transparent',
-                  color: 'var(--text-2)',
+                  background: 'transparent', color: 'var(--text-2)',
                   border: '1px solid var(--border)',
                   borderRadius: '14px', padding: '11px 20px',
-                  fontSize: '14px', fontWeight: 500,
-                  textDecoration: 'none',
+                  fontSize: '14px', fontWeight: 500, textDecoration: 'none',
                   transition: 'background 0.15s, border-color 0.15s',
                 }}
                 onMouseEnter={e => {
@@ -490,32 +537,36 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
       </div>
 
       {/* ── Status pills ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
+        <span style={{
+          fontSize: '9px', fontWeight: 700, color: 'var(--text-3)',
+          letterSpacing: '0.14em', textTransform: 'uppercase',
+        }}>
+          Today&apos;s Status
+        </span>
+        <LiveDot refreshing={refreshing} />
+      </div>
+
       <div
         className="home-stat-grid"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '10px',
+          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px',
           animation: 'fadeUp 0.45s var(--ease) 0.10s both',
         }}
       >
         {stats.map(s => (
-          <StatPill key={s.label} {...s} />
+          <StatPill key={s.label} {...s} refreshing={refreshing} />
         ))}
       </div>
 
       <style>{`
         @media (max-width: 600px) {
-          .home-stat-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
-          .home-pulse-card {
-            padding: 24px !important;
-          }
+          .home-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .home-pulse-card { padding: 24px !important; }
         }
         @keyframes homePulse {
-          0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--sage); }
-          50%       { opacity: 0.45; box-shadow: 0 0 2px var(--sage); }
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
         }
       `}</style>
     </div>
