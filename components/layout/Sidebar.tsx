@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const MAIN_NAV = [
+  { href: '/',        label: 'Home',          icon: <HomeIcon /> },
   { href: '/checkin', label: 'Check-in',      icon: <CheckinIcon /> },
   { href: '/habits',  label: 'Habits',        icon: <HabitsIcon /> },
   { href: '/capture', label: 'Capture',       icon: <CaptureIcon /> },
@@ -58,7 +59,7 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
           gap: '2px',
         }}>
           {MAIN_NAV.map(item => {
-            const active = pathname === item.href
+            const active = item.href === '/' ? pathname === '/' : pathname === item.href
             const showBadge = item.href === '/goals' && overdueStepCount > 0
             return (
               <DockItem key={item.href} href={item.href} label={item.label} active={active} badge={showBadge}>
@@ -162,6 +163,10 @@ function DockItem({ href, label, active, badge = false, children }: {
 }
 
 /* ── SVG Icons ── */
+
+function HomeIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M3 9.5L10 3l7 6.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M5 8v8a1 1 0 0 0 1 1h3v-4h2v4h3a1 1 0 0 0 1-1V8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
 
 function CheckinIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M10 3v2M10 15v2M3 10h2M15 10h2" strokeLinecap="round" /><circle cx="10" cy="10" r="4" /></svg>
