@@ -54,13 +54,11 @@ function MarkdownInsight({ text, sidebar = false }: { text: string; sidebar?: bo
     <div>
       {paragraphs.map((para, i) => (
         <p key={i} style={{
-          fontFamily:    'var(--font-serif)',
-          fontSize:      sidebar ? '14.5px' : '17px',
-          fontWeight:    300,
-          color:         'var(--ai-card-text)',
-          lineHeight:    1.7,
-          letterSpacing: '0.01em',
-          margin:        i < paragraphs.length - 1 ? '0 0 12px' : '0',
+          fontSize:   sidebar ? 'clamp(14px, 1.8vw, 16px)' : '17px',
+          fontWeight: sidebar ? (i === 0 ? 500 : 400) : 300,
+          color:      sidebar ? 'var(--text-1)' : 'var(--ai-card-text)',
+          lineHeight: 1.75,
+          margin:     i < paragraphs.length - 1 ? '0 0 10px' : '0',
         }}>
           {renderInline(para, String(i))}
         </p>
