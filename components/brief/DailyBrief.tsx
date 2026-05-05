@@ -27,26 +27,66 @@ function browserDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function RingProgress({ value, size = 120 }: { value: number; size?: number }) {
-  const r = size * 0.38
-  const c = 2 * Math.PI * r
-  const offset = c - (value / 100) * c
+function renderMessage(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} style={{ color: 'var(--ink-900)', fontWeight: 700 }}>
+          {part.slice(2, -2)}
+        </strong>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
+}
+
+function ActionRow({
+  icon, label, sublabel, href, accent = false,
+}: {
+  icon: React.ReactNode
+  label: string
+  sublabel?: string
+  href: string
+  accent?: boolean
+}) {
   return (
-    <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg style={{ position: 'absolute', inset: 0 }} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="7" />
-        <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke="var(--sage)" strokeWidth="7"
-          strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
+    <a
+      href={href}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '14px',
+        padding: '14px 16px', borderRadius: '14px',
+        background: accent ? 'oklch(0.62 0.06 165 / 0.12)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${accent ? 'oklch(0.62 0.06 165 / 0.25)' : 'rgba(255,255,255,0.07)'}`,
+        textDecoration: 'none', color: 'inherit',
+        transition: 'background 0.15s, transform 0.15s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = accent ? 'oklch(0.62 0.06 165 / 0.18)' : 'rgba(255,255,255,0.07)'
+        e.currentTarget.style.transform = 'translateX(2px)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = accent ? 'oklch(0.62 0.06 165 / 0.12)' : 'rgba(255,255,255,0.04)'
+        e.currentTarget.style.transform = 'translateX(0)'
+      }}
+    >
+      <div style={{
+        width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+        background: accent ? 'oklch(0.62 0.06 165 / 0.20)' : 'rgba(255,255,255,0.08)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: accent ? 'var(--sage)' : 'var(--ink-500)',
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ink-900)', lineHeight: 1.3 }}>{label}</div>
+        {sublabel && <div style={{ fontSize: '12px', color: 'var(--ink-400)', marginTop: '2px' }}>{sublabel}</div>}
+      </div>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" width="14" height="14"
+        style={{ color: 'var(--ink-400)', flexShrink: 0 }}>
+        <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="font-serif-display" style={{ fontSize: size * 0.2 + 'px', color: 'var(--ink-900)', fontWeight: 500 }}>
-        {value}%
-      </span>
-    </div>
+    </a>
   )
 }
 
@@ -93,12 +133,10 @@ export default function DailyBrief({
   const doneToday = scheduledToday.filter(h => doneMap[h.id])
   const activeGoals = goals.filter(g => g.status === 'active')
   const topGoal = activeGoals[0] ?? null
-  const topHabit = scheduledToday[0] ?? null
-  const energyVal = checkin?.energy_level ?? null
+  const topStreak = Math.max(0, ...habits.map(h => h.streak))
 
   return (
     <div
-      className="brief-shell"
       style={{
         height: '100%',
         display: 'flex',
@@ -108,120 +146,14 @@ export default function DailyBrief({
         animation: 'fadeUp 0.4s var(--ease) both',
       }}
     >
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.15); opacity: 0.9; }
-        }
-        .big3-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 14px;
-          flex: 1;
-          min-height: 0;
-        }
-        .big3-card {
-          display: flex;
-          flex-direction: column;
-          padding: 28px 24px 22px;
-          border-radius: var(--radius-card);
-          text-decoration: none;
-          color: inherit;
-          cursor: pointer;
-          transition: transform 0.18s var(--ease), box-shadow 0.2s var(--ease);
-          overflow: hidden;
-          position: relative;
-        }
-        .big3-card:hover {
-          transform: translateY(-3px);
-        }
-        .big3-label {
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.22em;
-          color: var(--ink-400);
-          margin-bottom: 4px;
-        }
-        .big3-sublabel {
-          font-size: 13px;
-          color: var(--ink-500);
-          font-weight: 400;
-          line-height: 1.4;
-        }
-        .big3-center {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-        }
-        .big3-action {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 16px;
-        }
-        .big3-arrow {
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.18);
-          border: 1px solid rgba(255,255,255,0.28);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--ink-500);
-          flex-shrink: 0;
-        }
-        .habit-checkbox {
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          border: 2px solid var(--ink-300);
-          background: rgba(255,255,255,0.08);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: background 0.18s, border-color 0.18s, transform 0.15s;
-          flex-shrink: 0;
-        }
-        .habit-checkbox.done {
-          border-color: var(--sage);
-          background: oklch(0.62 0.06 165 / 0.22);
-        }
-        .habit-checkbox:active {
-          transform: scale(0.92);
-        }
-        @media (max-width: 720px) {
-          .big3-grid {
-            grid-template-columns: 1fr;
-            grid-template-rows: repeat(3, auto);
-          }
-          .big3-card {
-            padding: 22px 20px 18px;
-            min-height: 180px;
-          }
-          .big3-center {
-            flex-direction: row;
-            justify-content: flex-start;
-            gap: 20px;
-          }
-        }
-      `}</style>
-
       {/* ── Header ── */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexShrink: 0 }}>
-        {/* Left: brand + greeting */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <div style={{
             width: '36px', height: '36px', borderRadius: '12px',
             background: 'var(--glass-card-bg-tint)',
             border: '1.5px solid var(--glass-card-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)' }} />
           </div>
@@ -235,9 +167,8 @@ export default function DailyBrief({
           </div>
         </div>
 
-        {/* Center: date */}
-        <div className="glass-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '20px', padding: '6px 16px', flexShrink: 0 }}>
-          {checkin && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />}
+        <div className="glass-pill" style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '20px', padding: '6px 16px', flexShrink: 0 }}>
+          {checkin && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--sage)', flexShrink: 0 }} />}
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3, alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-900)', whiteSpace: 'nowrap' }}>{dayLabel} · {dateLabel}</span>
             <span style={{ fontSize: '10px', color: 'var(--ink-400)' }}>
@@ -246,7 +177,6 @@ export default function DailyBrief({
           </div>
         </div>
 
-        {/* Right: capture */}
         <a href="/capture" className="glass-pill" style={{
           width: '36px', height: '36px', borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -258,221 +188,149 @@ export default function DailyBrief({
         </a>
       </header>
 
-      {/* ── Missed habits banner ── */}
-      {missedYesterday.length > 0 && (
-        <a href="/checkin" style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '10px 16px', borderRadius: '14px',
-          background: 'rgba(255,200,100,0.10)',
-          border: '1px solid rgba(255,200,100,0.20)',
-          textDecoration: 'none', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: '16px' }}>⚠️</span>
-          <span style={{ fontSize: '12px', color: 'var(--ink-500)', flex: 1 }}>
-            You missed <strong style={{ color: 'var(--ink-900)' }}>{missedYesterday.length} habit{missedYesterday.length > 1 ? 's' : ''}</strong> yesterday —{' '}
-            {missedYesterday.slice(0, 2).map(h => `${h.emoji ?? ''} ${h.name}`).join(', ')}
-            {missedYesterday.length > 2 ? ` +${missedYesterday.length - 2} more` : ''}
-          </span>
-          <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>→</span>
-        </a>
-      )}
+      {/* ── Scrollable body ── */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', minHeight: 0 }}>
 
-      {/* ── Big 3 ── */}
-      <div className="big3-grid">
-
-        {/* ─ FEEL ─ */}
-        <a href="/checkin" className="big3-card glass-card">
-          <div>
-            <div className="big3-label">Feel</div>
-            <div className="big3-sublabel">How is your energy today?</div>
-          </div>
-
-          <div className="big3-center">
-            {checkin ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                  <span className="font-serif-display" style={{ fontSize: '80px', lineHeight: 1, color: 'var(--ink-900)', fontWeight: 400 }}>
-                    {checkin.energy_level}
-                  </span>
-                  <span style={{ fontSize: '20px', color: 'var(--ink-400)', marginBottom: '8px' }}>/10</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sage)' }} />
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Logged today</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <span style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{
-                    position: 'absolute', width: '72px', height: '72px', borderRadius: '50%',
-                    background: 'oklch(0.62 0.06 165 / 0.15)',
-                    animation: 'pulse 2s ease-in-out infinite',
-                  }} />
-                  <span style={{
-                    width: '52px', height: '52px', borderRadius: '50%',
-                    background: 'oklch(0.62 0.06 165 / 0.25)',
-                    border: '2px solid var(--sage)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <svg viewBox="0 0 20 20" fill="none" stroke="var(--sage)" strokeWidth="1.6" width="22" height="22">
-                      <path d="M10 6v4l2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      <circle cx="10" cy="10" r="7" />
-                    </svg>
-                  </span>
-                </span>
-                <p className="font-serif-display" style={{ fontSize: '16px', fontStyle: 'italic', color: 'var(--ink-500)', textAlign: 'center', lineHeight: 1.4 }}>
-                  Tap to log<br />your energy
-                </p>
-              </>
-            )}
-          </div>
-
-          <div className="big3-action">
-            {avgEnergy != null && (
-              <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>
-                7-day avg: <strong style={{ color: 'var(--ink-900)' }}>{avgEnergy.toFixed(1)}</strong>
-              </span>
-            )}
-            <div className="big3-arrow" style={{ marginLeft: 'auto' }}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" width="12" height="12">
-                <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-        </a>
-
-        {/* ─ DO ─ */}
-        <div className="big3-card glass-card-soft" style={{ cursor: 'default' }}>
-          <div>
-            <div className="big3-label">Do</div>
-            <div className="big3-sublabel">
-              {scheduledToday.length > 0
-                ? `${doneToday.length} of ${scheduledToday.length} habits done`
-                : 'Your habits for today'}
-            </div>
-          </div>
-
-          <div className="big3-center" style={{ gap: '20px' }}>
-            {topHabit ? (
-              <>
-                <div
-                  className={`habit-checkbox${doneMap[topHabit.id] ? ' done' : ''}`}
-                  onClick={() => toggleHabit(topHabit.id)}
-                >
-                  {doneMap[topHabit.id] && (
-                    <svg viewBox="0 0 20 20" fill="none" stroke="var(--sage)" strokeWidth="2.2" width="24" height="24">
-                      <path d="M4 10l5 5 7-8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '22px', marginBottom: '6px' }}>{topHabit.emoji ?? '✦'}</div>
-                  <div style={{ fontSize: '17px', fontWeight: 600, color: doneMap[topHabit.id] ? 'var(--ink-400)' : 'var(--ink-900)', textDecoration: doneMap[topHabit.id] ? 'line-through' : 'none', transition: 'color 0.2s' }}>
-                    {topHabit.name}
-                  </div>
-                  {scheduledToday.length > 1 && (
-                    <div style={{ fontSize: '12px', color: 'var(--ink-400)', marginTop: '4px' }}>
-                      +{scheduledToday.length - 1} more habit{scheduledToday.length - 1 > 1 ? 's' : ''}
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <p className="font-serif-display" style={{ fontSize: '16px', fontStyle: 'italic', color: 'var(--ink-400)', textAlign: 'center' }}>
-                No habits scheduled today
+        {/* ── Morning Message ── */}
+        <div style={{ padding: '4px 2px' }}>
+          {brief?.insight_text ? (
+            <p
+              className="font-serif-display"
+              style={{
+                fontSize: '18px',
+                lineHeight: 1.75,
+                color: 'var(--ink-500)',
+                fontWeight: 400,
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {renderMessage(brief.insight_text)}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p
+                className="font-serif-display"
+                style={{ fontSize: '18px', lineHeight: 1.75, color: 'var(--ink-500)', fontStyle: 'italic', margin: 0 }}
+              >
+                {checkin
+                  ? 'Your morning message is being prepared…'
+                  : `${greeting}${userName ? `, ${userName.split(' ')[0]}` : ''}. Check in to unlock your personalized message for today.`}
               </p>
-            )}
-          </div>
-
-          <div className="big3-action">
-            {scheduledToday.length > 0 && doneToday.length === scheduledToday.length ? (
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--sage)', letterSpacing: '0.08em' }}>
-                All done today 🎉
-              </span>
-            ) : (
-              <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>
-                {topStreak(habits) > 0 ? `${topStreak(habits)}-day streak` : 'Build your streak'}
-              </span>
-            )}
-            <a href="/habits" className="big3-arrow" style={{ textDecoration: 'none' }}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" width="12" height="12">
-                <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </a>
-          </div>
+              {!checkin && (
+                <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>
+                  Locus will write you a personal note once it knows how you&apos;re feeling.
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* ─ TRACK ─ */}
-        <a href="/goals" className="big3-card glass-card-soft" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div>
-            <div className="big3-label">Track</div>
-            <div className="big3-sublabel">
-              {activeGoals.length > 0
-                ? `${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''}`
-                : 'Your top goal'}
-            </div>
-          </div>
+        {/* ── Divider ── */}
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
 
-          <div className="big3-center">
-            {topGoal ? (
-              <>
-                <RingProgress value={topGoal.progress_pct} size={120} />
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '17px', fontWeight: 600, color: 'var(--ink-900)', lineHeight: 1.3 }}>
-                    {topGoal.title.length > 24 ? topGoal.title.slice(0, 24) + '…' : topGoal.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--ink-500)', marginTop: '4px' }}>
-                    {topGoal.category} · {topGoal.timeframe}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <p className="font-serif-display" style={{ fontSize: '16px', fontStyle: 'italic', color: 'var(--ink-400)', textAlign: 'center' }}>
-                Set your first goal
-              </p>
-            )}
-          </div>
+        {/* ── Action rows ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-          <div className="big3-action">
-            {activeGoals.length > 1 && (
-              <span style={{ fontSize: '12px', color: 'var(--ink-400)' }}>
-                +{activeGoals.length - 1} more goal{activeGoals.length - 1 > 1 ? 's' : ''}
-              </span>
-            )}
-            <div className="big3-arrow" style={{ marginLeft: 'auto' }}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" width="12" height="12">
-                <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-        </a>
+          {/* Habits */}
+          {scheduledToday.length > 0 && (
+            <ActionRow
+              href="/habits"
+              icon={
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
+                  <path d="M5 10l3.5 3.5L15 7" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="10" cy="10" r="8" />
+                </svg>
+              }
+              label={
+                doneToday.length === scheduledToday.length
+                  ? 'All habits done today 🎉'
+                  : `${scheduledToday.length - doneToday.length} habit${scheduledToday.length - doneToday.length > 1 ? 's' : ''} to check off today`
+              }
+              sublabel={
+                doneToday.length > 0
+                  ? `${doneToday.length} of ${scheduledToday.length} done${topStreak > 2 ? ` · ${topStreak}-day streak` : ''}`
+                  : topStreak > 2 ? `${topStreak}-day streak — keep it going` : undefined
+              }
+            />
+          )}
 
+          {/* Top goal */}
+          {topGoal && (
+            <ActionRow
+              href="/goals"
+              icon={
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
+                  <circle cx="10" cy="10" r="7" />
+                  <circle cx="10" cy="10" r="3" />
+                </svg>
+              }
+              label={topGoal.title.length > 36 ? topGoal.title.slice(0, 36) + '…' : topGoal.title}
+              sublabel={`${topGoal.progress_pct}% complete · ${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''}`}
+            />
+          )}
+
+          {/* Missed yesterday */}
+          {missedYesterday.length > 0 && (
+            <ActionRow
+              href="/checkin"
+              icon={
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
+                  <path d="M10 7v4M10 13h.01" strokeLinecap="round" />
+                  <circle cx="10" cy="10" r="8" />
+                </svg>
+              }
+              label={`${missedYesterday.length} missed yesterday`}
+              sublabel={missedYesterday.slice(0, 2).map(h => `${h.emoji ?? ''} ${h.name}`).join(' · ')}
+            />
+          )}
+
+          {/* Check in */}
+          {!checkin && (
+            <ActionRow
+              href="/checkin"
+              accent
+              icon={
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
+                  <path d="M10 6v4l2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="10" cy="10" r="7" />
+                </svg>
+              }
+              label="Ready to start your day?"
+              sublabel="Log your energy and unlock your morning message"
+            />
+          )}
+
+          {/* No goals yet */}
+          {activeGoals.length === 0 && (
+            <ActionRow
+              href="/goals"
+              icon={
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
+                  <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+                </svg>
+              }
+              label="Set your first goal"
+              sublabel="Give Locus something to work towards with you"
+            />
+          )}
+
+          {/* No habits yet */}
+          {habits.length === 0 && (
+            <ActionRow
+              href="/habits"
+              icon={
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="16" height="16">
+                  <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+                </svg>
+              }
+              label="Add your first habit"
+              sublabel="Small daily actions compound into big results"
+            />
+          )}
+
+        </div>
       </div>
-
-      {/* ── Bottom CTA — only shown when not checked in ── */}
-      {!checkin && (
-        <a href="/checkin" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-          padding: '16px', borderRadius: '16px',
-          background: 'var(--sage)', color: 'oklch(0.15 0.02 165)',
-          textDecoration: 'none', fontWeight: 700, fontSize: '15px',
-          letterSpacing: '0.04em', flexShrink: 0,
-          transition: 'opacity 0.18s',
-        }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          Start your day — Check in now
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-            <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </a>
-      )}
     </div>
   )
-}
-
-function topStreak(habits: HabitWithLogs[]) {
-  return Math.max(0, ...habits.map(h => h.streak))
 }
