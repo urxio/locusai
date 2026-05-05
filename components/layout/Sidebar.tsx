@@ -22,7 +22,7 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
 
   return (
     <aside className="app-sidebar">
-      {/* Floating nav pill */}
+      {/* Floating nav pill — centered */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '2px',
         background: 'var(--glass-card-bg)',
@@ -33,7 +33,9 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
         boxShadow: 'var(--glass-card-shadow)',
         padding: '6px 8px',
         height: '52px',
-        flexShrink: 0,
+        position: 'absolute',
+        left: '50%',
+        transform: 'translateX(-50%)',
       }}>
         {/* Brand mark */}
         <div style={{
