@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ThemeToggle from '@/components/layout/ThemeToggle'
-import type { Goal, CheckIn, HabitWithLogs, Brief } from '@/lib/types'
+import type { Goal, CheckIn, HabitWithLogs, Brief, MemoryNote } from '@/lib/types'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -227,15 +227,133 @@ function LiveDot({ refreshing }: { refreshing: boolean }) {
 /* ── Main component ────────────────────────────────────── */
 
 type Props = {
-  goals:   Goal[]
-  checkin: CheckIn | null
-  habits:  HabitWithLogs[]
-  brief?:  Brief | null
+  goals:        Goal[]
+  checkin:      CheckIn | null
+  habits:       HabitWithLogs[]
+  brief?:       Brief | null
+  userName?:    string | null
+  memoryNotes?: MemoryNote[]
+}
+
+/* ── Pulse message builder ─────────────────────────────── */
+
+type MessageSegment = { text: string; highlight?: 'sage' | 'gold' | 'muted' }
+type MessageLine    = MessageSegment[]
+
+function buildPulseMessage(opts: {
+  firstName:    string
+  hour:         number
+  dayName:      string
+  day:          number
+  month:        string
+  habitsTotal:  number
+  goalsActive:  number
+  firstGoal:    Goal | null
+  energyScore:  number | null
+  topNote:      MemoryNote | null
+  brief:        Brief | null | undefined
+}): MessageLine[] {
+  const { firstName, hour, dayName, day, month,
+          habitsTotal, goalsActive, firstGoal,
+          energyScore, topNote, brief } = opts
+
+  const greeting = hour < 12 ? 'Morning' : hour < 17 ? 'Hey' : 'Evening'
+  const lines: MessageLine[] = []
+
+  // ── Line 1: greeting + date ──
+  lines.push([
+    { text: `${greeting} ` },
+    { text: firstName, highlight: 'sage' },
+    { text: ', hope you slept well. Today is ' },
+    { text: `${dayName}, ${day} ${month}`, highlight: 'muted' },
+    { text: '.' },
+  ])
+
+  // ── Line 2: energy prediction ──
+  const energy = energyScore ?? brief?.energy_score
+  if (energy != null) {
+    lines.push([
+      { text: 'From your recent journal entries, I\'d expect your energy to be around a ' },
+      { text: `${energy}`, highlight: 'gold' },
+      { text: ' today — keep that in mind as you plan your morning.' },
+    ])
+  }
+
+  // ── Line 3: memory note surface ──
+  if (topNote) {
+    const noteSnippet = topNote.content.length > 80
+      ? topNote.content.slice(0, 77) + '…'
+      : topNote.content
+    lines.push([
+      { text: 'I noticed you captured something worth revisiting: ' },
+      { text: `"${noteSnippet}"`, highlight: 'muted' },
+      { text: ' — might be worth acting on today.' },
+    ])
+  } else if (brief?.insight_text) {
+    const snippet = brief.insight_text.split('.').slice(0, 1).join('.') + '.'
+    lines.push([{ text: snippet }])
+  }
+
+  // ── Line 4: habits ──
+  if (habitsTotal > 0) {
+    lines.push([
+      { text: 'Don\'t forget, you have ' },
+      { text: `${habitsTotal} habit${habitsTotal !== 1 ? 's' : ''}`, highlight: 'gold' },
+      { text: ' to check off today.' },
+    ])
+  }
+
+  // ── Line 5: goals ──
+  if (goalsActive > 0 && firstGoal) {
+    lines.push([
+      { text: 'Your goal of ' },
+      { text: firstGoal.title, highlight: 'sage' },
+      { text: ' is also getting some traction — keep the momentum going.' },
+    ])
+  } else if (goalsActive > 0) {
+    lines.push([
+      { text: `You have ` },
+      { text: `${goalsActive} active goal${goalsActive !== 1 ? 's' : ''}`, highlight: 'sage' },
+      { text: ' in progress — keep going.' },
+    ])
+  }
+
+  // ── Line 6: closing ──
+  lines.push([{ text: 'Let me know how the day goes when you\'re ready to check in.' }])
+
+  return lines
+}
+
+/* ── Pulse message renderer ───────────────────────────── */
+
+function PulseMessage({ lines }: { lines: MessageLine[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '620px' }}>
+      {lines.map((line, i) => (
+        <p key={i} style={{
+          margin: 0,
+          fontSize: 'clamp(14px, 1.8vw, 16px)',
+          lineHeight: 1.75,
+          color: 'var(--text-1)',
+          fontWeight: i === 0 ? 500 : 400,
+        }}>
+          {line.map((seg, j) => {
+            if (!seg.highlight) return <span key={j}>{seg.text}</span>
+            if (seg.highlight === 'sage')
+              return <span key={j} style={{ color: 'var(--sage)', fontWeight: 600 }}>{seg.text}</span>
+            if (seg.highlight === 'gold')
+              return <span key={j} style={{ color: 'var(--gold)', fontWeight: 600 }}>{seg.text}</span>
+            return <span key={j} style={{ color: 'var(--text-0)', fontWeight: 500 }}>{seg.text}</span>
+          })}
+        </p>
+      ))}
+    </div>
+  )
 }
 
 const POLL_MS = 60_000
 
-export default function HomeDashboard({ goals, checkin, habits, brief }: Props) {
+export default function HomeDashboard({ goals, checkin, habits, brief, userName, memoryNotes }: Props) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => { setNow(new Date()) }, [])
@@ -305,18 +423,25 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
     : 'no active goals'
   const goalsBarPct   = live.avgPct ?? 0
 
-  /* ── Pulse card headline ── */
-  const timePart = hour < 12
-    ? 'The morning is clear.'
-    : hour < 17 ? 'The afternoon is yours.' : 'Wind down with intention.'
+  /* ── Pulse conversational message ── */
+  const firstName   = userName?.split(' ')[0] ?? 'there'
+  const firstGoal   = goals.find(g => g.status === 'active') ?? null
+  const topNote     = memoryNotes?.[0] ?? null
+  const energyScore = checkin?.energy_level ?? brief?.energy_score ?? null
 
-  const hasBothData = live.goalsActive > 0 && live.habitsTotal > 0
-  const hasGoals    = live.goalsActive > 0
-  const hasHabits   = live.habitsTotal > 0 || live.habitsAll > 0
-
-  const insightText = brief?.insight_text
-    ? brief.insight_text.split('.').slice(0, 2).join('.') + '.'
-    : null
+  const pulseLines = buildPulseMessage({
+    firstName,
+    hour,
+    dayName,
+    day,
+    month,
+    habitsTotal: live.habitsTotal > 0 ? live.habitsTotal : live.habitsAll,
+    goalsActive: live.goalsActive,
+    firstGoal,
+    energyScore,
+    topNote,
+    brief,
+  })
 
   const stats = [
     {
@@ -428,64 +553,10 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
             </span>
           </div>
 
-          {/* Serif headline */}
-          <div style={{
-            fontSize: 'clamp(20px, 3.2vw, 30px)', fontWeight: 500, lineHeight: 1.4,
-            color: 'var(--text-0)', marginBottom: '14px',
-            fontFamily: 'var(--font-serif)', maxWidth: '640px',
-          }}>
-            {hasBothData ? (
-              <>
-                You have{' '}
-                <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>
-                  {live.goalsActive} {live.goalsActive !== 1 ? 'goals' : 'goal'}
-                </a>
-                {' '}and{' '}
-                <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>
-                  {live.habitsTotal} {live.habitsTotal !== 1 ? 'habits' : 'habit'}
-                </a>
-                {' '}aligned for today. {timePart}
-              </>
-            ) : hasGoals ? (
-              <>
-                You have{' '}
-                <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>
-                  {live.goalsActive} active {live.goalsActive !== 1 ? 'goals' : 'goal'}
-                </a>
-                {' '}to work toward. {timePart}
-              </>
-            ) : hasHabits ? (
-              <>
-                You have{' '}
-                <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>
-                  {live.habitsAll} {live.habitsAll !== 1 ? 'habits' : 'habit'}
-                </a>
-                {' '}to build on. {timePart}
-              </>
-            ) : (
-              <>
-                Welcome back. Set your first{' '}
-                <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>goal</a>
-                {' '}or{' '}
-                <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>habit</a>
-                {' '}to get started.
-              </>
-            )}
+          {/* Conversational message */}
+          <div style={{ marginBottom: '28px' }}>
+            <PulseMessage lines={pulseLines} />
           </div>
-
-          {/* Insight / subtitle */}
-          <p style={{
-            fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.75,
-            margin: '0 0 28px', maxWidth: '520px',
-          }}>
-            {insightText ?? (
-              hour < 12
-                ? 'Your focus sessions have been most productive before 10 am. Consider scheduling your deepest work before the afternoon dip.'
-                : hour < 17
-                ? 'Mid-day energy tends to hold up well. A good time to work through goal steps or connect with your team.'
-                : 'End the day with a check-in to track your wins and set a clear intention for tomorrow.'
-            )}
-          </p>
 
           {/* CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>

@@ -3,6 +3,7 @@ import { getTodayCheckin } from '@/lib/db/checkins'
 import { getActiveGoals } from '@/lib/db/goals'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getTodayBrief } from '@/lib/db/briefs'
+import { getActiveMemoryNotes } from '@/lib/db/memory-notes'
 import HomeDashboard from '@/components/home/HomeDashboard'
 
 export const dynamic = 'force-dynamic'
@@ -12,11 +13,13 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [checkin, goals, habits, brief] = await Promise.all([
+  const [checkin, goals, habits, brief, memoryNotes, profile] = await Promise.all([
     getTodayCheckin(user.id),
     getActiveGoals(user.id),
     getUserHabitsWithLogs(user.id),
     getTodayBrief(user.id),
+    getActiveMemoryNotes(user.id),
+    supabase.from('users').select('name').eq('id', user.id).single().then(r => r.data),
   ])
 
   return (
@@ -25,6 +28,8 @@ export default async function HomePage() {
       goals={goals}
       habits={habits}
       brief={brief}
+      userName={profile?.name ?? null}
+      memoryNotes={memoryNotes}
     />
   )
 }
