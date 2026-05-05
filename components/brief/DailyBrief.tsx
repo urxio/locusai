@@ -279,12 +279,20 @@ export default function DailyBrief({
         {/* ── Today's message ── */}
         <div style={{ padding: '4px 2px' }}>
           {brief?.insight_text ? (
-            <p
-              className="font-serif-display"
-              style={{ fontSize: '20px', lineHeight: 1.8, color: 'var(--ink-900)', fontWeight: 400, margin: 0, whiteSpace: 'pre-wrap' }}
-            >
-              {renderMessage(brief.insight_text)}
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {brief.insight_text.split(/\n+/).filter(Boolean).map((para, i) => (
+                <p key={i} style={{
+                  margin: 0,
+                  fontSize: 'clamp(14px, 1.8vw, 16px)',
+                  lineHeight: 1.75,
+                  color: 'var(--text-1)',
+                  fontWeight: i === 0 ? 500 : 400,
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {renderMessage(para)}
+                </p>
+              ))}
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Typing indicator */}
@@ -306,10 +314,7 @@ export default function DailyBrief({
                   {isGenerating ? 'Locus is writing your message…' : 'Preparing your message…'}
                 </span>
               </div>
-              <p
-                className="font-serif-display"
-                style={{ fontSize: '20px', lineHeight: 1.8, color: 'var(--ink-500)', fontStyle: 'italic', margin: 0 }}
-              >
+              <p style={{ fontSize: 'clamp(14px, 1.8vw, 16px)', lineHeight: 1.75, color: 'var(--text-1)', fontStyle: 'italic', margin: 0 }}>
                 {greeting}{userName ? `, ${userName.split(' ')[0]}` : ''}. Your morning message is on its way.
               </p>
             </div>
