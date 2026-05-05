@@ -154,7 +154,7 @@ export default function LoginPage() {
       } else if (!data?.session) {
         setError('Sign-in failed. Please try again.')
       } else {
-        window.location.href = '/brief'
+        window.location.href = '/checkin'
       }
     } catch {
       setError('Something went wrong. Please check your connection and try again.')
@@ -244,7 +244,7 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPass })
       if (error) setError(error.message || 'Failed to update password.')
-      else window.location.href = '/brief'
+      else window.location.href = '/checkin'
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {

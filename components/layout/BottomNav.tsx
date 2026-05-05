@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
-  { href: '/',         label: 'Home',     icon: <HomeIcon /> },
   { href: '/checkin',  label: 'Check-in', icon: <CheckinIcon /> },
   { href: '/habits',   label: 'Habits',   icon: <HabitsIcon /> },
   { href: '/capture',  label: 'Capture',  icon: <CaptureIcon /> },
   { href: '/goals',    label: 'Goals',    icon: <GoalsIcon /> },
+  { href: '/planner',  label: 'Planner',  icon: <PlannerIcon /> },
 ]
 
 export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?: number }) {
@@ -51,14 +51,6 @@ export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?:
 
 function label(item: { label: string }) { return item.label }
 
-function HomeIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20">
-      <path d="M3 10l7-7 7 7v7H3z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 20v-6h4v6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 function CheckinIcon() {
   return (
@@ -92,4 +84,8 @@ function GoalsIcon() {
       <path d="M4 15l4-4 3 3 5-7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
+}
+
+function PlannerIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><rect x="3" y="4" width="14" height="13" rx="2" /><path d="M7 2v4M13 2v4M3 9h14" strokeLinecap="round" /></svg>
 }
