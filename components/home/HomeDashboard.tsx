@@ -68,6 +68,85 @@ function propsToLive(goals: Goal[], checkin: CheckIn | null, habits: HabitWithLo
 
 const POLL_MS = 60_000
 
+/* ── Pulse cache ─────────────────────────────────────── */
+
+function getPulseCacheKey() {
+  const now = new Date()
+  return `locus_pulse_${now.toISOString().split('T')[0]}_${now.getHours()}`
+}
+
+function usePulse(hasCheckin: boolean) {
+  const [text, setText] = useState<string>(() => {
+    try { return localStorage.getItem(getPulseCacheKey()) ?? '' } catch { return '' }
+  })
+  const [streaming, setStreaming] = useState(false)
+  const abortRef    = useRef<AbortController | null>(null)
+  const prevCheckin = useRef(hasCheckin)
+
+  const loadPulse = useCallback(async (force = false) => {
+    if (!force) {
+      try {
+        const cached = localStorage.getItem(getPulseCacheKey())
+        if (cached) { setText(cached); return }
+      } catch {}
+    }
+    abortRef.current?.abort()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    setStreaming(true)
+    setText('')
+    try {
+      const url = force ? '/api/pulse?force=1' : '/api/pulse'
+      const res = await window.fetch(url, { cache: 'no-store', signal: ctrl.signal })
+      if (!res.ok || !res.body) return
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      let acc = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        acc += dec.decode(value, { stream: true })
+        setText(acc)
+      }
+      if (acc) {
+        try {
+          const key = getPulseCacheKey()
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i)
+            if (k?.startsWith('locus_pulse_') && k !== key) localStorage.removeItem(k)
+          }
+          localStorage.setItem(key, acc)
+        } catch {}
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') console.error('[pulse]', e)
+    } finally {
+      setStreaming(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPulse()
+    const onVisible = () => { if (!document.hidden) loadPulse() }
+    const onFocus   = () => loadPulse()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      abortRef.current?.abort()
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [loadPulse])
+
+  useEffect(() => {
+    const justCheckedIn = hasCheckin && !prevCheckin.current
+    prevCheckin.current = hasCheckin
+    if (justCheckedIn) loadPulse(true)
+  }, [hasCheckin, loadPulse])
+
+  return { text, streaming }
+}
+
 /* ── Component ───────────────────────────────────────── */
 
 export default function HomeDashboard({ goals, checkin, habits, brief, userName, memoryNotes }: Props) {
@@ -136,6 +215,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName,
     topNote:     memoryNotes?.[0] ?? null,
     brief,
   })
+  const { text: aiText, streaming } = usePulse(live.hasCheckin)
 
   const stats = [
     { href: '/checkin', label: 'Energy', mainVal: energyDisplay, unit: energyUnit, sub: energySub, barPct: energyBarPct, warm: true },
@@ -165,7 +245,22 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName,
           </div>
 
           <div style={{ marginBottom: '28px' }}>
-            <PulseMessage lines={pulseLines} />
+            <PulseMessage lines={[pulseLines[0]]} />
+            <div style={{ marginTop: '10px' }}>
+              {aiText ? (
+                <p style={{ margin: 0, fontSize: 'clamp(14px, 1.8vw, 16px)', lineHeight: 1.75, color: 'var(--text-1)', fontWeight: 400 }}>
+                  {aiText}
+                  {streaming && <span className="pulse-cursor"> |</span>}
+                </p>
+              ) : streaming ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '2px' }}>
+                  <div className="pulse-shimmer" style={{ height: '15px', width: '88%', borderRadius: '6px' }} />
+                  <div className="pulse-shimmer" style={{ height: '15px', width: '68%', borderRadius: '6px', animationDelay: '0.15s' }} />
+                </div>
+              ) : (
+                <PulseMessage lines={pulseLines.slice(1)} />
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -222,6 +317,23 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName,
         @keyframes homePulse {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0.4; }
+        }
+        .pulse-cursor {
+          color: var(--text-3);
+          font-weight: 300;
+          animation: pulseCursorBlink 1s step-end infinite;
+        }
+        @keyframes pulseCursorBlink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        .pulse-shimmer {
+          background: var(--bg-2);
+          animation: pulseShimmer 1.4s ease-in-out infinite;
+        }
+        @keyframes pulseShimmer {
+          0%, 100% { opacity: 0.4; }
+          50%       { opacity: 0.9; }
         }
       `}</style>
     </div>

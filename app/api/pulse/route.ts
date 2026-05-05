@@ -5,26 +5,36 @@ import { getTodayCheckin } from '@/lib/db/checkins'
 import { getUserHabitsWithLogs } from '@/lib/db/habits'
 import { getActiveGoals } from '@/lib/db/goals'
 import { getUserLocalDate } from '@/lib/db/users'
+import { getCachedPulse, storePulse } from '@/lib/db/pulse'
 
 export const runtime  = 'nodejs'
 export const dynamic  = 'force-dynamic'
 export const maxDuration = 20
 
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401 })
 
-  const [memory, checkin, habits, goals, todayDate] = await Promise.all([
+  const force     = new URL(req.url).searchParams.has('force')
+  const todayDate = await getUserLocalDate(user.id)
+  const hour      = new Date().getHours()
+
+  if (!force) {
+    const cached = await getCachedPulse(user.id, todayDate, hour)
+    if (cached) {
+      return new Response(cached, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+    }
+  }
+
+  const [memory, checkin, habits, goals] = await Promise.all([
     readUserMemory(user.id),
     getTodayCheckin(user.id),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
-    getUserLocalDate(user.id),
   ])
 
   const dayName   = new Date(todayDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })
-  const hour      = new Date().getHours()
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 
   const scheduledToday  = habits.filter(h => h.isScheduledToday)
@@ -71,6 +81,7 @@ Rules:
 
   const stream = new ReadableStream({
     async start(controller) {
+      let accumulated = ''
       try {
         const response = await client.messages.create({
           model:      'claude-haiku-4-5',
@@ -81,8 +92,14 @@ Rules:
         })
         for await (const event of response) {
           if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            accumulated += event.delta.text
             controller.enqueue(encoder.encode(event.delta.text))
           }
+        }
+        if (accumulated) {
+          storePulse(user.id, todayDate, hour, accumulated).catch(err =>
+            console.error('[pulse] store error:', err)
+          )
         }
       } catch (err) {
         console.error('[pulse] stream error:', err)
