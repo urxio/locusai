@@ -101,7 +101,7 @@ export default function PostCheckinBrief({ memory, sidebar = false }: Props) {
           <div style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '12px' }}>
             Brief generation hit an issue: {genError}
           </div>
-          <a href="/brief" style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
+          <a href="/checkin" style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
             Open brief page →
           </a>
         </div>
@@ -189,7 +189,7 @@ export default function PostCheckinBrief({ memory, sidebar = false }: Props) {
       {/* ── Link to full brief page ── */}
       {!generating && (
         <a
-          href="/brief"
+          href="/checkin"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginTop: '8px', padding: '13px 16px',

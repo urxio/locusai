@@ -204,7 +204,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
                 ↺ Update check-in
               </button>
               <a
-                href="/brief"
+                href="/checkin"
                 style={{ flex: 2, display: 'block', padding: '12px', background: 'var(--gold)', color: '#131110', borderRadius: '9px', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}
               >
                 View Daily Brief →

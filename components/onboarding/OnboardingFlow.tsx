@@ -240,7 +240,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
           { energy_level: checkin.energy_level, mood_note: checkin.mood_note },
           Intl.DateTimeFormat().resolvedOptions().timeZone,
         )
-        router.push('/brief')
+        router.push('/checkin')
         router.refresh()
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -327,7 +327,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
       {error && <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(200,80,60,0.08)', border: '1px solid rgba(200,80,60,0.18)', fontSize: '13px', color: '#e07060' }}>{error}</div>}
       {!chatDone && <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '10px', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</div>}
       <div style={{ textAlign: 'center', marginTop: '14px' }}>
-        <a href="/brief" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>{isRedo ? '← Back to brief' : 'Skip for now →'}</a>
+        <a href="/checkin" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>{isRedo ? '← Back to brief' : 'Skip for now →'}</a>
       </div>
     </div>
   )
@@ -548,7 +548,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
         {goals.length > 0 && habits.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', marginTop: '-8px' }}>Add at least one habit to continue.</div>}
 
         <div style={{ textAlign: 'center' }}>
-          <a href="/brief" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>{isRedo ? '← Back to brief' : 'Skip setup →'}</a>
+          <a href="/checkin" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>{isRedo ? '← Back to brief' : 'Skip setup →'}</a>
         </div>
       </div>
     </div>

@@ -290,7 +290,7 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
           {checkin ? 'Open Activity' : 'Start Check-in'} →
         </a>
         <a
-          href="/brief"
+          href="/checkin"
           style={{
             display: 'inline-flex', alignItems: 'center',
             background: 'var(--bg-2)', border: '1px solid var(--border)',
