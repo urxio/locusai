@@ -128,8 +128,7 @@ export default function ConversationalCheckin({
   }, [checkinSaved])
 
   useEffect(() => {
-    const box = messagesBoxRef.current
-    if (box) box.scrollTop = box.scrollHeight
+    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [messages])
 
   const saveCheckin = useCallback(async (data: CheckinData, conversationMessages: Message[]) => {
@@ -331,7 +330,7 @@ export default function ConversationalCheckin({
 
               {/* Chat panel */}
               <div style={{
-                position: showSummary ? 'absolute' : 'relative',
+                position: 'absolute',
                 inset: 0,
                 opacity: showSummary ? 0 : 1,
                 transform: showSummary ? 'translateY(-8px)' : 'translateY(0)',
@@ -442,7 +441,7 @@ export default function ConversationalCheckin({
               {/* Summary card (crossfade in) */}
               {checkinData && (
                 <div style={{
-                  position: showSummary ? 'relative' : 'absolute',
+                  position: 'absolute',
                   inset: 0,
                   opacity: showSummary ? 1 : 0,
                   transform: showSummary ? 'translateY(0)' : 'translateY(14px)',
