@@ -22,39 +22,56 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
 
   return (
     <aside className="app-sidebar">
-      {/* Brand mark */}
+      {/* Floating nav pill */}
       <div style={{
-        width: '32px', height: '32px',
-        borderRadius: '10px',
-        background: 'var(--glass-card-bg-tint)',
+        display: 'flex', alignItems: 'center', gap: '2px',
+        background: 'var(--glass-card-bg)',
         border: '1px solid var(--glass-card-border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, marginRight: '8px',
+        borderRadius: 'var(--radius-card)',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        boxShadow: 'var(--glass-card-shadow)',
+        padding: '6px 8px',
+        height: '52px',
+        flexShrink: 0,
       }}>
+        {/* Brand mark */}
         <div style={{
-          width: '10px', height: '10px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
-        }} />
+          width: '32px', height: '32px',
+          borderRadius: '10px',
+          background: 'var(--glass-card-bg-tint)',
+          border: '1px solid var(--glass-card-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, marginRight: '4px',
+        }}>
+          <div style={{
+            width: '10px', height: '10px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
+          }} />
+        </div>
+
+        {/* Main nav — horizontal */}
+        <nav style={{
+          display: 'flex', flexDirection: 'row', alignItems: 'center',
+          gap: '2px',
+        }}>
+          {MAIN_NAV.map(item => {
+            const active = pathname === item.href
+            const showBadge = item.href === '/goals' && overdueStepCount > 0
+            return (
+              <DockItem key={item.href} href={item.href} label={item.label} active={active} badge={showBadge}>
+                {item.icon}
+              </DockItem>
+            )
+          })}
+        </nav>
       </div>
 
-      {/* Main nav — horizontal */}
-      <nav style={{
-        flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center',
-        gap: '2px', overflowX: 'auto', scrollbarWidth: 'none',
-      }}>
-        {MAIN_NAV.map(item => {
-          const active = pathname === item.href
-          const showBadge = item.href === '/goals' && overdueStepCount > 0
-          return (
-            <DockItem key={item.href} href={item.href} label={item.label} active={active} badge={showBadge}>
-              {item.icon}
-            </DockItem>
-          )
-        })}
-      </nav>
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
 
-      {/* Right: settings + avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+      {/* Right: settings + avatar — floating, no pill */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <DockItem href="/settings" label="Settings" active={pathname === '/settings'}>
           <SettingsIcon />
         </DockItem>
