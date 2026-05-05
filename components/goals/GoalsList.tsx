@@ -218,7 +218,7 @@ export default function GoalsList({ goals: initial, habits: initialHabits = [], 
 
   return (
     <>
-      <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+      <div className="page-pad" style={{ maxWidth: '860px', width: '100%', marginLeft: 'auto', marginRight: 'auto', animation: 'fadeUp 0.3s var(--ease) both' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', gap: '16px' }}>
           <div>

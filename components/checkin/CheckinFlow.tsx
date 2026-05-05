@@ -60,7 +60,7 @@ export default function CheckinFlow({ existingCheckin }: { existingCheckin: Chec
   const energyColor = energy >= 7 ? 'var(--sage)' : energy >= 5 ? 'var(--gold)' : '#c08060'
 
   return (
-    <div className="page-pad" style={{ maxWidth: '860px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+    <div className="page-pad" style={{ maxWidth: '860px', width: '100%', marginLeft: 'auto', marginRight: 'auto', animation: 'fadeUp 0.3s var(--ease) both' }}>
       <div style={{ marginBottom: '32px' }}>
         <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', opacity: 0.85 }}>
           {isRedo ? 'Updating Check-in' : 'Daily Check-in'}

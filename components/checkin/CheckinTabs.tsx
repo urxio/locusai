@@ -71,7 +71,7 @@ function CheckinLayout({
   const CARD_H = 'min(680px, calc(100vh - 156px))'
 
   return (
-    <div className="page-pad" style={{ maxWidth: '1180px' }}>
+    <div className="page-pad" style={{ maxWidth: '1180px', width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
       <div className="checkin-two-col">
 
         {/* ── LEFT: Chat card ── */}

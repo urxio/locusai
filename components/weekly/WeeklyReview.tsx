@@ -159,7 +159,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
   }
 
   return (
-    <div className="page-pad" style={{ maxWidth: '900px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+    <div className="page-pad" style={{ maxWidth: '900px', width: '100%', marginLeft: 'auto', marginRight: 'auto', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
       {/* ── Header with week navigation ── */}
       <div style={{ marginBottom: '28px' }}>

@@ -186,7 +186,7 @@ export default function HabitTracker({ habits: initial, today, activeGoals = [] 
 
   return (
     <>
-      <div className="page-pad" style={{ maxWidth: '760px', animation: 'fadeUp 0.3s var(--ease) both' }}>
+      <div className="page-pad" style={{ maxWidth: '760px', width: '100%', marginLeft: 'auto', marginRight: 'auto', animation: 'fadeUp 0.3s var(--ease) both' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', gap: '16px' }}>
