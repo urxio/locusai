@@ -83,7 +83,7 @@ function StatPill({
     <a
       href={href}
       style={{
-        display: 'flex', flexDirection: 'column', gap: '0',
+        display: 'flex', flexDirection: 'column',
         flex: 1, minWidth: 0,
         background: 'var(--bg-1)',
         borderRadius: '24px',
@@ -97,6 +97,7 @@ function StatPill({
         border: '1px solid var(--border)',
         boxShadow: 'var(--shadow-card)',
         transition: 'transform 0.18s var(--ease), box-shadow 0.25s var(--ease)',
+        gap: 0,
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)' }}
@@ -109,7 +110,7 @@ function StatPill({
         filter: 'blur(20px)', pointerEvents: 'none',
       }} />
 
-      {/* Label + optional dot */}
+      {/* Label + optional mood dot */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <span style={{
           fontSize: '9px', fontWeight: 700,
@@ -133,7 +134,7 @@ function StatPill({
         )}
       </div>
 
-      {/* Value */}
+      {/* Value row */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', marginBottom: '8px' }}>
         <span style={{
           fontSize: '30px', fontWeight: 700, letterSpacing: '-0.02em',
@@ -148,12 +149,12 @@ function StatPill({
         )}
       </div>
 
-      {/* Sub */}
+      {/* Sub label */}
       <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3, marginBottom: barPct != null ? '14px' : '0' }}>
         {sub}
       </div>
 
-      {/* Bar */}
+      {/* Progress bar */}
       {barPct != null && <Bar pct={barPct} warm={warm} />}
     </a>
   )
@@ -200,7 +201,11 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
   const mood        = moodWord(checkin?.mood_note ?? null)
 
   /* ── Hero pulse text ── */
-  const timePart = hour < 12 ? 'The morning is clear.' : hour < 17 ? 'The afternoon is yours.' : 'Wind down with intention.'
+  const timePart = hour < 12
+    ? 'The morning is clear.'
+    : hour < 17
+    ? 'The afternoon is yours.'
+    : 'Wind down with intention.'
 
   const hasBothData = goalsCount > 0 && habitsCount > 0
   const hasGoals    = goalsCount > 0
@@ -232,7 +237,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
       href: '/goals', label: 'Goals',
       mainVal: goalsCount > 0 ? `${goalsCount}` : '—',
       sub: goalsCount > 0
-        ? avgGoalPct > 0 ? `active · ${avgGoalPct}% avg` : 'active goals'
+        ? avgGoalPct > 0 ? `${avgGoalPct}% avg` : 'active'
         : 'no active goals',
       barPct: avgGoalPct,
     },
@@ -245,22 +250,25 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
   ]
 
   return (
-    <div className="page-pad" style={{ maxWidth: '900px' }}>
+    <div className="page-pad home-dashboard" style={{ maxWidth: '900px' }}>
 
       {/* ── Header ── */}
-      <div style={{
+      <header style={{
         display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-        marginBottom: '28px',
-        gap: '16px',
+        marginBottom: '28px', gap: '16px',
+        animation: 'fadeUp 0.35s var(--ease) both',
       }}>
-        {/* Left: greeting + date */}
+        {/* Left: eyebrow + date */}
         <div>
           <div style={{
             fontSize: '10px', fontWeight: 700,
             color: 'var(--text-3)', letterSpacing: '0.18em',
-            textTransform: 'uppercase', marginBottom: '6px',
+            textTransform: 'uppercase', marginBottom: '5px',
+            display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            {greeting} · Today
+            <span>{greeting}</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>Today</span>
           </div>
           <h1 style={{
             fontSize: 'clamp(28px, 5vw, 42px)',
@@ -272,9 +280,9 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
           </h1>
         </div>
 
-        {/* Right: week + season + toggle */}
+        {/* Right: week + season + theme toggle */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '16px',
+          display: 'flex', alignItems: 'center', gap: '14px',
           flexShrink: 0,
         }}>
           <div style={{ textAlign: 'right' }}>
@@ -287,54 +295,53 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
           </div>
           <ThemeToggle />
         </div>
-      </div>
+      </header>
 
       {/* ── Pulse card ── */}
       <div
-        className="glass-card"
+        className="glass-card home-pulse-card"
         style={{
-          padding: 'clamp(28px, 4vw, 48px)',
+          padding: 'clamp(28px, 4vw, 44px)',
           position: 'relative',
           overflow: 'hidden',
-          marginBottom: '16px',
+          marginBottom: '14px',
+          animation: 'fadeUp 0.4s var(--ease) 0.05s both',
         }}
       >
-        {/* Ambient top-right glow */}
+        {/* Ambient top-right warm glow */}
         <div aria-hidden style={{
           position: 'absolute', top: '-80px', right: '-80px',
-          width: '340px', height: '340px', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.78 0.09 75 / 0.12) 0%, transparent 70%)',
+          width: '320px', height: '320px', borderRadius: '50%',
+          background: 'radial-gradient(circle, oklch(0.78 0.09 75 / 0.10) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
-        {/* Ambient bottom-left glow */}
+        {/* Ambient bottom-left sage glow */}
         <div aria-hidden style={{
           position: 'absolute', bottom: '-60px', left: '-60px',
-          width: '260px', height: '260px', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.78 0.07 165 / 0.10) 0%, transparent 70%)',
+          width: '240px', height: '240px', borderRadius: '50%',
+          background: 'radial-gradient(circle, oklch(0.78 0.07 165 / 0.09) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
-
-        {/* Card overlay */}
+        {/* Card overlay shimmer */}
         <div aria-hidden style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-          background: 'var(--card-overlay)', opacity: 0.3,
+          background: 'var(--card-overlay)', opacity: 0.28,
         }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* Badge */}
+          {/* ── AI pulse badge ── */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '7px',
             background: 'var(--bg-2)',
             border: '1px solid var(--border)',
             borderRadius: '20px',
-            padding: '5px 12px 5px 8px',
-            marginBottom: '24px',
+            padding: '5px 13px 5px 9px',
+            marginBottom: '22px',
           }}>
             <div style={{
               width: '7px', height: '7px', borderRadius: '50%',
               background: 'var(--sage)',
-              boxShadow: '0 0 6px var(--sage)',
-              animation: 'pulse 2.4s ease-in-out infinite',
+              animation: 'homePulse 2.4s ease-in-out infinite',
               flexShrink: 0,
             }} />
             <span style={{
@@ -345,70 +352,79 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
             </span>
           </div>
 
-          {/* Main heading */}
+          {/* ── Main serif headline ── */}
           <div style={{
-            fontSize: 'clamp(22px, 3.5vw, 32px)',
+            fontSize: 'clamp(20px, 3.2vw, 30px)',
             fontWeight: 500,
-            lineHeight: 1.35,
+            lineHeight: 1.4,
             color: 'var(--text-0)',
-            marginBottom: '16px',
+            marginBottom: '14px',
             fontFamily: 'var(--font-serif)',
             maxWidth: '640px',
           }}>
             {hasBothData ? (
               <>
                 You have{' '}
-                <span style={{ color: 'var(--sage)', fontWeight: 600 }}>{goalsCount} goal{goalsCount !== 1 ? 's' : ''}</span>
+                <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>
+                  {goalsCount} {goalsCount !== 1 ? 'goals' : 'goal'}
+                </a>
                 {' '}and{' '}
-                <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{habitsCount} habit{habitsCount !== 1 ? 's' : ''}</span>
+                <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>
+                  {habitsCount} {habitsCount !== 1 ? 'habits' : 'habit'}
+                </a>
                 {' '}aligned for today. {timePart}
               </>
             ) : hasGoals ? (
               <>
                 You have{' '}
-                <span style={{ color: 'var(--sage)', fontWeight: 600 }}>{goalsCount} active goal{goalsCount !== 1 ? 's' : ''}</span>
+                <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>
+                  {goalsCount} active {goalsCount !== 1 ? 'goals' : 'goal'}
+                </a>
                 {' '}to work toward. {timePart}
               </>
             ) : hasHabits ? (
               <>
                 You have{' '}
-                <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{habitsCount} habit{habitsCount !== 1 ? 's' : ''}</span>
+                <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>
+                  {habitsCount} {habitsCount !== 1 ? 'habits' : 'habit'}
+                </a>
                 {' '}scheduled for today. {timePart}
               </>
             ) : (
               <>
                 Welcome back. Set your first{' '}
-                <span style={{ color: 'var(--sage)', fontWeight: 600 }}>goal</span>
+                <a href="/goals" style={{ color: 'var(--sage)', fontWeight: 700, textDecoration: 'none' }}>goal</a>
                 {' '}or{' '}
-                <span style={{ color: 'var(--gold)', fontWeight: 600 }}>habit</span>
+                <a href="/habits" style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'none' }}>habit</a>
                 {' '}to get started.
               </>
             )}
           </div>
 
-          {/* Subtitle */}
+          {/* ── Subtitle / insight ── */}
           <p style={{
-            fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7,
-            margin: '0 0 32px', maxWidth: '520px',
+            fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.75,
+            margin: '0 0 28px', maxWidth: '520px',
           }}>
             {insightText ?? (
               hour < 12
-                ? 'Your focus sessions are most productive in the morning. Consider tackling your deepest work before the afternoon dip.'
+                ? 'Your focus sessions have been most productive before 10 am. Consider scheduling your deepest work before the afternoon dip.'
                 : hour < 17
                 ? 'Mid-day energy tends to hold up well. A good time to work through goal steps or connect with your team.'
                 : 'End the day with a check-in to track your wins and set a clear intention for tomorrow.'
             )}
           </p>
 
-          {/* Actions */}
+          {/* ── CTA buttons ── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {checkin ? (
               <Link
                 href="/checkin"
+                id="home-view-brief-btn"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   background: 'var(--text-0)', color: 'var(--bg-0)',
-                  borderRadius: '14px', padding: '12px 22px',
+                  borderRadius: '14px', padding: '11px 22px',
                   fontSize: '14px', fontWeight: 600,
                   textDecoration: 'none',
                   transition: 'opacity 0.15s',
@@ -417,15 +433,18 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
                 View Brief
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </Link>
             ) : (
               <Link
                 href="/checkin"
+                id="home-start-checkin-btn"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   background: 'var(--text-0)', color: 'var(--bg-0)',
-                  borderRadius: '14px', padding: '12px 22px',
+                  borderRadius: '14px', padding: '11px 22px',
                   fontSize: '14px', fontWeight: 600,
                   textDecoration: 'none',
                   transition: 'opacity 0.15s',
@@ -434,19 +453,22 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
                 Start Check-in
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </Link>
             )}
 
             {!checkin && (
               <Link
                 href="/goals"
+                id="home-skip-btn"
                 style={{
                   display: 'inline-flex', alignItems: 'center',
                   background: 'transparent',
                   color: 'var(--text-2)',
                   border: '1px solid var(--border)',
-                  borderRadius: '14px', padding: '12px 20px',
+                  borderRadius: '14px', padding: '11px 20px',
                   fontSize: '14px', fontWeight: 500,
                   textDecoration: 'none',
                   transition: 'background 0.15s, border-color 0.15s',
@@ -468,12 +490,14 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
       </div>
 
       {/* ── Status pills ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '10px',
-      }}
+      <div
         className="home-stat-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '10px',
+          animation: 'fadeUp 0.45s var(--ease) 0.10s both',
+        }}
       >
         {stats.map(s => (
           <StatPill key={s.label} {...s} />
@@ -485,10 +509,13 @@ export default function HomeDashboard({ goals, checkin, habits, brief }: Props) 
           .home-stat-grid {
             grid-template-columns: repeat(2, 1fr) !important;
           }
+          .home-pulse-card {
+            padding: 24px !important;
+          }
         }
-        @keyframes pulse {
+        @keyframes homePulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--sage); }
-          50% { opacity: 0.5; box-shadow: 0 0 2px var(--sage); }
+          50%       { opacity: 0.45; box-shadow: 0 0 2px var(--sage); }
         }
       `}</style>
     </div>
