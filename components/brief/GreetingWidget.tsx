@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { CheckIn, HabitWithLogs, Brief, Goal } from '@/lib/types'
 
 type Props = {
@@ -153,19 +153,20 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
   const today      = todayDate ?? browserLocalDate()
   const scheduled  = habits.filter(h => h.isScheduledToday)
 
-  // ── AI opener — streamed on mount ───────────────────────
+  // ── AI opener — streamed on mount, re-fetched after check-in ──
   const [aiOpener, setAiOpener]   = useState('')
   const [openerDone, setDone]     = useState(false)
   const fetchedRef                = useRef(false)
+  const prevCheckinRef            = useRef(checkin)
 
-  useEffect(() => {
-    if (fetchedRef.current) return
-    fetchedRef.current = true
+  const fetchPulse = useCallback((force = false) => {
     let cancelled = false
-
+    setAiOpener('')
+    setDone(false)
     ;(async () => {
       try {
-        const res = await fetch('/api/pulse', { cache: 'no-store' })
+        const url = force ? '/api/pulse?force=1' : '/api/pulse'
+        const res = await fetch(url, { cache: 'no-store' })
         if (!res.ok || !res.body) return
         const reader = res.body.getReader()
         const dec    = new TextDecoder()
@@ -178,9 +179,23 @@ export default function GreetingWidget({ checkin, habits, goals, brief, todayDat
         if (!cancelled) setDone(true)
       }
     })()
-
     return () => { cancelled = true }
   }, [])
+
+  // Initial fetch on mount
+  useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+    return fetchPulse(false)
+  }, [fetchPulse])
+
+  // Re-fetch (busting cache) when check-in transitions from null → saved
+  useEffect(() => {
+    if (prevCheckinRef.current === null && checkin !== null) {
+      fetchPulse(true)
+    }
+    prevCheckinRef.current = checkin
+  }, [checkin, fetchPulse])
   const doneToday  = scheduled.filter(h => h.logs.some(l => l.logged_date === today))
   const active     = goals.filter(g => g.status === 'active')
 
