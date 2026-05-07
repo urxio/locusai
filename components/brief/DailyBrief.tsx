@@ -209,8 +209,6 @@ export default function DailyBrief({
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [router])
 
-  const hour = now.getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const dayLabel = now.toLocaleDateString('en-US', { weekday: 'long' })
   const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
@@ -247,7 +245,7 @@ export default function DailyBrief({
               <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--glass-card-bg)' }} />
             </span>
             <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ink-400)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {greeting}{userName ? `, ${userName.split(' ')[0]}` : ''}
+              {userName ? userName.split(' ')[0] : 'Daily Brief'}
             </span>
           </div>
         </div>
@@ -315,7 +313,7 @@ export default function DailyBrief({
                 </span>
               </div>
               <p style={{ fontSize: 'clamp(14px, 1.8vw, 16px)', lineHeight: 1.75, color: 'var(--text-1)', fontStyle: 'italic', margin: 0 }}>
-                {greeting}{userName ? `, ${userName.split(' ')[0]}` : ''}. Your morning message is on its way.
+                Your daily message is on its way.
               </p>
             </div>
           )}
