@@ -337,6 +337,7 @@ export default function JournalSection({
 
   const [locusComment,        setLocusComment]        = useState<string | null>(() => commentForDate(todayStr))
   const [locusCommentLoading, setLocusCommentLoading] = useState(false)
+  const [locusCommentError,   setLocusCommentError]   = useState(false)
 
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -354,6 +355,7 @@ export default function JournalSection({
     setReflectionEmpty(cached.reflectionEmpty)
     setLocusComment(commentForDate(selectedDate))
     setLocusCommentLoading(false)
+    setLocusCommentError(false)
     setTimeout(() => textareaRef.current?.focus(), 50)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate])
@@ -432,9 +434,19 @@ export default function JournalSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content.trim(), date: selectedDate }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const { comment } = await res.json()
-      if (comment) setLocusComment(comment)
-    } catch { /* silent */ } finally {
+      if (comment) {
+        setLocusComment(comment)
+      } else {
+        setLocusCommentError(true)
+        setTimeout(() => setLocusCommentError(false), 4000)
+      }
+    } catch (err) {
+      console.error('[share-with-locus]', err)
+      setLocusCommentError(true)
+      setTimeout(() => setLocusCommentError(false), 4000)
+    } finally {
       setLocusCommentLoading(false)
     }
   }
@@ -561,7 +573,7 @@ export default function JournalSection({
               />
 
               {/* AI cards inside the scrollable area */}
-              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone) || locusComment || locusCommentLoading) && (
+              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone) || locusComment || locusCommentLoading || locusCommentError) && (
                 <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                   {reflectionLoading && !reflection && (
@@ -623,6 +635,20 @@ export default function JournalSection({
                   )}
 
                   {locusComment && <LocusCommentCard comment={locusComment} />}
+
+                  {locusCommentError && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
+                      animation: 'fadeUp 0.25s var(--ease) both',
+                    }}>
+                      <LocusIcon />
+                      <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
+                        Couldn't reach Locus — try again in a moment.
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

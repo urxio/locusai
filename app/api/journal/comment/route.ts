@@ -55,13 +55,21 @@ export async function POST(request: NextRequest) {
     })
 
     const raw = res.content.find(b => b.type === 'text')?.text ?? ''
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
-    const parsed = JSON.parse(cleaned)
+    // Extract the first JSON object from anywhere in the response
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('[journal/comment] no JSON in response:', raw)
+      return NextResponse.json({ comment: null })
+    }
+    const parsed = JSON.parse(jsonMatch[0])
     const comment = typeof parsed.comment === 'string' && parsed.comment.trim()
       ? parsed.comment.trim()
       : null
 
-    if (!comment) return NextResponse.json({ comment: null })
+    if (!comment) {
+      console.error('[journal/comment] comment null, parsed:', parsed)
+      return NextResponse.json({ comment: null })
+    }
 
     await saveLocusComment(user.id, date, comment)
 
