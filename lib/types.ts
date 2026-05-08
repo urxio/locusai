@@ -135,6 +135,7 @@ export type JournalEntry = {
   user_id: string
   date: string
   content: string
+  locus_comment: string | null
   created_at: string
   updated_at: string
 }

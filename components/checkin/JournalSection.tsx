@@ -242,6 +242,39 @@ function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismi
   )
 }
 
+// ─── Locus comment card ───────────────────────────────────────────────────────
+
+function LocusCommentCard({ comment }: { comment: string }) {
+  return (
+    <div style={{
+      background: 'var(--glass-card-bg)',
+      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+      border: '1px solid var(--gold)',
+      borderRadius: '14px', overflow: 'hidden',
+      animation: 'fadeUp 0.3s var(--ease) both',
+    }}>
+      <div style={{
+        padding: '10px 14px',
+        borderBottom: '1px solid color-mix(in srgb, var(--gold) 25%, transparent)',
+        display: 'flex', alignItems: 'center', gap: '8px',
+      }}>
+        <LocusIcon />
+        <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.9 }}>
+          Locus
+        </span>
+      </div>
+      <div style={{ padding: '14px 16px' }}>
+        <p style={{
+          margin: 0, fontFamily: 'var(--font-serif)', fontSize: '15px',
+          fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.65,
+        }}>
+          {comment}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function JournalSection({
@@ -266,6 +299,11 @@ export default function JournalSection({
   function entryForDate(date: string): string {
     if (date === todayStr) return existing?.content ?? ''
     return recentJournals.find(j => j.date === date)?.content ?? ''
+  }
+
+  function commentForDate(date: string): string | null {
+    if (date === todayStr) return existing?.locus_comment ?? null
+    return recentJournals.find(j => j.date === date)?.locus_comment ?? null
   }
 
   const [content, setContent] = useState(entryForDate(todayStr))
@@ -297,6 +335,9 @@ export default function JournalSection({
   const [reflectionDismissed, setReflectionDismissed] = useState(false)
   const [reflectionEmpty,     setReflectionEmpty]     = useState(false)
 
+  const [locusComment,        setLocusComment]        = useState<string | null>(() => commentForDate(todayStr))
+  const [locusCommentLoading, setLocusCommentLoading] = useState(false)
+
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -311,6 +352,8 @@ export default function JournalSection({
     setFollowupQ(cached.followupQ)
     setReflection(cached.reflection)
     setReflectionEmpty(cached.reflectionEmpty)
+    setLocusComment(commentForDate(selectedDate))
+    setLocusCommentLoading(false)
     setTimeout(() => textareaRef.current?.focus(), 50)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate])
@@ -376,6 +419,24 @@ export default function JournalSection({
     if (timerRef.current) clearTimeout(timerRef.current)
     saveToDb(content, selectedDate)
     triggerAI(content, selectedDate)
+  }
+
+  const handleShareWithLocus = async () => {
+    if (locusCommentLoading || locusComment) return
+    if (timerRef.current) clearTimeout(timerRef.current)
+    await saveToDb(content, selectedDate)
+    setLocusCommentLoading(true)
+    try {
+      const res = await fetch('/api/journal/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content.trim(), date: selectedDate }),
+      })
+      const { comment } = await res.json()
+      if (comment) setLocusComment(comment)
+    } catch { /* silent */ } finally {
+      setLocusCommentLoading(false)
+    }
   }
 
   const journalsForMap: JournalEntry[] = existing
@@ -500,7 +561,7 @@ export default function JournalSection({
               />
 
               {/* AI cards inside the scrollable area */}
-              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone)) && (
+              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone) || locusComment || locusCommentLoading) && (
                 <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                   {reflectionLoading && !reflection && (
@@ -542,6 +603,26 @@ export default function JournalSection({
                   {followupQ && !followupDone && (
                     <FollowupQuestion question={followupQ} context={content} onDone={() => setFollowupDone(true)} />
                   )}
+
+                  {locusCommentLoading && !locusComment && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '12px 16px',
+                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid var(--gold)',
+                      borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
+                    }}>
+                      <LocusIcon />
+                      <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
+                      <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
+                        {[0, 200, 400].map(delay => (
+                          <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms`, opacity: 0.6 }} />
+                        ))}
+                      </span>
+                    </div>
+                  )}
+
+                  {locusComment && <LocusCommentCard comment={locusComment} />}
                 </div>
               )}
             </div>
@@ -569,6 +650,28 @@ export default function JournalSection({
                     }}
                   >
                     Save now
+                  </button>
+                )}
+                {content.trim().split(/\s+/).filter(Boolean).length >= 10 && !locusComment && (
+                  <button
+                    onClick={handleShareWithLocus}
+                    disabled={locusCommentLoading}
+                    style={{
+                      fontSize: '11.5px', padding: '5px 12px',
+                      background: locusCommentLoading
+                        ? 'var(--glass-card-bg)'
+                        : 'linear-gradient(135deg, color-mix(in srgb, var(--gold) 18%, transparent), color-mix(in srgb, var(--gold) 8%, transparent))',
+                      border: '1px solid color-mix(in srgb, var(--gold) 45%, transparent)',
+                      borderRadius: '8px',
+                      color: locusCommentLoading ? 'var(--text-3)' : 'var(--gold)',
+                      cursor: locusCommentLoading ? 'default' : 'pointer',
+                      fontFamily: 'inherit', fontWeight: 600,
+                      backdropFilter: 'blur(12px)',
+                      transition: 'opacity 0.2s',
+                      opacity: locusCommentLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {locusCommentLoading ? 'Sharing…' : 'Share with Locus'}
                   </button>
                 )}
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', opacity: 0.5 }}>

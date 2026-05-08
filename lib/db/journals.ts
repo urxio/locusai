@@ -47,3 +47,18 @@ export async function upsertJournal(
   if (error) { console.error('upsertJournal:', error); return null }
   return data as JournalEntry
 }
+
+export async function saveLocusComment(
+  userId: string,
+  date: string,
+  comment: string
+): Promise<boolean> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({ locus_comment: comment, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('date', date)
+  if (error) { console.error('saveLocusComment:', error); return false }
+  return true
+}
