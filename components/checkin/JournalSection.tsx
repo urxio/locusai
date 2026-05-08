@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react
 import { saveJournalAction } from '@/app/actions/journal'
 import { localDateStr } from '@/lib/utils/date'
 import type { JournalEntry } from '@/lib/types'
-import FollowupQuestion from './FollowupQuestion'
 import { TabToggle, type Tab } from '@/components/checkin/CheckinTabs'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,9 +94,7 @@ function DateSidebar({
           width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
           padding: '7px 12px', borderRadius: '10px', border: 'none',
           cursor: clickable ? 'pointer' : 'default', fontFamily: 'inherit',
-          background: isSelected
-            ? 'var(--glass-card-bg-strong)'
-            : 'transparent',
+          background: isSelected ? 'var(--glass-card-bg-strong)' : 'transparent',
           transition: 'background 0.13s',
           opacity: isFuture ? 0.3 : 1,
           boxShadow: isSelected ? 'var(--glass-card-shadow-sm)' : 'none',
@@ -134,7 +131,6 @@ function DateSidebar({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Header */}
       <div style={{
         padding: '22px 16px 16px', flexShrink: 0,
         borderBottom: '1px solid var(--glass-card-border-subtle)',
@@ -151,8 +147,7 @@ function DateSidebar({
           </span>
           <a href="/checkin/history" style={{
             fontSize: '10px', color: 'var(--text-3)', textDecoration: 'none',
-            fontWeight: 600, letterSpacing: '0.04em',
-            opacity: 0.7,
+            fontWeight: 600, letterSpacing: '0.04em', opacity: 0.7,
           }}>
             All →
           </a>
@@ -162,7 +157,6 @@ function DateSidebar({
         )}
       </div>
 
-      {/* Date list — scrollable */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 6px', scrollbarWidth: 'none' }}>
         {weeks.map(({ offset, days }) => (
           <div key={offset}>
@@ -203,46 +197,6 @@ function LocusIcon() {
   )
 }
 
-// ─── Reflection card ──────────────────────────────────────────────────────────
-
-function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismiss: () => void }) {
-  return (
-    <div style={{
-      background: 'var(--glass-card-bg)',
-      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-      border: '1px solid var(--glass-card-border-subtle)',
-      borderRadius: '14px', overflow: 'hidden',
-      animation: 'fadeUp 0.3s var(--ease) both',
-    }}>
-      <div style={{
-        padding: '10px 14px',
-        borderBottom: '1px solid var(--glass-card-border-subtle)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <LocusIcon />
-          <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Locus noticed
-          </span>
-        </div>
-        <button onClick={onDismiss} aria-label="Dismiss" style={{
-          background: 'none', border: 'none', color: 'var(--text-3)',
-          cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 2px', fontFamily: 'inherit',
-        }}>×</button>
-      </div>
-      <div style={{ padding: '14px 16px' }}>
-        <p style={{
-          margin: 0, fontFamily: 'var(--font-serif)', fontSize: '15px',
-          fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.65,
-        }}>
-          {reflection}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function JournalSection({
@@ -277,52 +231,32 @@ export default function JournalSection({
   const [content, setContent] = useState(entryForDate(todayStr))
   const [status, setStatus]   = useState<'idle' | 'saving' | 'saved'>('idle')
 
-  type AiCache = {
-    aiFetched: boolean; followupQ: string | null
-    reflection: string | null; reflectionEmpty: boolean
-    locusComment: string | null
-  }
   const CACHE_KEY = 'locus_journal_ai_cache'
-  const readStorage = (): Record<string, AiCache> => {
+  const readStorage = (): Record<string, string | null> => {
     try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? '{}') } catch { return {} }
   }
-  const writeStorage = (store: Record<string, AiCache>) => {
+  const writeStorage = (store: Record<string, string | null>) => {
     try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(store)) } catch {}
   }
-  const EMPTY_CACHE: AiCache = { aiFetched: false, followupQ: null, reflection: null, reflectionEmpty: false, locusComment: null }
-  const getCache = (date: string): AiCache => readStorage()[date] ?? EMPTY_CACHE
-  const setCache = (date: string, patch: Partial<AiCache>) => {
+  const getCached = (date: string): string | null => readStorage()[date] ?? null
+  const setCached = (date: string, comment: string | null) => {
     const store = readStorage()
-    store[date] = { ...getCache(date), ...patch }
+    store[date] = comment
     writeStorage(store)
   }
 
-  const [followupQ,           setFollowupQ]           = useState<string | null>(() => getCache(todayStr).followupQ)
-  const [followupDone,        setFollowupDone]        = useState(false)
-  const [reflection,          setReflection]          = useState<string | null>(() => getCache(todayStr).reflection)
-  const [reflectionLoading,   setReflectionLoading]   = useState(false)
-  const [reflectionDismissed, setReflectionDismissed] = useState(false)
-  const [reflectionEmpty,     setReflectionEmpty]     = useState(false)
-
-  const [locusComment,        setLocusComment]        = useState<string | null>(() => commentForDate(todayStr) ?? getCache(todayStr).locusComment)
+  const [locusComment,        setLocusComment]        = useState<string | null>(() => commentForDate(todayStr) ?? getCached(todayStr))
   const [locusCommentLoading, setLocusCommentLoading] = useState(false)
   const [locusCommentError,   setLocusCommentError]   = useState(false)
 
-  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     setContent(entryForDate(selectedDate))
     setStatus('idle')
-    setFollowupDone(false)
-    setReflectionDismissed(false)
-    setReflectionLoading(false)
-    const cached = getCache(selectedDate)
-    setFollowupQ(cached.followupQ)
-    setReflection(cached.reflection)
-    setReflectionEmpty(cached.reflectionEmpty)
-    setLocusComment(commentForDate(selectedDate) ?? getCache(selectedDate).locusComment)
+    setLocusComment(commentForDate(selectedDate) ?? getCached(selectedDate))
     setLocusCommentLoading(false)
     setLocusCommentError(false)
     setTimeout(() => textareaRef.current?.focus(), 50)
@@ -342,36 +276,6 @@ export default function JournalSection({
     } catch { setStatus('idle') }
   }, [])
 
-  const triggerAI = useCallback((text: string, date: string) => {
-    if (getCache(date).aiFetched) return
-    setCache(date, { aiFetched: true })
-    const trimmed = text.trim()
-    if (!trimmed) return
-    const words = trimmed.split(/\s+/).filter(Boolean).length
-    if (words < 10) return
-
-    if (words < 20) {
-      fetch('/api/followup/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: trimmed, type: 'journal' }) })
-        .then(r => r.json()).then(({ question }) => { if (question) { setCache(date, { followupQ: question }); setFollowupQ(question) } }).catch(() => {})
-    } else {
-      setReflectionLoading(true)
-      fetch('/api/journal/reflect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: trimmed }) })
-        .then(r => r.json())
-        .then(({ reflection: r }) => {
-          if (r) { setCache(date, { reflection: r }); setReflection(r) }
-          else {
-            return fetch('/api/followup/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: trimmed, type: 'journal' }) })
-              .then(r2 => r2.json()).then(({ question }) => {
-                if (question) { setCache(date, { followupQ: question }); setFollowupQ(question) }
-                else { setCache(date, { reflectionEmpty: true }); setReflectionEmpty(true); setTimeout(() => { setCache(date, { reflectionEmpty: false }); setReflectionEmpty(false) }, 4000) }
-              })
-          }
-        })
-        .catch(() => {}).finally(() => setReflectionLoading(false))
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const handleChange = (val: string) => {
     setContent(val)
     setStatus('idle')
@@ -383,13 +287,6 @@ export default function JournalSection({
     if (timerRef.current) clearTimeout(timerRef.current)
     if (!content.trim()) return
     saveToDb(content, selectedDate)
-    triggerAI(content, selectedDate)
-  }
-
-  const handleSaveNow = () => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    saveToDb(content, selectedDate)
-    triggerAI(content, selectedDate)
   }
 
   const handleShareWithLocus = async () => {
@@ -407,7 +304,7 @@ export default function JournalSection({
       const { comment } = await res.json()
       if (comment) {
         setLocusComment(comment)
-        setCache(selectedDate, { locusComment: comment })
+        setCached(selectedDate, comment)
       } else {
         setLocusCommentError(true)
         setTimeout(() => setLocusCommentError(false), 4000)
@@ -430,10 +327,7 @@ export default function JournalSection({
       <div className="journal-layout">
 
         {/* ── LEFT: Date sidebar ── */}
-        <div className="glass-card-soft" style={{
-          height: CARD_H, overflow: 'hidden', position: 'relative',
-        }}>
-          {/* Overlay */}
+        <div className="glass-card-soft" style={{ height: CARD_H, overflow: 'hidden', position: 'relative' }}>
           <div aria-hidden style={{
             position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
             background: 'var(--card-overlay)', opacity: 0.25,
@@ -456,7 +350,6 @@ export default function JournalSection({
           height: CARD_H, display: 'flex', flexDirection: 'column',
           overflow: 'hidden', position: 'relative',
         }}>
-          {/* Overlay + glow */}
           <div aria-hidden style={{
             position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
             background: 'var(--card-overlay)', opacity: 0.28,
@@ -497,13 +390,10 @@ export default function JournalSection({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                {/* Save status */}
                 <div style={{ fontSize: '12px', minWidth: '52px', textAlign: 'right', transition: 'color 0.2s' }}>
                   {status === 'saving' && <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Saving…</span>}
                   {status === 'saved'  && <span style={{ color: 'var(--sage)', fontWeight: 600 }}>✓ Saved</span>}
                 </div>
-
-                {/* Back to today */}
                 {!isToday && (
                   <button
                     onClick={() => setSelectedDate(todayStr)}
@@ -523,7 +413,7 @@ export default function JournalSection({
             </div>
 
             {/* ── Writing area ── */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', scrollbarWidth: 'none' }}>
+            <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
               <textarea
                 ref={textareaRef}
                 value={content}
@@ -533,103 +423,83 @@ export default function JournalSection({
                   ? 'Write freely — a stream of thought, a few observations, or a detailed account of your day...'
                   : `Write a reflection for ${formatDisplayDate(selectedDate)}…`}
                 style={{
-                  flex: 1, width: '100%', minHeight: '100%',
+                  width: '100%', height: '100%', minHeight: '100%',
                   background: 'transparent', border: 'none', outline: 'none',
                   fontFamily: 'var(--font-sans)', fontSize: '15px',
                   color: 'var(--text-0)', resize: 'none', lineHeight: 1.8,
                   padding: '24px 28px', boxSizing: 'border-box',
                   caretColor: 'var(--gold)',
+                  display: 'block',
                 }}
               />
-
-              {/* AI cards below the journal text */}
-              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone) || locusCommentLoading || locusComment || locusCommentError) && (
-                <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-                  {reflectionLoading && !reflection && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '12px 16px',
-                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                      border: '1px solid var(--glass-card-border-subtle)',
-                      borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
-                    }}>
-                      <LocusIcon />
-                      <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
-                      <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-                        {[0, 200, 400].map(delay => (
-                          <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms` }} />
-                        ))}
-                      </span>
-                    </div>
-                  )}
-
-                  {reflectionEmpty && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
-                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                      border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
-                      animation: 'fadeUp 0.25s var(--ease) both',
-                    }}>
-                      <LocusIcon />
-                      <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
-                        Nothing unusual to flag from this entry.
-                      </span>
-                    </div>
-                  )}
-
-                  {reflection && !reflectionDismissed && (
-                    <ReflectionCard reflection={reflection} onDismiss={() => setReflectionDismissed(true)} />
-                  )}
-
-                  {followupQ && !followupDone && (
-                    <FollowupQuestion question={followupQ} context={content} onDone={() => setFollowupDone(true)} />
-                  )}
-
-                  {locusCommentLoading && !locusComment && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '12px 16px',
-                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                      border: '1px solid var(--glass-card-border-subtle)',
-                      borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
-                    }}>
-                      <LocusIcon />
-                      <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
-                      <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-                        {[0, 200, 400].map(delay => (
-                          <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms` }} />
-                        ))}
-                      </span>
-                    </div>
-                  )}
-
-                  {locusComment && (
-                    <ReflectionCard
-                      reflection={locusComment}
-                      onDismiss={() => {
-                        setLocusComment(null)
-                        setCache(selectedDate, { locusComment: null })
-                      }}
-                    />
-                  )}
-
-                  {locusCommentError && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
-                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                      border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
-                      animation: 'fadeUp 0.25s var(--ease) both',
-                    }}>
-                      <LocusIcon />
-                      <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
-                        Couldn't reach Locus — try again in a moment.
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
+
+            {/* ── Locus comment — pinned, always visible ── */}
+            {(locusCommentLoading || locusComment || locusCommentError) && (
+              <div style={{
+                flexShrink: 0,
+                borderTop: '1px solid var(--glass-card-border-subtle)',
+                overflow: 'hidden',
+                animation: 'fadeUp 0.3s var(--ease) both',
+              }}>
+                {locusCommentLoading && !locusComment && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '14px 28px',
+                  }}>
+                    <LocusIcon />
+                    <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
+                    <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
+                      {[0, 200, 400].map(delay => (
+                        <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms` }} />
+                      ))}
+                    </span>
+                  </div>
+                )}
+
+                {locusComment && (
+                  <div>
+                    <div style={{
+                      padding: '10px 28px',
+                      borderBottom: '1px solid var(--glass-card-border-subtle)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <LocusIcon />
+                        <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                          Locus noticed
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => { setLocusComment(null); setCached(selectedDate, null) }}
+                        aria-label="Dismiss"
+                        style={{
+                          background: 'none', border: 'none', color: 'var(--text-3)',
+                          cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 2px', fontFamily: 'inherit',
+                        }}
+                      >×</button>
+                    </div>
+                    <div style={{ padding: '14px 28px' }}>
+                      <p style={{
+                        margin: 0, fontFamily: 'var(--font-serif)', fontSize: '15px',
+                        fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.65,
+                      }}>
+                        {locusComment}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {locusCommentError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 28px' }}>
+                    <LocusIcon />
+                    <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
+                      Couldn't reach Locus — try again in a moment.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── Bottom bar ── */}
             <div style={{
@@ -643,7 +513,7 @@ export default function JournalSection({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {content.trim() && status !== 'saved' && (
                   <button
-                    onClick={handleSaveNow}
+                    onClick={() => { if (timerRef.current) clearTimeout(timerRef.current); saveToDb(content, selectedDate) }}
                     style={{
                       fontSize: '11.5px', padding: '5px 12px',
                       background: 'var(--glass-card-bg-strong)',
@@ -656,7 +526,7 @@ export default function JournalSection({
                     Save now
                   </button>
                 )}
-                {content.trim().split(/\s+/).filter(Boolean).length >= 10 && !locusComment && (
+                {wordCount >= 10 && !locusComment && (
                   <button
                     onClick={handleShareWithLocus}
                     disabled={locusCommentLoading}
