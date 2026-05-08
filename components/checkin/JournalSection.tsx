@@ -312,6 +312,7 @@ export default function JournalSection({
   type AiCache = {
     aiFetched: boolean; followupQ: string | null
     reflection: string | null; reflectionEmpty: boolean
+    locusComment: string | null
   }
   const CACHE_KEY = 'locus_journal_ai_cache'
   const readStorage = (): Record<string, AiCache> => {
@@ -320,7 +321,7 @@ export default function JournalSection({
   const writeStorage = (store: Record<string, AiCache>) => {
     try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(store)) } catch {}
   }
-  const EMPTY_CACHE: AiCache = { aiFetched: false, followupQ: null, reflection: null, reflectionEmpty: false }
+  const EMPTY_CACHE: AiCache = { aiFetched: false, followupQ: null, reflection: null, reflectionEmpty: false, locusComment: null }
   const getCache = (date: string): AiCache => readStorage()[date] ?? EMPTY_CACHE
   const setCache = (date: string, patch: Partial<AiCache>) => {
     const store = readStorage()
@@ -335,7 +336,7 @@ export default function JournalSection({
   const [reflectionDismissed, setReflectionDismissed] = useState(false)
   const [reflectionEmpty,     setReflectionEmpty]     = useState(false)
 
-  const [locusComment,        setLocusComment]        = useState<string | null>(() => commentForDate(todayStr))
+  const [locusComment,        setLocusComment]        = useState<string | null>(() => commentForDate(todayStr) ?? getCache(todayStr).locusComment)
   const [locusCommentLoading, setLocusCommentLoading] = useState(false)
   const [locusCommentError,   setLocusCommentError]   = useState(false)
 
@@ -353,7 +354,7 @@ export default function JournalSection({
     setFollowupQ(cached.followupQ)
     setReflection(cached.reflection)
     setReflectionEmpty(cached.reflectionEmpty)
-    setLocusComment(commentForDate(selectedDate))
+    setLocusComment(commentForDate(selectedDate) ?? getCache(selectedDate).locusComment)
     setLocusCommentLoading(false)
     setLocusCommentError(false)
     setTimeout(() => textareaRef.current?.focus(), 50)
@@ -438,6 +439,7 @@ export default function JournalSection({
       const { comment } = await res.json()
       if (comment) {
         setLocusComment(comment)
+        setCache(selectedDate, { locusComment: comment })
       } else {
         setLocusCommentError(true)
         setTimeout(() => setLocusCommentError(false), 4000)
@@ -552,6 +554,46 @@ export default function JournalSection({
               </div>
             </div>
 
+            {/* ── Locus comment (pinned below header, always visible) ── */}
+            {(locusCommentLoading || locusComment || locusCommentError) && (
+              <div style={{
+                flexShrink: 0, padding: '0 28px 14px',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+              }}>
+                {locusCommentLoading && !locusComment && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '12px 16px',
+                    background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid var(--gold)',
+                    borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
+                  }}>
+                    <LocusIcon />
+                    <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
+                    <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
+                      {[0, 200, 400].map(delay => (
+                        <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms`, opacity: 0.6 }} />
+                      ))}
+                    </span>
+                  </div>
+                )}
+                {locusComment && <LocusCommentCard comment={locusComment} />}
+                {locusCommentError && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                    background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
+                    animation: 'fadeUp 0.25s var(--ease) both',
+                  }}>
+                    <LocusIcon />
+                    <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
+                      Couldn't reach Locus — try again in a moment.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── Writing area ── */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', scrollbarWidth: 'none' }}>
               <textarea
@@ -618,46 +660,6 @@ export default function JournalSection({
                 </div>
               )}
             </div>
-
-            {/* ── Locus comment (pinned above bottom bar) ── */}
-            {(locusCommentLoading || locusComment || locusCommentError) && (
-              <div style={{
-                flexShrink: 0, padding: '0 28px 14px',
-                display: 'flex', flexDirection: 'column', gap: '10px',
-              }}>
-                {locusCommentLoading && !locusComment && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '12px 16px',
-                    background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid var(--gold)',
-                    borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
-                  }}>
-                    <LocusIcon />
-                    <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
-                    <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-                      {[0, 200, 400].map(delay => (
-                        <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms`, opacity: 0.6 }} />
-                      ))}
-                    </span>
-                  </div>
-                )}
-                {locusComment && <LocusCommentCard comment={locusComment} />}
-                {locusCommentError && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
-                    background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
-                    animation: 'fadeUp 0.25s var(--ease) both',
-                  }}>
-                    <LocusIcon />
-                    <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
-                      Couldn't reach Locus — try again in a moment.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* ── Bottom bar ── */}
             <div style={{
