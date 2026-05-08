@@ -151,6 +151,19 @@ export type MemoryNote = {
   created_at: string
 }
 
+export type PersonGroup = 'friends' | 'acquaintances' | 'work' | 'family'
+
+export type Person = {
+  id: string
+  user_id: string
+  name: string
+  notes: string | null
+  group: PersonGroup
+  want_catchup: boolean
+  last_mentioned_at: string | null
+  created_at: string
+}
+
 export type WheelArea = {
   key: string
   label: string

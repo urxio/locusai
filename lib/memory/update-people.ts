@@ -10,6 +10,15 @@ import { createClient } from '@/lib/supabase/server'
 import { readUserMemory, patchUserMemory } from '@/lib/ai/memory'
 import { getAnthropicClient } from '@/lib/ai/client'
 import type { PersonMemory } from '@/lib/ai/memory'
+import { upsertPersonByName } from '@/lib/db/people'
+
+// Map PersonMemory relationship → people.group
+function toGroup(relationship: string): string {
+  if (['friend'].includes(relationship)) return 'friends'
+  if (['family', 'partner'].includes(relationship)) return 'family'
+  if (['colleague', 'manager'].includes(relationship)) return 'work'
+  return 'acquaintances'
+}
 
 const THROTTLE_DAYS = 5
 const MIN_JOURNALS  = 3
@@ -130,6 +139,16 @@ Rules:
         last_updated: new Date().toISOString(),
       },
     })
+
+    // Sync extracted people into the people table so they appear in My Network
+    await Promise.all(
+      people.map(p =>
+        upsertPersonByName(userId, p.name, {
+          notes: p.context,
+          last_mentioned_at: p.last_mentioned ? new Date(p.last_mentioned).toISOString() : undefined,
+        }).catch(() => {})
+      )
+    )
 
     console.log(`[memory:people] extracted ${people.length} people for user ${userId.slice(0, 8)}`)
   } catch (err) {

@@ -10,6 +10,7 @@ const MAIN_NAV = [
   { href: '/capture', label: 'Capture',       icon: <CaptureIcon /> },
   { href: '/goals',   label: 'Goals',         icon: <GoalsIcon /> },
   { href: '/planner', label: 'Planner',       icon: <PlannerIcon /> },
+  { href: '/network', label: 'Network',       icon: <NetworkIcon /> },
   { href: '/review',  label: 'Weekly Review', icon: <ReviewIcon /> },
 ]
 
@@ -190,6 +191,10 @@ function PlannerIcon() {
 
 function ReviewIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M4 10a6 6 0 1 0 6-6" strokeLinecap="round" /><path d="M4 6v4h4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+
+function NetworkIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><circle cx="10" cy="7" r="3" /><path d="M4 17c0-3.314 2.686-6 6-6s6 2.686 6 6" strokeLinecap="round" /></svg>
 }
 
 function SettingsIcon() {
