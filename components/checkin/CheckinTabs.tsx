@@ -23,6 +23,12 @@ type Props = {
 export default function CheckinTabs({ existingCheckin, todayJournal, recentJournals, memory, hasBrief = false, pastBriefs = [], initialTab = 'checkin' }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [briefReady, setBriefReady] = useState(hasBrief || !!existingCheckin)
+  const [briefKey, setBriefKey] = useState(0)
+
+  const handleCheckinSaved = () => {
+    if (briefReady) setBriefKey(k => k + 1)
+    setBriefReady(true)
+  }
 
   return (
     <div>
@@ -35,7 +41,8 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
           setTab={setTab}
           todayJournalHasContent={!!todayJournal?.content}
           briefReady={briefReady}
-          onCheckinSaved={() => setBriefReady(true)}
+          briefKey={briefKey}
+          onCheckinSaved={handleCheckinSaved}
           pastBriefs={pastBriefs}
         />
       </div>
@@ -56,7 +63,7 @@ export default function CheckinTabs({ existingCheckin, todayJournal, recentJourn
 /* ── Two-column check-in layout ─────────────────────────────────────────── */
 function CheckinLayout({
   existingCheckin, memory, hasBrief, tab, setTab,
-  todayJournalHasContent, briefReady, onCheckinSaved, pastBriefs,
+  todayJournalHasContent, briefReady, briefKey, onCheckinSaved, pastBriefs,
 }: {
   existingCheckin: CheckIn | null
   memory?: UserMemory | null
@@ -65,6 +72,7 @@ function CheckinLayout({
   setTab: (t: Tab) => void
   todayJournalHasContent: boolean
   briefReady: boolean
+  briefKey: number
   onCheckinSaved: () => void
   pastBriefs: Brief[]
 }) {
@@ -146,7 +154,7 @@ function CheckinLayout({
           {/* Scrollable body */}
           <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 1 }}>
             {briefReady ? (
-              <PostCheckinBrief memory={memory} sidebar />
+              <PostCheckinBrief key={briefKey} memory={memory} sidebar />
             ) : (
               <BriefPlaceholder />
             )}
