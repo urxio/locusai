@@ -242,38 +242,6 @@ function ReflectionCard({ reflection, onDismiss }: { reflection: string; onDismi
   )
 }
 
-// ─── Locus comment card ───────────────────────────────────────────────────────
-
-function LocusCommentCard({ comment }: { comment: string }) {
-  return (
-    <div style={{
-      background: 'var(--glass-card-bg)',
-      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-      border: '1px solid var(--gold)',
-      borderRadius: '14px', overflow: 'hidden',
-      animation: 'fadeUp 0.3s var(--ease) both',
-    }}>
-      <div style={{
-        padding: '10px 14px',
-        borderBottom: '1px solid color-mix(in srgb, var(--gold) 25%, transparent)',
-        display: 'flex', alignItems: 'center', gap: '8px',
-      }}>
-        <LocusIcon />
-        <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.9 }}>
-          Locus
-        </span>
-      </div>
-      <div style={{ padding: '14px 16px' }}>
-        <p style={{
-          margin: 0, fontFamily: 'var(--font-serif)', fontSize: '15px',
-          fontWeight: 300, color: 'var(--text-0)', lineHeight: 1.65,
-        }}>
-          {comment}
-        </p>
-      </div>
-    </div>
-  )
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -554,46 +522,6 @@ export default function JournalSection({
               </div>
             </div>
 
-            {/* ── Locus comment (pinned below header, always visible) ── */}
-            {(locusCommentLoading || locusComment || locusCommentError) && (
-              <div style={{
-                flexShrink: 0, padding: '0 28px 14px',
-                display: 'flex', flexDirection: 'column', gap: '10px',
-              }}>
-                {locusCommentLoading && !locusComment && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '12px 16px',
-                    background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid var(--gold)',
-                    borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
-                  }}>
-                    <LocusIcon />
-                    <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
-                    <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-                      {[0, 200, 400].map(delay => (
-                        <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms`, opacity: 0.6 }} />
-                      ))}
-                    </span>
-                  </div>
-                )}
-                {locusComment && <LocusCommentCard comment={locusComment} />}
-                {locusCommentError && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
-                    background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
-                    animation: 'fadeUp 0.25s var(--ease) both',
-                  }}>
-                    <LocusIcon />
-                    <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
-                      Couldn't reach Locus — try again in a moment.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* ── Writing area ── */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', scrollbarWidth: 'none' }}>
               <textarea
@@ -614,8 +542,8 @@ export default function JournalSection({
                 }}
               />
 
-              {/* Auto-triggered AI cards (reflection / followup) */}
-              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone)) && (
+              {/* AI cards below the journal text */}
+              {(reflectionLoading || reflectionEmpty || (reflection && !reflectionDismissed) || (followupQ && !followupDone) || locusCommentLoading || locusComment || locusCommentError) && (
                 <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                   {reflectionLoading && !reflection && (
@@ -656,6 +584,48 @@ export default function JournalSection({
 
                   {followupQ && !followupDone && (
                     <FollowupQuestion question={followupQ} context={content} onDone={() => setFollowupDone(true)} />
+                  )}
+
+                  {locusCommentLoading && !locusComment && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '12px 16px',
+                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid var(--glass-card-border-subtle)',
+                      borderRadius: '14px', animation: 'fadeUp 0.25s var(--ease) both',
+                    }}>
+                      <LocusIcon />
+                      <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
+                      <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
+                        {[0, 200, 400].map(delay => (
+                          <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms` }} />
+                        ))}
+                      </span>
+                    </div>
+                  )}
+
+                  {locusComment && (
+                    <ReflectionCard
+                      reflection={locusComment}
+                      onDismiss={() => {
+                        setLocusComment(null)
+                        setCache(selectedDate, { locusComment: null })
+                      }}
+                    />
+                  )}
+
+                  {locusCommentError && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                      background: 'var(--glass-card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid var(--glass-card-border-subtle)', borderRadius: '14px',
+                      animation: 'fadeUp 0.25s var(--ease) both',
+                    }}>
+                      <LocusIcon />
+                      <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
+                        Couldn't reach Locus — try again in a moment.
+                      </span>
+                    </div>
                   )}
                 </div>
               )}
