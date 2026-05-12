@@ -605,13 +605,13 @@ export default function WeeklyPlanner({
 
   function popupStyle(): React.CSSProperties {
     if (!click) return {}
-    const W  = 296
+    const W  = 240
     const vw = typeof window !== 'undefined' ? window.innerWidth  : 1200
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-    const H  = popupMode === 'event' ? 310 : popupMode === 'habit' ? 290 : popupMode === 'goal' ? 240 : popupMode === 'custom' ? 160 : 180
+    const H  = popupMode === 'event' ? 260 : popupMode === 'habit' ? 280 : popupMode === 'goal' ? 240 : popupMode === 'custom' ? 130 : 196
     return {
       position: 'fixed',
-      top:  Math.max(8, Math.min(vh - H - 8, click.clientY + 10)),
+      top:  Math.max(8, Math.min(vh - H - 8, click.clientY + 8)),
       left: Math.max(8, Math.min(vw - W - 8, click.clientX - W / 2)),
       width: `${W}px`, zIndex: 9000,
     }
@@ -840,108 +840,108 @@ export default function WeeklyPlanner({
           id="cal-popup"
           style={{
             ...popupStyle(),
-            background: 'var(--bg-1)',
-            border: '1px solid var(--border-md)',
+            background: '#1c1a17',
+            border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '10px',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 48px rgba(0,0,0,0.7)',
             overflow: 'hidden',
-            animation: 'fadeUp 0.15s var(--ease) both',
+            animation: 'fadeUp 0.12s ease both',
           }}
         >
-          <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-0)' }}>
-                {DOW_FULL[new Date(click.dateStr + 'T12:00:00').getDay()]}{', '}
-                {new Date(click.dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '1px' }}>{formatTime(click.hour, click.minute)}</div>
+          {/* Compact header */}
+          <div style={{ padding: '9px 12px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              {popupMode !== 'choose' && (
+                <button onClick={() => setPopupMode('choose')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '13px', padding: '0 4px 0 0', lineHeight: 1 }}>‹</button>
+              )}
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+                {DOW_SHORT[new Date(click.dateStr + 'T12:00:00').getDay()]}, {new Date(click.dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>{formatTime(click.hour, click.minute)}</span>
             </div>
-            <button onClick={closePopup} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: 0 }}>×</button>
+            <button onClick={closePopup} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
           </div>
 
-          <div style={{ padding: '10px 14px 14px' }}>
-            {popupMode === 'choose' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <OptionBtn icon="📅" label="New Event" sub={hasGoogleCalendar ? 'Locus or Google Calendar' : 'Add to your Locus calendar'} onClick={() => setPopupMode('event')} />
-                <OptionBtn icon="🔄" label="Schedule Habit here" sub={`Sets habit time to ${formatTime(click.hour, click.minute)}`} onClick={() => setPopupMode('habit')} />
-                <OptionBtn icon="🎯" label="Add Goal Block" sub="Place a goal work session" onClick={() => setPopupMode('goal')} />
-                <OptionBtn icon="📝" label="Custom Block" sub="Freeform note or task" onClick={() => setPopupMode('custom')} />
-              </div>
-            )}
+          {/* Body */}
+          {popupMode === 'choose' && (
+            <div style={{ padding: '4px' }}>
+              <PopupRow icon="✦" label="New Event" hint={hasGoogleCalendar ? 'Locus or Google Cal' : 'Locus calendar'} onClick={() => setPopupMode('event')} />
+              <PopupRow icon="⊕" label="Schedule Habit" hint={formatTime(click.hour, click.minute)} onClick={() => setPopupMode('habit')} />
+              <PopupRow icon="◎" label="Goal Block" hint="Work session" onClick={() => setPopupMode('goal')} />
+              <PopupRow icon="—" label="Custom Block" hint="Freeform" onClick={() => setPopupMode('custom')} />
+            </div>
+          )}
 
-            {popupMode === 'event' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                <BackBtn onClick={() => setPopupMode('choose')} />
-                <input autoFocus placeholder="Event title" value={evTitle} onChange={e => setEvTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCreateEvent()} style={iStyle} />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '3px' }}>Start</div>
-                    <input type="time" value={evStart} onChange={e => setEvStart(e.target.value)} style={iStyle} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '3px' }}>End</div>
-                    <input type="time" value={evEnd} onChange={e => setEvEnd(e.target.value)} style={iStyle} />
-                  </div>
-                </div>
-                {hasGoogleCalendar && (
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {(['locus', 'google'] as EventSource[]).map(src => (
-                      <button key={src} onClick={() => setEvSource(src)} style={{ flex: 1, padding: '6px', border: `1px solid ${evSource === src ? (src === 'locus' ? 'rgba(212,168,83,0.5)' : 'rgba(66,133,244,0.5)') : 'var(--border)'}`, background: evSource === src ? (src === 'locus' ? 'rgba(212,168,83,0.1)' : 'rgba(66,133,244,0.1)') : 'transparent', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: evSource === src ? 'var(--text-0)' : 'var(--text-3)', fontWeight: evSource === src ? 600 : 400 }}>
-                        {src === 'locus' ? '✦ Locus' : '📅 Google Cal'}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {createErr && <div style={{ fontSize: '11px', color: '#e07060', lineHeight: 1.4 }}>{createErr}</div>}
-                <button onClick={handleCreateEvent} disabled={creating || !evTitle.trim()} style={{ padding: '8px', border: 'none', background: (!evTitle.trim() || creating) ? 'var(--bg-2)' : 'var(--gold)', color: (!evTitle.trim() || creating) ? 'var(--text-3)' : '#131110', borderRadius: '6px', cursor: (!evTitle.trim() || creating) ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600 }}>
-                  {creating ? 'Creating…' : 'Create Event'}
-                </button>
+          {popupMode === 'event' && (
+            <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input autoFocus placeholder="Event title" value={evTitle} onChange={e => setEvTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCreateEvent()} style={popupInput} />
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input type="time" value={evStart} onChange={e => setEvStart(e.target.value)} style={{ ...popupInput, flex: 1, colorScheme: 'dark' }} />
+                <span style={{ alignSelf: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '12px' }}>→</span>
+                <input type="time" value={evEnd} onChange={e => setEvEnd(e.target.value)} style={{ ...popupInput, flex: 1, colorScheme: 'dark' }} />
               </div>
-            )}
-
-            {popupMode === 'habit' && (
-              <div>
-                <BackBtn onClick={() => setPopupMode('choose')} />
-                <div style={{ fontSize: '11px', color: 'var(--text-2)', margin: '6px 0' }}>
-                  Pick a habit to schedule at <strong style={{ color: 'var(--text-0)' }}>{formatTime(click.hour, click.minute)}</strong>:
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '200px', overflowY: 'auto' }}>
-                  {localHabits.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>No habits yet.</div>}
-                  {localHabits.map(h => (
-                    <button key={h.id} onClick={() => handleAddHabit(h)} style={{ padding: '7px 10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-0)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>{h.emoji}</span>
-                      <span style={{ flex: 1 }}>{h.name}</span>
-                      {h.time_of_day && <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>{h.time_of_day}</span>}
+              {hasGoogleCalendar && (
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  {(['locus', 'google'] as EventSource[]).map(src => (
+                    <button key={src} onClick={() => setEvSource(src)} style={{ flex: 1, padding: '5px 8px', border: `1px solid ${evSource === src ? (src === 'locus' ? 'rgba(212,168,83,0.5)' : 'rgba(66,133,244,0.4)') : 'rgba(255,255,255,0.08)'}`, background: evSource === src ? (src === 'locus' ? 'rgba(212,168,83,0.12)' : 'rgba(66,133,244,0.12)') : 'transparent', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: evSource === src ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+                      {src === 'locus' ? '✦ Locus' : '📅 Google'}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+              {createErr && <div style={{ fontSize: '11px', color: '#e07060' }}>{createErr}</div>}
+              <button onClick={handleCreateEvent} disabled={creating || !evTitle.trim()} style={{ padding: '8px', border: 'none', background: (!evTitle.trim() || creating) ? 'rgba(255,255,255,0.07)' : 'var(--gold)', color: (!evTitle.trim() || creating) ? 'rgba(255,255,255,0.3)' : '#131110', borderRadius: '7px', cursor: (!evTitle.trim() || creating) ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600 }}>
+                {creating ? 'Creating…' : 'Create Event'}
+              </button>
+            </div>
+          )}
 
-            {popupMode === 'goal' && (
-              <div>
-                <BackBtn onClick={() => setPopupMode('choose')} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                  {goals.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>No active goals.</div>}
-                  {goals.map(g => (
-                    <button key={g.id} onClick={() => handleAddGoalBlock(g)} style={{ padding: '7px 10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-0)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', textAlign: 'left' }}>
-                      {g.title}
-                    </button>
-                  ))}
-                </div>
+          {popupMode === 'habit' && (
+            <div style={{ padding: '6px 4px 4px' }}>
+              <div style={{ padding: '0 10px 6px', fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>
+                Schedule at {formatTime(click.hour, click.minute)}
               </div>
-            )}
+              <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                {localHabits.length === 0 && <div style={{ padding: '8px 12px', fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>No habits yet.</div>}
+                {localHabits.map(h => (
+                  <button key={h.id} onClick={() => handleAddHabit(h)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: '6px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span style={{ fontSize: '15px', flexShrink: 0 }}>{h.emoji}</span>
+                    <span style={{ flex: 1, fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>{h.name}</span>
+                    {h.time_of_day && <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>{h.time_of_day}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-            {popupMode === 'custom' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <BackBtn onClick={() => setPopupMode('choose')} />
-                <input autoFocus placeholder="Block title…" value={customText} onChange={e => setCustomText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddCustomBlock()} style={iStyle} />
-                <button onClick={handleAddCustomBlock} disabled={!customText.trim()} style={{ padding: '8px', border: 'none', background: customText.trim() ? 'var(--gold)' : 'var(--bg-2)', color: customText.trim() ? '#131110' : 'var(--text-3)', borderRadius: '6px', cursor: customText.trim() ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: 600 }}>
-                  Add Block
-                </button>
+          {popupMode === 'goal' && (
+            <div style={{ padding: '6px 4px 4px' }}>
+              <div style={{ padding: '0 10px 6px', fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>Add a goal work session</div>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {goals.length === 0 && <div style={{ padding: '8px 12px', fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>No active goals.</div>}
+                {goals.map(g => (
+                  <button key={g.id} onClick={() => handleAddGoalBlock(g)}
+                    style={{ display: 'block', width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500, borderRadius: '6px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >{g.title}</button>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {popupMode === 'custom' && (
+            <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input autoFocus placeholder="Block title…" value={customText} onChange={e => setCustomText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddCustomBlock()} style={popupInput} />
+              <button onClick={handleAddCustomBlock} disabled={!customText.trim()} style={{ padding: '8px', border: 'none', background: customText.trim() ? 'var(--gold)' : 'rgba(255,255,255,0.07)', color: customText.trim() ? '#131110' : 'rgba(255,255,255,0.3)', borderRadius: '7px', cursor: customText.trim() ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: 600 }}>
+                Add Block
+              </button>
+            </div>
+          )}
         </div>,
         document.body,
       )}
@@ -1078,6 +1078,16 @@ const iStyle: React.CSSProperties = {
   fontSize: '12px', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark',
 }
 
+const popupInput: React.CSSProperties = {
+  width: '100%', padding: '7px 10px',
+  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'rgba(255,255,255,0.05)',
+  color: 'rgba(255,255,255,0.9)',
+  borderRadius: '7px', fontSize: '12px',
+  outline: 'none', boxSizing: 'border-box',
+  colorScheme: 'dark',
+}
+
 function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
@@ -1097,27 +1107,18 @@ function SpinIcon() {
   return <div style={{ width: '12px', height: '12px', border: '2px solid #131110', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
 }
 
-function BackBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <button onClick={onClick} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '12px', padding: 0, display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-      ← Back
-    </button>
-  )
-}
 
-function OptionBtn({ icon, label, sub, onClick }: { icon: string; label: string; sub: string; onClick: () => void }) {
+function PopupRow({ icon, label, hint, onClick }: { icon: string; label: string; hint: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-0)', borderRadius: '7px', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', borderRadius: '6px' }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
     >
-      <span style={{ fontSize: '18px', flexShrink: 0 }}>{icon}</span>
-      <div>
-        <div style={{ fontSize: '13px', fontWeight: 600, lineHeight: 1.2 }}>{label}</div>
-        <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '1px' }}>{sub}</div>
-      </div>
+      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', flexShrink: 0, width: '16px', textAlign: 'center', fontFamily: 'monospace' }}>{icon}</span>
+      <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{label}</span>
+      <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>{hint}</span>
     </button>
   )
 }
