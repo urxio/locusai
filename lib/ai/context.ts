@@ -5,7 +5,8 @@ import { readUserMemory, type UserMemory } from '@/lib/ai/memory'
 import { getTodayJournal, getRecentJournals } from '@/lib/db/journals'
 import { getPlanForDate } from '@/lib/db/planner'
 import { getContextualNotes } from '@/lib/db/memory-notes'
-import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry, WeeklyPlanBlock, MemoryNote } from '@/lib/types'
+import { getCalendarEventsForAI } from '@/lib/google/calendar'
+import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry, WeeklyPlanBlock, MemoryNote, CalendarEvent } from '@/lib/types'
 
 export type NeglectedHabit = {
   name: string
@@ -29,10 +30,11 @@ export type BriefContext = {
   isFirstBrief: boolean
   todayPlan: WeeklyPlanBlock[]
   memoryNotes: MemoryNote[]  // contextual notes to surface today
+  calendarEvents: CalendarEvent[]
 }
 
 export async function buildBriefContext(userId: string, date: string): Promise<BriefContext> {
-  const [goalsWithSteps, todayCheckin, recentCheckins, habits, memory, todayJournal, recentJournals, todayPlan] = await Promise.all([
+  const [goalsWithSteps, todayCheckin, recentCheckins, habits, memory, todayJournal, recentJournals, todayPlan, calendarEvents] = await Promise.all([
     getActiveGoalsWithSteps(userId),
     getTodayCheckin(userId),
     getRecentCheckins(userId, 7),
@@ -41,6 +43,7 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     getTodayJournal(userId),
     getRecentJournals(userId, 7),
     getPlanForDate(userId, date),
+    getCalendarEventsForAI(userId),
   ])
 
   // Build topic keywords from today's context for memory note matching
@@ -90,5 +93,6 @@ export async function buildBriefContext(userId: string, date: string): Promise<B
     isFirstBrief,
     todayPlan,
     memoryNotes,
+    calendarEvents,
   }
 }

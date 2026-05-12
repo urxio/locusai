@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateProfile } from '@/app/actions/settings'
 import { signOut } from '@/app/actions/auth'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import { useToast } from '@/components/ui/ToastContext'
 import { createClient } from '@/lib/supabase/client'
+import { disconnectCalendar } from '@/app/actions/calendar'
 
 // ── Cover presets ─────────────────────────────────────────────────────────────
 
@@ -264,20 +265,125 @@ function ChangePasswordSection() {
   )
 }
 
+// ── Google Calendar integration ───────────────────────────────────────────────
+
+function CalIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2.5" width="14" height="12" rx="2" />
+      <path d="M1 6h14M5 1v3M11 1v3" />
+    </svg>
+  )
+}
+
+function CheckMark() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 6.5l3.5 3.5 5.5-6" />
+    </svg>
+  )
+}
+
+function CalendarIntegrationSection({ connected }: { connected: boolean }) {
+  const toast = useToast()
+  const [disconnecting, startDisconnect] = useTransition()
+
+  function handleDisconnect() {
+    startDisconnect(async () => {
+      try {
+        await disconnectCalendar()
+        toast.success('Google Calendar disconnected')
+      } catch {
+        toast.error('Failed to disconnect — try again')
+      }
+    })
+  }
+
+  return (
+    <Section title="Integrations">
+      <Row label="Google Calendar" last>
+        {connected ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#4caf7d', fontWeight: 500 }}>
+              <CheckMark />
+              Connected
+            </span>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              style={{
+                padding: '6px 13px', borderRadius: '8px',
+                border: '1px solid rgba(224,92,74,0.3)',
+                background: 'rgba(224,92,74,0.07)',
+                color: disconnecting ? 'var(--text-3)' : '#e05c4a',
+                fontSize: '12px', fontWeight: 500,
+                cursor: disconnecting ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+              Adds your next 7 days to your daily brief
+            </span>
+            <a
+              href="/api/calendar/connect"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '9px',
+                background: 'var(--gold)', color: 'var(--bg-0)',
+                fontSize: '13px', fontWeight: 600, textDecoration: 'none',
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              <CalIcon />
+              Connect
+            </a>
+          </div>
+        )}
+      </Row>
+    </Section>
+  )
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function SettingsView({
-  name, avatarUrl, coverUrl, timezone, email,
+  name, avatarUrl, coverUrl, timezone, email, calendarConnected,
 }: {
   name: string
   avatarUrl: string | null
   coverUrl: string | null
   timezone: string
   email: string
+  calendarConnected: boolean
 }) {
   const toast = useToast()
   const router = useRouter()
   const [signingOut, startSignOut] = useTransition()
+
+  // Show a toast based on the ?calendar= param set by the OAuth callback,
+  // then strip it from the URL so it doesn't re-fire on refresh.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const cal = params.get('calendar')
+    if (cal === 'connected') {
+      toast.success('Google Calendar connected')
+      router.replace('/settings')
+    } else if (cal === 'error') {
+      toast.error('Failed to connect Google Calendar')
+      router.replace('/settings')
+    } else if (cal === 'denied') {
+      toast.error('Google Calendar access was denied')
+      router.replace('/settings')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="page-pad" style={{ maxWidth: '560px', animation: 'fadeUp 0.3s var(--ease) both' }}>
@@ -306,6 +412,9 @@ export default function SettingsView({
 
       {/* Security */}
       <ChangePasswordSection />
+
+      {/* Integrations */}
+      <CalendarIntegrationSection connected={calendarConnected} />
 
       {/* Appearance */}
       <Section title="Appearance">
