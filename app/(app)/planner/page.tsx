@@ -5,6 +5,7 @@ import { getWeeklyPlan } from '@/lib/db/planner'
 import { getCalendarEventsForAI } from '@/lib/google/calendar'
 import { isCalendarConnected } from '@/lib/db/calendar'
 import { getLocusEvents } from '@/lib/db/locus-events'
+import { getHabitTimeOverrides } from '@/lib/db/habit-overrides'
 import WeeklyPlanner from '@/components/planner/WeeklyPlanner'
 import { getMondayOfWeek } from '@/lib/utils/date'
 
@@ -23,13 +24,14 @@ export default async function PlannerPage() {
   })()
   const today = new Date().toISOString().split('T')[0]
 
-  const [habits, goals, initialPlan, calendarEvents, hasGoogleCalendar, locusEvents] = await Promise.all([
+  const [habits, goals, initialPlan, calendarEvents, hasGoogleCalendar, locusEvents, habitOverrides] = await Promise.all([
     getUserHabitsWithLogs(user.id),
     getActiveGoalsWithSteps(user.id),
     getWeeklyPlan(user.id, weekStart),
     getCalendarEventsForAI(user.id),
     isCalendarConnected(user.id),
     getLocusEvents(user.id, `${weekStart}T00:00:00Z`, `${weekEnd}T23:59:59Z`),
+    getHabitTimeOverrides(user.id, weekStart, weekEnd),
   ])
 
   return (
@@ -41,6 +43,7 @@ export default async function PlannerPage() {
       today={today}
       calendarEvents={calendarEvents}
       locusEvents={locusEvents}
+      habitOverrides={habitOverrides}
       hasGoogleCalendar={hasGoogleCalendar}
     />
   )

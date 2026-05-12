@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { HabitWithLogs, GoalWithSteps, WeeklyPlanBlock, CalendarEvent, LocusEvent } from '@/lib/types'
 import { useToast } from '@/components/ui/ToastContext'
@@ -10,16 +10,16 @@ import {
   acceptSuggestion,
   dismissSuggestion,
   saveSuggestions,
-  setHabitTimeOfDay,
 } from '@/app/actions/planner'
+import { setHabitTimeAction } from '@/app/actions/habits'
 import { createLocusEventAction, deleteLocusEventAction } from '@/app/actions/locus-events'
 
 // ── Grid constants ─────────────────────────────────────────────────────────────
-const START_HOUR = 7   // 7 AM
-const END_HOUR   = 22  // 10 PM
+const START_HOUR = 7
+const END_HOUR   = 22
 const HOURS      = END_HOUR - START_HOUR
 const HOUR_PX    = 64
-const GRID_H     = HOURS * HOUR_PX  // 960px
+const GRID_H     = HOURS * HOUR_PX
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,6 +74,11 @@ function formatTime(h: number, m: number): string {
   return `${h % 12 || 12}:${pad2(m)} ${ampm}`
 }
 
+function formatHHMM(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  return formatTime(h, m)
+}
+
 function localISO(dateStr: string, h: number, m: number): string {
   const d   = new Date(`${dateStr}T${pad2(h)}:${pad2(m)}:00`)
   const off = -d.getTimezoneOffset()
@@ -83,7 +88,6 @@ function localISO(dateStr: string, h: number, m: number): string {
   return `${dateStr}T${pad2(h)}:${pad2(m)}:00${s}${pad2(ah)}:${pad2(am)}`
 }
 
-/** Convert a LocusEvent row to the shared CalendarEvent display shape. */
 function locusToCalEvent(ev: LocusEvent): CalendarEvent {
   return {
     id:           ev.id,
@@ -123,6 +127,15 @@ function layoutDayEvents(events: CalendarEvent[]): LayoutEvent[] {
 const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DOW_FULL  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+/** A habit's effective presence on a specific calendar date. */
+type HabitOnDay = {
+  habit: HabitWithLogs
+  /** Resolved time for this date: override > habit.time_of_day > null */
+  effectiveTime: string | null
+  /** True if this date has an explicit override row (even if null). */
+  hasOverride: boolean
+}
+
 type ClickPoint = {
   dateStr: string
   hour: number
@@ -143,6 +156,14 @@ type SuggestedRawBlock = {
   reason: string
 }
 
+type HabitMenuState = {
+  habit: HabitWithLogs
+  dateStr: string
+  clientX: number
+  clientY: number
+  currentTime: string | null
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type Props = {
@@ -151,8 +172,9 @@ type Props = {
   initialPlan: WeeklyPlanBlock[]
   weekStart: string
   today: string
-  calendarEvents?: CalendarEvent[]   // Google Calendar events
-  locusEvents?: LocusEvent[]         // Native Locus events
+  calendarEvents?: CalendarEvent[]
+  locusEvents?: LocusEvent[]
+  habitOverrides?: Record<string, string | null>
   hasGoogleCalendar?: boolean
 }
 
@@ -164,8 +186,9 @@ export default function WeeklyPlanner({
   initialPlan,
   weekStart: initialWeekStart,
   today,
-  calendarEvents = [],
-  locusEvents    = [],
+  calendarEvents    = [],
+  locusEvents       = [],
+  habitOverrides    = {},
   hasGoogleCalendar = false,
 }: Props) {
   const toast = useToast()
@@ -175,6 +198,7 @@ export default function WeeklyPlanner({
   const [weekOffset,   setWeekOffset]   = useState(0)
   const [weekStart,    setWeekStart]    = useState(initialWeekStart)
   const [localHabits,  setLocalHabits]  = useState<HabitWithLogs[]>(habits)
+  const [localOverrides, setLocalOverrides] = useState<Record<string, string | null>>(habitOverrides)
   const [suggesting,   setSuggesting]   = useState(false)
   const [narrative,    setNarrative]    = useState('')
   const [narrativeVisible, setNarrativeVisible] = useState(false)
@@ -195,8 +219,15 @@ export default function WeeklyPlanner({
   const [createErr,   setCreateErr]   = useState('')
   const [customText,  setCustomText]  = useState('')
 
+  // ── Habit right-click / time-edit state ──
+  const [habitMenu,     setHabitMenu]     = useState<HabitMenuState | null>(null)
+  const [habitTimeEdit, setHabitTimeEdit] = useState<{ habit: HabitWithLogs; dateStr: string } | null>(null)
+  const [editTime,      setEditTime]      = useState('')
+  const [editScope,     setEditScope]     = useState<'this' | 'all'>('all')
+  const [savingTime,    setSavingTime]    = useState(false)
+
   // ── Current time ──
-  const [nowMinutes, setNowMinutes] = useState(() => {
+  const [nowMinutes, setNowMinutes] = useState<number>(() => {
     const n = new Date(); return n.getHours() * 60 + n.getMinutes()
   })
   useEffect(() => {
@@ -209,8 +240,9 @@ export default function WeeklyPlanner({
   useEffect(() => { setLocalHabits(habits) }, [habits])
   useEffect(() => { setLocalGCalEvents(calendarEvents) }, [calendarEvents])
   useEffect(() => { setLocalLocusEvents(locusEvents) }, [locusEvents])
+  useEffect(() => { setLocalOverrides(habitOverrides) }, [habitOverrides])
 
-  // When week changes: fetch plan blocks + locus events for that week
+  // When week changes: fetch plan blocks + locus events + overrides for that week
   useEffect(() => {
     const ws = getWeekStart(weekOffset)
     setWeekStart(ws)
@@ -221,21 +253,25 @@ export default function WeeklyPlanner({
     ]).then(([plan, locus]) => {
       setPlanBlocks(plan as WeeklyPlanBlock[])
       setLocalLocusEvents((locus as { events: LocusEvent[] }).events ?? [])
+      setLocalOverrides((locus as { habitOverrides: Record<string, string | null> }).habitOverrides ?? {})
     }).catch(() => toast.error('Failed to load plan'))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekOffset])
 
-  // Close popup on outside click
+  // Close popups on outside click
   useEffect(() => {
-    if (!click) return
+    if (!click && !habitMenu) return
     const handler = (e: MouseEvent) => {
-      const el = document.getElementById('cal-popup')
-      if (el && !el.contains(e.target as Node)) closePopup()
+      const popup = document.getElementById('cal-popup')
+      const menu  = document.getElementById('habit-ctx-menu')
+      if (popup && !popup.contains(e.target as Node)) closePopup()
+      if (menu  && !menu.contains(e.target as Node))  setHabitMenu(null)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [click])
+  }, [click, habitMenu])
 
-  // ── Memos ──
+  // ── Memos ──────────────────────────────────────────────────────────────────
 
   const colDates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -243,13 +279,11 @@ export default function WeeklyPlanner({
   )
   const weekEnd = colDates[6]
 
-  /** All calendar events to display (Locus converted to CalendarEvent + GCal) */
   const allCalEvents = useMemo<CalendarEvent[]>(() => [
     ...localLocusEvents.map(locusToCalEvent),
     ...localGCalEvents.map(ev => ({ ...ev, source: 'google' as const })),
   ], [localLocusEvents, localGCalEvents])
 
-  /** All-day events indexed by dateStr */
   const allDayByDate = useMemo(() => {
     const m = new Map<string, CalendarEvent[]>()
     for (const ev of allCalEvents) {
@@ -262,7 +296,6 @@ export default function WeeklyPlanner({
     return m
   }, [allCalEvents, colDates, weekEnd])
 
-  /** Timed events per dateStr with lane layout (Locus + GCal merged) */
   const timedByDate = useMemo(() => {
     const m = new Map<string, LayoutEvent[]>()
     for (const col of colDates) {
@@ -272,22 +305,27 @@ export default function WeeklyPlanner({
     return m
   }, [allCalEvents, colDates])
 
-  /** Habits with a scheduled time, per dateStr */
+  /**
+   * All habits scheduled for each day, with their effective time resolved.
+   * effectiveTime = override[habitId_date] ?? habit.time_of_day ?? null
+   */
   const habitsByDate = useMemo(() => {
-    const m = new Map<string, HabitWithLogs[]>()
+    const m = new Map<string, HabitOnDay[]>()
     for (const col of colDates) {
       const dow = new Date(col + 'T12:00:00').getDay()
       const scheduled = localHabits.filter(h =>
-        h.time_of_day &&
-        isHabitOnDay(h, dow) &&
-        (!h.ends_at || col <= h.ends_at)
+        isHabitOnDay(h, dow) && (!h.ends_at || col <= h.ends_at)
       )
-      m.set(col, scheduled)
+      m.set(col, scheduled.map(habit => {
+        const key = `${habit.id}_${col}`
+        const hasOverride = key in localOverrides
+        const effectiveTime = hasOverride ? localOverrides[key] : habit.time_of_day
+        return { habit, effectiveTime: effectiveTime ?? null, hasOverride }
+      }))
     }
     return m
-  }, [localHabits, colDates])
+  }, [localHabits, colDates, localOverrides])
 
-  /** Total event count per day for load dots */
   const loadByDate = useMemo(() => {
     const m = new Map<string, number>()
     for (const ev of allCalEvents) {
@@ -295,16 +333,13 @@ export default function WeeklyPlanner({
       if (d < colDates[0] || d > weekEnd) continue
       m.set(d, (m.get(d) ?? 0) + 1)
     }
-    // Also count habits with scheduled times
     for (const [d, hs] of habitsByDate) {
       m.set(d, (m.get(d) ?? 0) + hs.length)
     }
     return m
   }, [allCalEvents, habitsByDate, colDates, weekEnd])
 
-  const hasAnyCalendar = allCalEvents.length > 0 || localHabits.some(h => h.time_of_day)
-
-  // ── Handlers ──
+  // ── Handlers: popup ─────────────────────────────────────────────────────────
 
   function openPopup(dateStr: string, cx: number, cy: number, hour: number, minute: number) {
     const endH = Math.min(hour + 1, END_HOUR - 1)
@@ -316,6 +351,7 @@ export default function WeeklyPlanner({
     setEvSource('locus')
     setCreateErr('')
     setCustomText('')
+    setHabitMenu(null)
   }
 
   function closePopup() { setClick(null); setPopupMode('choose') }
@@ -337,7 +373,6 @@ export default function WeeklyPlanner({
       const endISO   = localISO(click.dateStr, eh, em)
 
       if (evSource === 'google') {
-        // Create in Google Calendar
         const res  = await fetch('/api/calendar/events', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: evTitle.trim(), startDateTime: startISO, endDateTime: endISO }),
@@ -348,7 +383,6 @@ export default function WeeklyPlanner({
           if (res.status === 403) { setCreateErr('Reconnect Google Calendar in Settings to enable event creation.'); return }
           setCreateErr(data.error ?? 'Failed to create event'); return
         }
-        // Optimistically add as a local CalendarEvent
         const opt: CalendarEvent = {
           id: data.eventId ?? `gcal-opt-${Date.now()}`,
           title: evTitle.trim(), start: startISO, end: endISO,
@@ -357,7 +391,6 @@ export default function WeeklyPlanner({
         }
         setLocalGCalEvents(prev => [...prev, opt])
       } else {
-        // Create as native Locus event
         const saved = await createLocusEventAction({
           title: evTitle.trim(), startDatetime: startISO, endDatetime: endISO,
         })
@@ -374,30 +407,113 @@ export default function WeeklyPlanner({
   async function handleDeleteLocusEvent(id: string) {
     setLocalLocusEvents(prev => prev.filter(e => e.id !== id))
     try { await deleteLocusEventAction(id) }
-    catch { toast.error('Failed to delete event'); /* re-fetch would be needed but skip for now */ }
+    catch { toast.error('Failed to delete event') }
   }
 
+  // Schedules a habit at clicked time for ALL occurrences (from click popup)
   async function handleAddHabit(habit: HabitWithLogs) {
     if (!click) return
     const timeStr = `${pad2(click.hour)}:${pad2(click.minute)}`
-    const prev    = habit.time_of_day
+    const prevTime = habit.time_of_day
     setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: timeStr } : h))
+    // Clear overrides since the habit-level time now governs
+    setLocalOverrides(prev => {
+      const next = { ...prev }
+      for (const key of Object.keys(next)) { if (key.startsWith(habit.id + '_')) delete next[key] }
+      return next
+    })
     closePopup()
     try {
-      await setHabitTimeOfDay(habit.id, timeStr)
+      await setHabitTimeAction(habit.id, click.dateStr, timeStr, 'all')
       toast.success(`${habit.emoji} ${habit.name} scheduled at ${timeStr}`)
     } catch {
       toast.error('Failed to schedule habit')
-      setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prev } : h))
+      setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prevTime } : h))
     }
   }
 
-  async function handleRemoveHabitTime(habit: HabitWithLogs) {
-    const prev = habit.time_of_day
-    setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: null } : h))
-    try { await setHabitTimeOfDay(habit.id, null) }
-    catch { toast.error('Failed to remove habit time'); setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: prev } : h)) }
+  // ── Handlers: habit right-click / time edit ─────────────────────────────────
+
+  function handleHabitContextMenu(
+    e: React.MouseEvent,
+    habit: HabitWithLogs,
+    dateStr: string,
+    currentTime: string | null,
+  ) {
+    e.preventDefault()
+    e.stopPropagation()
+    setHabitMenu({ habit, dateStr, clientX: e.clientX, clientY: e.clientY, currentTime })
+    setClick(null)
   }
+
+  function openHabitTimeEdit(habit: HabitWithLogs, dateStr: string, currentTime: string | null) {
+    setEditTime(currentTime ?? '')
+    setEditScope('all')
+    setHabitTimeEdit({ habit, dateStr })
+    setHabitMenu(null)
+  }
+
+  async function handleSaveHabitTime() {
+    if (!habitTimeEdit) return
+    setSavingTime(true)
+    const { habit, dateStr } = habitTimeEdit
+    const newTime = editTime || null
+    // Snapshot for rollback
+    const prevHabits    = localHabits
+    const prevOverrides = localOverrides
+
+    try {
+      if (editScope === 'all') {
+        setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: newTime } : h))
+        setLocalOverrides(prev => {
+          const next = { ...prev }
+          for (const key of Object.keys(next)) { if (key.startsWith(habit.id + '_')) delete next[key] }
+          return next
+        })
+      } else {
+        setLocalOverrides(prev => ({ ...prev, [`${habit.id}_${dateStr}`]: newTime }))
+      }
+
+      await setHabitTimeAction(habit.id, dateStr, newTime, editScope)
+      toast.success(
+        editScope === 'all'
+          ? `${habit.emoji} ${habit.name} — time updated for all occurrences`
+          : `${habit.emoji} ${habit.name} — updated for ${fmtDate(dateStr)} only`,
+      )
+      setHabitTimeEdit(null)
+    } catch {
+      toast.error('Failed to update habit time')
+      setLocalHabits(prevHabits)
+      setLocalOverrides(prevOverrides)
+    } finally { setSavingTime(false) }
+  }
+
+  async function handleClearHabitTime(habit: HabitWithLogs, dateStr: string, scope: 'this' | 'all') {
+    const prevHabits    = localHabits
+    const prevOverrides = localOverrides
+    setHabitMenu(null)
+
+    if (scope === 'all') {
+      setLocalHabits(hs => hs.map(h => h.id === habit.id ? { ...h, time_of_day: null } : h))
+      setLocalOverrides(prev => {
+        const next = { ...prev }
+        for (const key of Object.keys(next)) { if (key.startsWith(habit.id + '_')) delete next[key] }
+        return next
+      })
+    } else {
+      setLocalOverrides(prev => ({ ...prev, [`${habit.id}_${dateStr}`]: null }))
+    }
+
+    try {
+      await setHabitTimeAction(habit.id, dateStr, null, scope)
+    } catch {
+      toast.error('Failed to clear habit time')
+      setLocalHabits(prevHabits)
+      setLocalOverrides(prevOverrides)
+    }
+  }
+
+  // ── Handlers: plan blocks ───────────────────────────────────────────────────
 
   async function handleAddGoalBlock(goal: GoalWithSteps) {
     if (!click) return
@@ -480,7 +596,7 @@ export default function WeeklyPlanner({
     } finally { setSuggesting(false) }
   }
 
-  // ── Derived ──
+  // ── Derived ──────────────────────────────────────────────────────────────────
 
   const weekEnd2  = addDays(weekStart, 6)
   const weekLabel = `${fmtDate(weekStart)} – ${fmtDate(weekEnd2)}`
@@ -497,12 +613,11 @@ export default function WeeklyPlanner({
       position: 'fixed',
       top:  Math.max(8, Math.min(vh - H - 8, click.clientY + 10)),
       left: Math.max(8, Math.min(vw - W - 8, click.clientX - W / 2)),
-      width: `${W}px`,
-      zIndex: 9000,
+      width: `${W}px`, zIndex: 9000,
     }
   }
 
-  // ── Render ──
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 16px' }}>
@@ -536,7 +651,7 @@ export default function WeeklyPlanner({
         </div>
       )}
 
-      {/* AI Panel */}
+      {/* AI narrative */}
       {narrativeVisible && narrative && (
         <div style={{ background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.2)', borderLeft: '3px solid var(--gold)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
@@ -555,13 +670,13 @@ export default function WeeklyPlanner({
         <LegendDot color="rgba(212,168,83,0.7)" label="Locus event" />
         {hasGoogleCalendar && <LegendDot color="rgba(66,133,244,0.7)" label="Google Calendar" />}
         <LegendDot color="rgba(100,160,130,0.7)" label="Habit" />
-        <span style={{ fontSize: '11px', color: 'var(--text-3)', marginLeft: 'auto' }}>Click any time slot to add</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-3)', marginLeft: 'auto' }}>Click to add · Right-click habit to edit time</span>
       </div>
 
       {/* Calendar grid */}
       <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--bg-0)' }}>
 
-        {/* Day headers (sticky) */}
+        {/* Day headers */}
         <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-0)' }}>
           <div style={{ borderRight: '1px solid var(--border)' }} />
           {colDates.map((dateStr, col) => {
@@ -606,7 +721,15 @@ export default function WeeklyPlanner({
           </div>
         )}
 
-        {/* Plan blocks strip (AI suggestions + goal/custom blocks) */}
+        {/* Habits strip — habits with no scheduled time for that day */}
+        <HabitsStrip
+          colDates={colDates}
+          today={today}
+          habitsByDate={habitsByDate}
+          onContextMenu={handleHabitContextMenu}
+        />
+
+        {/* Plan blocks strip */}
         <PlanStrip
           colDates={colDates}
           weekStart={weekStart}
@@ -636,7 +759,8 @@ export default function WeeklyPlanner({
               const isToday   = dateStr === today
               const isPast    = dateStr < today
               const dayEvents = timedByDate.get(dateStr) ?? []
-              const dayHabits = habitsByDate.get(dateStr) ?? []
+              // Only habits WITH an effective time go into the time grid
+              const timedHabits = (habitsByDate.get(dateStr) ?? []).filter(h => h.effectiveTime !== null)
 
               return (
                 <div
@@ -658,7 +782,7 @@ export default function WeeklyPlanner({
                     <div key={i} style={{ position: 'absolute', top: `${i * HOUR_PX + HOUR_PX / 2}px`, left: 0, right: 0, borderTop: '1px dashed rgba(255,255,255,0.035)', pointerEvents: 'none' }} />
                   ))}
 
-                  {/* Current time indicator */}
+                  {/* Current time line */}
                   {showNow && isToday && (
                     <div style={{ position: 'absolute', top: `${nowY}px`, left: 0, right: 0, zIndex: 6, pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'rgba(220,70,50,0.9)', marginLeft: '-4px', flexShrink: 0 }} />
@@ -666,21 +790,22 @@ export default function WeeklyPlanner({
                     </div>
                   )}
 
-                  {/* Habit blocks (green, at exact scheduled time) */}
-                  {dayHabits.map((habit, i) => {
-                    const [hh, mm] = (habit.time_of_day ?? '08:00').split(':').map(Number)
+                  {/* Timed habit blocks */}
+                  {timedHabits.map(({ habit, effectiveTime }, i) => {
+                    const [hh, mm] = (effectiveTime ?? '08:00').split(':').map(Number)
                     const top = Math.max(0, minuteToY(hh * 60 + mm))
                     return (
                       <HabitBlock
                         key={habit.id}
                         habit={habit}
-                        top={top + i * 2}  // tiny stagger if two habits at exact same time
-                        onRemove={() => handleRemoveHabitTime(habit)}
+                        top={top + i * 2}
+                        effectiveTime={effectiveTime!}
+                        onContextMenu={e => handleHabitContextMenu(e, habit, dateStr, effectiveTime)}
                       />
                     )
                   })}
 
-                  {/* Calendar + Locus event blocks */}
+                  {/* Calendar / Locus event blocks */}
                   {dayEvents.map(ev => {
                     const top    = eventTop(ev)
                     const height = eventHeight(ev)
@@ -688,7 +813,6 @@ export default function WeeklyPlanner({
                     const L = ev.laneIdx * W
                     const isLocus = ev.source === 'locus'
                     const startTime = new Date(ev.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-
                     return (
                       <EventBlock
                         key={ev.id}
@@ -710,7 +834,7 @@ export default function WeeklyPlanner({
         </div>
       </div>
 
-      {/* Click popup */}
+      {/* ── Click popup ────────────────────────────────────────────────────────── */}
       {click && createPortal(
         <div
           id="cal-popup"
@@ -724,7 +848,6 @@ export default function WeeklyPlanner({
             animation: 'fadeUp 0.15s var(--ease) both',
           }}
         >
-          {/* Popup header */}
           <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-0)' }}>
@@ -760,7 +883,6 @@ export default function WeeklyPlanner({
                     <input type="time" value={evEnd} onChange={e => setEvEnd(e.target.value)} style={iStyle} />
                   </div>
                 </div>
-                {/* Source selector — only show when GCal is connected */}
                 {hasGoogleCalendar && (
                   <div style={{ display: 'flex', gap: '6px' }}>
                     {(['locus', 'google'] as EventSource[]).map(src => (
@@ -772,7 +894,7 @@ export default function WeeklyPlanner({
                 )}
                 {createErr && <div style={{ fontSize: '11px', color: '#e07060', lineHeight: 1.4 }}>{createErr}</div>}
                 <button onClick={handleCreateEvent} disabled={creating || !evTitle.trim()} style={{ padding: '8px', border: 'none', background: (!evTitle.trim() || creating) ? 'var(--bg-2)' : 'var(--gold)', color: (!evTitle.trim() || creating) ? 'var(--text-3)' : '#131110', borderRadius: '6px', cursor: (!evTitle.trim() || creating) ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600 }}>
-                  {creating ? 'Creating…' : `Create Event`}
+                  {creating ? 'Creating…' : 'Create Event'}
                 </button>
               </div>
             )}
@@ -824,6 +946,117 @@ export default function WeeklyPlanner({
         document.body,
       )}
 
+      {/* ── Habit right-click context menu ─────────────────────────────────────── */}
+      {habitMenu && createPortal(
+        <div
+          id="habit-ctx-menu"
+          style={{
+            position: 'fixed',
+            top:  Math.min(habitMenu.clientY, (typeof window !== 'undefined' ? window.innerHeight : 800) - 160),
+            left: Math.min(habitMenu.clientX, (typeof window !== 'undefined' ? window.innerWidth  : 1200) - 200),
+            width: '192px',
+            background: 'var(--bg-1)',
+            border: '1px solid var(--border-md)',
+            borderRadius: '8px',
+            boxShadow: '0 6px 30px rgba(0,0,0,0.5)',
+            zIndex: 9100,
+            overflow: 'hidden',
+            animation: 'fadeUp 0.12s var(--ease) both',
+          }}
+        >
+          {/* Header */}
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: '11px', fontWeight: 600, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '14px' }}>{habitMenu.habit.emoji}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habitMenu.habit.name}</span>
+          </div>
+          <div style={{ padding: '4px' }}>
+            <CtxItem
+              icon="⏰"
+              label="Edit time…"
+              onClick={() => openHabitTimeEdit(habitMenu.habit, habitMenu.dateStr, habitMenu.currentTime)}
+            />
+            {habitMenu.currentTime && (
+              <CtxItem
+                icon="✕"
+                label="Remove time (this day)"
+                onClick={() => handleClearHabitTime(habitMenu.habit, habitMenu.dateStr, 'this')}
+                danger
+              />
+            )}
+            {(habitMenu.habit.time_of_day || habitMenu.currentTime) && (
+              <CtxItem
+                icon="✕"
+                label="Remove time (all days)"
+                onClick={() => handleClearHabitTime(habitMenu.habit, habitMenu.dateStr, 'all')}
+                danger
+              />
+            )}
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {/* ── Habit time-edit dialog ───────────────────────────────────────────── */}
+      {habitTimeEdit && createPortal(
+        <div
+          onClick={e => e.target === e.currentTarget && setHabitTimeEdit(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9200, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}
+        >
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: '12px', padding: '24px', width: '300px', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', animation: 'fadeUp 0.15s var(--ease) both' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '20px' }}>{habitTimeEdit.habit.emoji}</span>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)' }}>{habitTimeEdit.habit.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{fmtDate(habitTimeEdit.dateStr)}</div>
+              </div>
+            </div>
+
+            <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Scheduled time</label>
+            <input
+              autoFocus
+              type="time"
+              value={editTime}
+              onChange={e => setEditTime(e.target.value)}
+              style={{ ...iStyle, marginBottom: '16px', colorScheme: 'dark' }}
+            />
+
+            <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Apply to</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '18px' }}>
+              {(['this', 'all'] as const).map(scope => (
+                <label key={scope} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '8px 10px', borderRadius: '7px', border: `1px solid ${editScope === scope ? 'rgba(212,168,83,0.4)' : 'var(--border)'}`, background: editScope === scope ? 'rgba(212,168,83,0.07)' : 'transparent' }}>
+                  <input
+                    type="radio"
+                    name="edit-scope"
+                    value={scope}
+                    checked={editScope === scope}
+                    onChange={() => setEditScope(scope)}
+                    style={{ marginTop: '2px', accentColor: 'var(--gold)', flexShrink: 0 }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-0)' }}>
+                      {scope === 'this' ? `This day only` : 'All occurrences'}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '1px' }}>
+                      {scope === 'this'
+                        ? `Only ${fmtDate(habitTimeEdit.dateStr)} gets this time`
+                        : 'Updates the habit default — affects every day'}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setHabitTimeEdit(null)} style={{ flex: 1, padding: '9px', border: '1px solid var(--border)', background: 'none', color: 'var(--text-2)', borderRadius: '7px', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+              <button onClick={handleSaveHabitTime} disabled={savingTime} style={{ flex: 2, padding: '9px', border: 'none', background: savingTime ? 'var(--bg-2)' : 'var(--gold)', color: savingTime ? 'var(--text-3)' : '#131110', borderRadius: '7px', cursor: savingTime ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 700 }}>
+                {savingTime ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
         @keyframes spin   { to { transform: rotate(360deg) } }
@@ -832,7 +1065,7 @@ export default function WeeklyPlanner({
   )
 }
 
-// ── Shared micro-styles ────────────────────────────────────────────────────────
+// ── Shared styles ──────────────────────────────────────────────────────────────
 
 const navBtn: React.CSSProperties = {
   padding: '6px 12px', border: '1px solid var(--border)', background: 'var(--bg-1)',
@@ -849,7 +1082,7 @@ function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Micro-components ───────────────────────────────────────────────────────────
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
@@ -876,7 +1109,7 @@ function OptionBtn({ icon, label, sub, onClick }: { icon: string; label: string;
   return (
     <button
       onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-0)', borderRadius: '7px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s', width: '100%' }}
+      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-0)', borderRadius: '7px', cursor: 'pointer', textAlign: 'left', width: '100%' }}
       onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
@@ -889,7 +1122,21 @@ function OptionBtn({ icon, label, sub, onClick }: { icon: string; label: string;
   )
 }
 
-// All-day event chip (shown above the time grid)
+function CtxItem({ icon, label, onClick, danger }: { icon: string; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', background: 'none', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', color: danger ? '#e07060' : 'var(--text-1)', textAlign: 'left' }}
+      onMouseEnter={e => (e.currentTarget.style.background = danger ? 'rgba(200,80,60,0.1)' : 'var(--bg-2)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+    >
+      <span style={{ fontSize: '12px', flexShrink: 0, opacity: 0.7 }}>{icon}</span>
+      {label}
+    </button>
+  )
+}
+
+// All-day event chip
 function AllDayChip({ event, onDelete }: { event: CalendarEvent; onDelete?: () => void }) {
   const [hov, setHov] = useState(false)
   const isLocus = event.source === 'locus'
@@ -908,59 +1155,154 @@ function AllDayChip({ event, onDelete }: { event: CalendarEvent; onDelete?: () =
   )
 }
 
-// Habit block — green, positioned at exact time in the grid
-function HabitBlock({ habit, top, onRemove }: { habit: HabitWithLogs; top: number; onRemove: () => void }) {
+// Habit chip in the strip (no scheduled time)
+function HabitStripChip({
+  entry,
+  onContextMenu,
+}: {
+  entry: HabitOnDay
+  onContextMenu: (e: React.MouseEvent) => void
+}) {
   const [hov, setHov] = useState(false)
+  const { habit } = entry
   return (
     <div
       data-event="1"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      onClick={e => e.stopPropagation()}
-      title={`${habit.emoji} ${habit.name} · ${habit.time_of_day}`}
+      onContextMenu={onContextMenu}
+      title={`${habit.emoji} ${habit.name} · right-click to set time`}
       style={{
-        position: 'absolute',
-        top:    `${top}px`,
-        left:   '1%',
-        width:  '98%',
-        height: '26px',
-        background: 'rgba(100,160,130,0.22)',
-        border:     '1px solid rgba(100,160,130,0.45)',
-        borderLeft: '3px solid rgba(100,160,130,0.8)',
-        borderRadius: '4px',
-        padding: '2px 6px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        overflow: 'hidden',
-        zIndex: 3,
-        boxSizing: 'border-box',
-        cursor: 'default',
+        display: 'flex', alignItems: 'center', gap: '3px',
+        padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 500,
+        background: hov ? 'rgba(100,160,130,0.28)' : 'rgba(100,160,130,0.15)',
+        border: '1px solid rgba(100,160,130,0.4)',
+        color: 'rgba(140,200,160,0.95)',
+        cursor: 'context-menu',
+        userSelect: 'none',
+        transition: 'background 0.1s',
+        maxWidth: '100%', overflow: 'hidden',
       }}
     >
-      <span style={{ fontSize: '11px', flexShrink: 0 }}>{habit.emoji}</span>
-      <span style={{ fontSize: '10.5px', color: 'var(--text-1)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
-      <span style={{ fontSize: '9px', color: 'rgba(100,180,140,0.7)', flexShrink: 0 }}>{habit.time_of_day}</span>
-      {hov && (
-        <button onClick={e => { e.stopPropagation(); onRemove() }} title="Remove scheduled time" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '13px', padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
+      <span style={{ fontSize: '10px', flexShrink: 0 }}>{habit.emoji}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+    </div>
+  )
+}
+
+// Habits strip — shows habits with no time for that day
+function HabitsStrip({
+  colDates,
+  today,
+  habitsByDate,
+  onContextMenu,
+}: {
+  colDates: string[]
+  today: string
+  habitsByDate: Map<string, HabitOnDay[]>
+  onContextMenu: (e: React.MouseEvent, habit: HabitWithLogs, dateStr: string, currentTime: string | null) => void
+}) {
+  const [collapsed, setCollapsed] = useState(false)
+  const hasAny = [...habitsByDate.values()].some(hs => hs.length > 0)
+  if (!hasAny) return null
+
+  return (
+    <div style={{ borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px', borderBottom: collapsed ? undefined : '1px solid var(--border)' }}>
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '11px', padding: '1px 4px', display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          <span style={{ fontSize: '9px', display: 'inline-block', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0)', transition: 'transform 0.15s' }}>▼</span>
+          <span style={{ fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Habits</span>
+        </button>
+        <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>right-click to set time</span>
+      </div>
+
+      {!collapsed && (
+        <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)' }}>
+          <div style={{ borderRight: '1px solid var(--border)' }} />
+          {colDates.map((dateStr, col) => {
+            const isToday = dateStr === today
+            // Show habits that have NO effective time for this day (they go in the strip)
+            const noTimeHabits = (habitsByDate.get(dateStr) ?? []).filter(h => h.effectiveTime === null)
+            return (
+              <div
+                key={col}
+                style={{
+                  padding: '3px 4px',
+                  borderRight: col < 6 ? '1px solid var(--border)' : undefined,
+                  background: isToday ? 'rgba(212,168,83,0.025)' : undefined,
+                  minHeight: '28px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '2px',
+                  alignContent: 'flex-start',
+                }}
+              >
+                {noTimeHabits.map(entry => (
+                  <HabitStripChip
+                    key={entry.habit.id}
+                    entry={entry}
+                    onContextMenu={e => onContextMenu(e, entry.habit, dateStr, entry.effectiveTime)}
+                  />
+                ))}
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
 }
 
-// Calendar/Locus event block — positioned precisely in the grid
+// Timed habit block in the grid
+function HabitBlock({
+  habit,
+  top,
+  effectiveTime,
+  onContextMenu,
+}: {
+  habit: HabitWithLogs
+  top: number
+  effectiveTime: string
+  onContextMenu: (e: React.MouseEvent) => void
+}) {
+  return (
+    <div
+      data-event="1"
+      onContextMenu={onContextMenu}
+      onClick={e => e.stopPropagation()}
+      title={`${habit.emoji} ${habit.name} · ${effectiveTime} · right-click to edit`}
+      style={{
+        position: 'absolute', top: `${top}px`, left: '1%', width: '98%', height: '26px',
+        background: 'rgba(100,160,130,0.22)', border: '1px solid rgba(100,160,130,0.45)',
+        borderLeft: '3px solid rgba(100,160,130,0.8)',
+        borderRadius: '4px', padding: '2px 6px',
+        display: 'flex', alignItems: 'center', gap: '4px',
+        overflow: 'hidden', zIndex: 3, boxSizing: 'border-box',
+        cursor: 'context-menu',
+      }}
+    >
+      <span style={{ fontSize: '11px', flexShrink: 0 }}>{habit.emoji}</span>
+      <span style={{ fontSize: '10.5px', color: 'var(--text-1)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+      <span style={{ fontSize: '9px', color: 'rgba(100,180,140,0.7)', flexShrink: 0 }}>{formatHHMM(effectiveTime)}</span>
+    </div>
+  )
+}
+
+// Calendar / Locus event block
 function EventBlock({
   ev, top, height, left, width, startTime, isLocus, onDelete,
 }: {
-  ev: CalendarEvent
-  top: number; height: number; left: string; width: string
+  ev: CalendarEvent; top: number; height: number; left: string; width: string
   startTime: string; isLocus: boolean; onDelete?: () => void
 }) {
   const [hov, setHov] = useState(false)
-  const bg   = isLocus ? 'rgba(212,168,83,0.18)'  : 'rgba(66,133,244,0.18)'
-  const bd   = isLocus ? 'rgba(212,168,83,0.45)'  : 'rgba(66,133,244,0.45)'
-  const acc  = isLocus ? 'rgba(212,168,83,0.85)'  : 'rgba(66,133,244,0.85)'
-  const tc   = isLocus ? 'rgba(220,190,110,0.95)' : 'rgba(160,200,255,0.95)'
+  const bg  = isLocus ? 'rgba(212,168,83,0.18)'  : 'rgba(66,133,244,0.18)'
+  const bd  = isLocus ? 'rgba(212,168,83,0.45)'  : 'rgba(66,133,244,0.45)'
+  const acc = isLocus ? 'rgba(212,168,83,0.85)'  : 'rgba(66,133,244,0.85)'
+  const tc  = isLocus ? 'rgba(220,190,110,0.95)' : 'rgba(160,200,255,0.95)'
   return (
     <div
       data-event="1"
@@ -992,7 +1334,7 @@ function EventBlock({
   )
 }
 
-// Plan strip — AI suggestions, goal blocks, custom blocks per day
+// Plan strip (AI suggestions, goal blocks, custom blocks)
 function PlanStrip({
   colDates, weekStart, today, planBlocks,
   onRemove, onAccept, onDismiss, onAddClick,
@@ -1008,7 +1350,6 @@ function PlanStrip({
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const hasSomething = planBlocks.length > 0
-
   if (!hasSomething && collapsed) return null
 
   return (
@@ -1020,7 +1361,6 @@ function PlanStrip({
         </button>
         <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>goal blocks &amp; AI suggestions</span>
       </div>
-
       {!collapsed && (
         <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)' }}>
           <div style={{ borderRight: '1px solid var(--border)' }} />
@@ -1070,4 +1410,3 @@ function PlanChip({ block, onRemove, onAccept, onDismiss }: { block: WeeklyPlanB
     </div>
   )
 }
-

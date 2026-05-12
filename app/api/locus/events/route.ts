@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getLocusEvents } from '@/lib/db/locus-events'
+import { getHabitTimeOverrides } from '@/lib/db/habit-overrides'
 import type { NextRequest } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -16,6 +17,10 @@ export async function GET(request: NextRequest) {
   const end   = searchParams.get('end')
   if (!start || !end) return Response.json({ error: 'start and end params required' }, { status: 400 })
 
-  const events = await getLocusEvents(user.id, `${start}T00:00:00Z`, `${end}T23:59:59Z`)
-  return Response.json({ events })
+  const [events, habitOverrides] = await Promise.all([
+    getLocusEvents(user.id, `${start}T00:00:00Z`, `${end}T23:59:59Z`),
+    getHabitTimeOverrides(user.id, start, end),
+  ])
+
+  return Response.json({ events, habitOverrides })
 }

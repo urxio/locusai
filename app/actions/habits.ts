@@ -166,6 +166,50 @@ export async function updateHabitAction(habitId: string, data: HabitFormData) {
   revalidatePath('/goals')
 }
 
+/**
+ * Set (or clear) a habit's time, either for a single calendar date
+ * ("this occurrence only") or for every occurrence ("all").
+ *
+ * scope='all'  → updates habits.time_of_day + deletes any per-date overrides
+ * scope='this' → upserts a row in habit_time_overrides for that date
+ */
+export async function setHabitTimeAction(
+  habitId: string,
+  date: string,          // YYYY-MM-DD — only used when scope='this'
+  timeOfDay: string | null,  // "HH:MM" or null to clear
+  scope: 'this' | 'all',
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  if (scope === 'all') {
+    const { error } = await supabase
+      .from('habits')
+      .update({ time_of_day: timeOfDay })
+      .eq('id', habitId)
+      .eq('user_id', user.id)
+    if (error) throw new Error(error.message)
+    // Wipe overrides — the habit-level value now applies everywhere
+    await supabase
+      .from('habit_time_overrides')
+      .delete()
+      .eq('habit_id', habitId)
+      .eq('user_id', user.id)
+  } else {
+    const { error } = await supabase
+      .from('habit_time_overrides')
+      .upsert(
+        { user_id: user.id, habit_id: habitId, date, time_of_day: timeOfDay },
+        { onConflict: 'habit_id,date' },
+      )
+    if (error) throw new Error(error.message)
+  }
+
+  revalidatePath('/planner')
+  revalidatePath('/brief')
+}
+
 export async function deleteHabitAction(habitId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
