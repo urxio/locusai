@@ -1,5 +1,6 @@
 import type { BriefContext } from './context'
 import { formatMemoryForPrompt, formatPeopleForPrompt, formatCatchupForPrompt, formatClarifyingQAForPrompt, formatSelfProfileForPrompt, formatDailySummariesForPrompt, formatCorrelationsForPrompt } from './memory'
+import { formatCalendarForPrompt } from './calendar-context'
 
 function roundTo1(n: number): number { return Math.round(n * 10) / 10 }
 
@@ -32,6 +33,7 @@ INTELLIGENCE RULES
 17. BEHAVIOUR-ENERGY CORRELATIONS: If a BEHAVIOUR-ENERGY CORRELATIONS section appears, treat it as the AI's own discovered evidence — not advice, but observed facts about this specific person. When relevant to today's context (e.g. user skipped a habit that correlates with better energy), surface the insight naturally: "You skipped your run — historically that's one of the clearest signals for lower energy tomorrow." Only reference correlations when they're genuinely relevant to today. Never force them in. These are signals that build trust because they're real.
 18. HABIT-GOAL CONNECTIONS: If a HABIT → GOAL CONNECTIONS section appears in the habits block, use it to make the link between daily behaviour and long-term progress explicit. When a linked habit is on track or has a streak, say so in terms of what it's doing for the goal — not just "you did the habit" but "that's what's moving [goal] forward." When a linked habit appears in the NEGLECTED list, name the cost to the goal directly — "skipping [habit] this week is stalling [goal]." This is the most motivating frame available: connecting what they do today to what they're building over months. Use it.
 17. RECENT DAYS: If a RECENT DAYS section appears, treat it as the richest continuity signal available — what the user was actually experiencing and saying in recent conversations, in their own words. Use it to make the brief feel like a continuation of an ongoing relationship: reference something from yesterday or the day before when it's still relevant, connect today's mood or energy to a pattern that was building, or acknowledge a commitment they made. This context should make the brief feel like talking to someone who was listening then and is still listening now.
+19. CALENDAR: If an UPCOMING CALENDAR EVENTS section appears, use it to surface hard commitments that shape the user's available time and energy. When suggesting priorities or timing, factor in what's already on their calendar. If today has a demanding schedule (multiple meetings, appointments), acknowledge it and steer priorities toward what fits in the gaps. If a calendar event is directly relevant to a goal or habit (e.g. a doctor appointment relates to a health goal), make that connection explicit. Do not list all calendar events in the response — reference only the ones that are genuinely relevant to today's context or the priorities you're recommending.
 17. FIRST BRIEF: If a ── FIRST BRIEF ── block appears, this is day one — the user has just completed onboarding. Do NOT reference absent history, streaks, trends, or patterns (there are none yet). Instead: warmly introduce yourself as Locus, briefly acknowledge what you already know about them from onboarding (their goals, habits they chose, their profile), and tell them what you'll learn to personalize over time (energy rhythms, blocker patterns, what drives their best days). Make it feel like a meaningful beginning, not a data-empty fallback. The priorities should still be real and grounded in their goals and habits from onboarding. Emit 0 clarifying questions on a first brief — give them space to start.
 
 OUTPUT FORMAT — respond with a single valid JSON object only. No markdown fences, no explanation.
@@ -204,6 +206,13 @@ export function buildUserMessage(ctx: BriefContext): string {
     for (const [slot, titles] of Object.entries(bySlot)) {
       if (titles.length > 0) lines.push(`  ${slot}: ${titles.join(', ')}`)
     }
+    lines.push('')
+  }
+
+  // ── UPCOMING CALENDAR EVENTS ──
+  const calendarBlock = formatCalendarForPrompt(ctx.calendarEvents)
+  if (calendarBlock) {
+    lines.push(calendarBlock)
     lines.push('')
   }
 

@@ -1,6 +1,7 @@
-import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry, Person } from '@/lib/types'
+import type { CheckIn, HabitWithLogs, GoalWithSteps, JournalEntry, Person, CalendarEvent } from '@/lib/types'
 import { type UserMemory, formatMemoryForPrompt, formatPeopleForPrompt, formatCatchupForPrompt, formatSelfProfileForPrompt } from '@/lib/ai/memory'
 import type { NeglectedHabit } from '@/lib/ai/context'
+import { formatCalendarForPrompt } from '@/lib/ai/calendar-context'
 
 export type WeeklyContext = {
   weekNumber: number
@@ -18,6 +19,7 @@ export type WeeklyContext = {
   memory: UserMemory | null
   journals: JournalEntry[]
   catchupPeople: Pick<Person, 'name' | 'notes'>[]
+  calendarEvents: CalendarEvent[]
 }
 
 export const WEEKLY_SYSTEM_PROMPT = `You are Locus — an AI companion and life operating system generating a user's weekly reflection. This is not a performance review. It's a weekly conversation with someone who genuinely knows them — who has been watching their energy, habits, and goals all week and wants to help them understand themselves better, not just optimize harder.
@@ -212,6 +214,13 @@ export function buildWeeklyUserMessage(ctx: WeeklyContext): string {
     lines.push('')
   } else {
     lines.push(`JOURNAL ENTRIES: None this week`)
+  }
+
+  // ── UPCOMING CALENDAR EVENTS (next 7 days — helps AI frame the week ahead) ──
+  const calendarBlock = formatCalendarForPrompt(ctx.calendarEvents)
+  if (calendarBlock) {
+    lines.push('')
+    lines.push(calendarBlock)
   }
 
   return lines.join('\n')

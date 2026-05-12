@@ -7,6 +7,7 @@ import { getRecentJournals } from '@/lib/db/journals'
 import { getAnthropicClient } from '@/lib/ai/client'
 import { readUserMemory } from '@/lib/ai/memory'
 import { getPeople } from '@/lib/db/people'
+import { getCalendarEventsForAI } from '@/lib/google/calendar'
 import { updateMemoryInsights } from '@/lib/memory/update-insights'
 import { updatePeopleMemory } from '@/lib/memory/update-people'
 import { upsertWeeklyReflection } from '@/lib/db/weekly-reflections'
@@ -51,13 +52,14 @@ export async function POST() {
 
   const today = new Date()
 
-  const [checkins, habits, goalsWithSteps, memory, journals, allPeople] = await Promise.all([
+  const [checkins, habits, goalsWithSteps, memory, journals, allPeople, calendarEvents] = await Promise.all([
     getRecentCheckins(user.id, 7),
     getUserHabitsWithLogs(user.id),
     getActiveGoalsWithSteps(user.id),
     readUserMemory(user.id),
     getRecentJournals(user.id, 7),
     getPeople(user.id),
+    getCalendarEventsForAI(user.id),
   ])
 
   const neglectedHabits = habits
@@ -88,6 +90,7 @@ export async function POST() {
     memory,
     journals,
     catchupPeople: allPeople.filter(p => p.want_catchup).map(p => ({ name: p.name, notes: p.notes })),
+    calendarEvents,
   }
 
   const userMessage = buildWeeklyUserMessage(ctx)

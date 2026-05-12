@@ -190,6 +190,17 @@ export const WHEEL_AREAS: WheelArea[] = [
   { key: 'purpose',       label: 'Purpose & Meaning',  goalCategory: null        },
 ]
 
+export type CalendarEvent = {
+  id: string
+  title: string
+  start: string        // ISO datetime or date-only for all-day events
+  end: string
+  isAllDay: boolean
+  calendarName: string
+  location: string | null
+  description: string | null  // truncated to 200 chars
+}
+
 export type WheelScores = Record<string, number>
 
 export type WheelSnapshot = {

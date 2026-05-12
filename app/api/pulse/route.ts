@@ -7,6 +7,8 @@ import { getActiveGoals } from '@/lib/db/goals'
 import { getUserTimezone } from '@/lib/db/users'
 import { dateInTz, hourInTz } from '@/lib/utils/date'
 import { getCachedPulse, storePulse } from '@/lib/db/pulse'
+import { getCalendarEventsForAI } from '@/lib/google/calendar'
+import { formatCalendarForPulse } from '@/lib/ai/calendar-context'
 
 export const runtime  = 'nodejs'
 export const dynamic  = 'force-dynamic'
@@ -29,11 +31,12 @@ export async function GET(req: Request) {
     }
   }
 
-  const [memory, checkin, habits, goals] = await Promise.all([
+  const [memory, checkin, habits, goals, calendarEvents] = await Promise.all([
     readUserMemory(user.id),
     getTodayCheckin(user.id),
     getUserHabitsWithLogs(user.id),
     getActiveGoals(user.id),
+    getCalendarEventsForAI(user.id),
   ])
 
   const dayName   = new Date(todayDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })
@@ -64,7 +67,9 @@ export async function GET(req: Request) {
       : '',
   ].filter(Boolean).join('\n')
 
-  const contextParts = [profileBlock, memoryBlock, clarifyingBlock, todayBlock].filter(Boolean)
+  const calendarBlock = formatCalendarForPulse(calendarEvents, todayDate)
+
+  const contextParts = [profileBlock, memoryBlock, clarifyingBlock, todayBlock, calendarBlock].filter(Boolean)
   const context = contextParts.join('\n\n')
 
   const system = `You are Locus, a warm and perceptive AI life companion. Your job is to write a short, specific, thoughtful message to open the user's home page pulse.

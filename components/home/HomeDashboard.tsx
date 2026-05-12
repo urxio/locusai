@@ -7,6 +7,7 @@ import type { Goal, CheckIn, HabitWithLogs, Brief, MemoryNote } from '@/lib/type
 import { moodWord } from '@/lib/utils/mood'
 import { StatPill, LiveDot } from './StatPills'
 import { buildPulseMessage, PulseMessage } from './PulseCard'
+import CalendarWidget from '@/components/calendar/CalendarWidget'
 
 /* ── Types ───────────────────────────────────────────── */
 
@@ -307,6 +308,11 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName,
         {stats.map(s => (
           <StatPill key={s.label} {...s} refreshing={refreshing} />
         ))}
+      </div>
+
+      {/* ── Calendar widget (self-fetching; renders nothing if not connected or no events) ── */}
+      <div style={{ marginTop: '16px', animation: 'fadeUp 0.45s var(--ease) 0.2s both' }}>
+        <CalendarWidget />
       </div>
 
       <style>{`
