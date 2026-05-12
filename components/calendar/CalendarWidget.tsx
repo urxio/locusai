@@ -11,14 +11,17 @@ function formatEventTime(event: CalendarEvent): string {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-function getDayLabel(dateStr: string, isAllDay: boolean): string {
-  const d = new Date(isAllDay ? dateStr + 'T12:00:00' : dateStr)
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + 1)
+function getDayLabel(dateStr: string): string {
+  // dateStr is always YYYY-MM-DD (from ev.start.slice(0, 10))
+  // Use local noon to avoid UTC-midnight parsing shifting the date in non-UTC timezones
+  const d = new Date(dateStr + 'T12:00:00')
 
-  if (d.toDateString() === today.toDateString()) return 'Today'
-  if (d.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
+  const todayStr = new Date().toLocaleDateString('en-CA')          // YYYY-MM-DD local
+  const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA')     // YYYY-MM-DD local
+
+  if (dateStr === todayStr) return 'Today'
+  if (dateStr === tomorrowStr) return 'Tomorrow'
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
@@ -33,7 +36,7 @@ function groupByDay(events: CalendarEvent[]): Array<{ label: string; events: Cal
   }
 
   return Array.from(groups.entries()).map(([dateKey, evs]) => ({
-    label: getDayLabel(dateKey, evs[0].isAllDay),
+    label: getDayLabel(dateKey),
     events: evs,
   }))
 }
