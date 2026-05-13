@@ -28,7 +28,7 @@ export default async function PlannerPage() {
     getUserHabitsWithLogs(user.id),
     getActiveGoalsWithSteps(user.id),
     getWeeklyPlan(user.id, weekStart),
-    getCalendarEventsForAI(user.id),
+    getCalendarEventsForAI(user.id, weekStart, weekEnd),
     isCalendarConnected(user.id),
     getLocusEvents(user.id, `${weekStart}T00:00:00Z`, `${weekEnd}T23:59:59Z`),
     getHabitTimeOverrides(user.id, weekStart, weekEnd),

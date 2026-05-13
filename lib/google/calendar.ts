@@ -115,18 +115,31 @@ async function apiFetch<T>(url: string, accessToken: string): Promise<T | null> 
   }
 }
 
-/** Fetch events from Google Calendar API for all calendars, next 7 days. */
-async function fetchFromGoogle(accessToken: string): Promise<CalendarEvent[]> {
+/** Fetch events from Google Calendar API for all calendars.
+ *  Uses the provided week window, or falls back to rolling 7 days from now. */
+async function fetchFromGoogle(
+  accessToken: string,
+  weekStart?: string,  // YYYY-MM-DD  (Monday)
+  weekEnd?:   string,  // YYYY-MM-DD  (Sunday)
+): Promise<CalendarEvent[]> {
   const calList = await apiFetch<GCalList>(
     `${CALENDAR_API}/users/me/calendarList?minAccessRole=reader`,
     accessToken,
   )
   if (!calList?.items?.length) return []
 
-  const now     = new Date()
-  const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const timeMin = now.toISOString()
-  const timeMax = in7days.toISOString()
+  let timeMin: string
+  let timeMax: string
+  if (weekStart && weekEnd) {
+    // Exact week window: Mon 00:00 → Sun 23:59:59 local, expressed in UTC
+    timeMin = new Date(`${weekStart}T00:00:00`).toISOString()
+    timeMax = new Date(`${weekEnd}T23:59:59`).toISOString()
+  } else {
+    const now     = new Date()
+    const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    timeMin = now.toISOString()
+    timeMax = in7days.toISOString()
+  }
 
   const eventFetches = calList.items.map(cal =>
     apiFetch<GCalEvents>(
@@ -234,20 +247,26 @@ export async function createCalendarEvent(
  * Reads from cache when fresh; falls back to Google API when stale.
  * Always returns [] for users who haven't connected their calendar.
  */
-export async function getCalendarEventsForAI(userId: string): Promise<CalendarEvent[]> {
+export async function getCalendarEventsForAI(
+  userId: string,
+  weekStart?: string,  // YYYY-MM-DD — when provided, bypasses cache and fetches the exact week
+  weekEnd?:   string,
+): Promise<CalendarEvent[]> {
   try {
-    // 1. Try cache first
-    const cached = await getCachedCalendarEvents(userId)
-    if (cached) return cached
-
-    // 2. Cache miss — need a valid token
     const accessToken = await getValidAccessToken(userId)
     if (!accessToken) return []
 
-    // 3. Fetch from Google
+    // When fetching a specific week, skip cache — we need exact date accuracy
+    if (weekStart && weekEnd) {
+      return await fetchFromGoogle(accessToken, weekStart, weekEnd)
+    }
+
+    // Default path: try cache first (used by AI suggest and initial page load)
+    const cached = await getCachedCalendarEvents(userId)
+    if (cached) return cached
+
     const events = await fetchFromGoogle(accessToken)
 
-    // 4. Persist to cache (fire-and-forget — don't block the caller)
     storeCachedCalendarEvents(userId, events).catch(err =>
       console.error('[calendar] cache store error:', err)
     )

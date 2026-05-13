@@ -247,7 +247,7 @@ export default function WeeklyPlanner({
   useEffect(() => { setLocalLocusEvents(locusEvents) }, [locusEvents])
   useEffect(() => { setLocalOverrides(habitOverrides) }, [habitOverrides])
 
-  // When week changes: fetch plan blocks + locus events + overrides for that week
+  // When week changes: fetch plan blocks, locus events, overrides, and GCal events
   useEffect(() => {
     const ws = getWeekStart(weekOffset)
     setWeekStart(ws)
@@ -255,10 +255,12 @@ export default function WeeklyPlanner({
     Promise.all([
       fetch(`/api/planner/week?weekStart=${ws}`).then(r => r.json()),
       fetch(`/api/locus/events?start=${ws}&end=${we}`).then(r => r.json()),
-    ]).then(([plan, locus]) => {
+      fetch(`/api/calendar/events?start=${ws}&end=${we}`).then(r => r.json()).catch(() => ({ events: [] })),
+    ]).then(([plan, locus, gcal]) => {
       setPlanBlocks(plan as WeeklyPlanBlock[])
       setLocalLocusEvents((locus as { events: LocusEvent[] }).events ?? [])
       setLocalOverrides((locus as { habitOverrides: Record<string, string | null> }).habitOverrides ?? {})
+      setLocalGCalEvents((gcal as { events: CalendarEvent[] }).events ?? [])
     }).catch(() => toast.error('Failed to load plan'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekOffset])
