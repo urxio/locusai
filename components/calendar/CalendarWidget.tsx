@@ -12,31 +12,24 @@ function formatEventTime(event: CalendarEvent): string {
 }
 
 function getDayLabel(dateStr: string): string {
-  // dateStr is always YYYY-MM-DD (from ev.start.slice(0, 10))
-  // Use local noon to avoid UTC-midnight parsing shifting the date in non-UTC timezones
   const d = new Date(dateStr + 'T12:00:00')
-
-  const todayStr = new Date().toLocaleDateString('en-CA')          // YYYY-MM-DD local
+  const todayStr = new Date().toLocaleDateString('en-CA')
   const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1)
-  const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA')     // YYYY-MM-DD local
-
+  const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA')
   if (dateStr === todayStr) return 'Today'
   if (dateStr === tomorrowStr) return 'Tomorrow'
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// Group events by their date string (YYYY-MM-DD)
 function groupByDay(events: CalendarEvent[]): Array<{ label: string; events: CalendarEvent[] }> {
   const groups = new Map<string, CalendarEvent[]>()
-
   for (const ev of events) {
     const dateKey = ev.start.slice(0, 10)
     if (!groups.has(dateKey)) groups.set(dateKey, [])
     groups.get(dateKey)!.push(ev)
   }
-
-  return Array.from(groups.entries()).map(([dateKey, evs]) => ({
-    label: getDayLabel(dateKey),
+  return Array.from(groups.entries()).map(([, evs]) => ({
+    label: getDayLabel(evs[0].start.slice(0, 10)),
     events: evs,
   }))
 }
@@ -45,29 +38,46 @@ function groupByDay(events: CalendarEvent[]): Array<{ label: string; events: Cal
 
 function CalIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
       <rect x="1" y="2.5" width="14" height="12" rx="2" />
       <path d="M1 6h14M5 1v3M11 1v3" />
     </svg>
   )
 }
 
-function EventRow({ event }: { event: CalendarEvent }) {
+function EventRow({ event, isLast }: { event: CalendarEvent; isLast: boolean }) {
+  const [hov, setHov] = useState(false)
+  const isGoogle = event.source === 'google'
+  const dotColor = isGoogle ? 'rgba(96,155,210,0.85)' : 'rgba(212,168,83,0.85)'
+
   return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: '10px',
-      padding: '6px 0',
-    }}>
-      {/* Time pill */}
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: '10px',
+        padding: '5px 7px', margin: '0 -7px',
+        borderRadius: '6px',
+        background: hov ? 'rgba(255,255,255,0.04)' : 'transparent',
+        transition: 'background 0.12s',
+        borderBottom: !isLast ? '1px solid rgba(255,255,255,0.04)' : undefined,
+        cursor: 'default',
+      }}
+    >
       <span style={{
-        fontSize: '11px', color: 'var(--text-3)', fontWeight: 500,
-        minWidth: '52px', paddingTop: '1px', flexShrink: 0,
+        fontSize: '10.5px', color: 'var(--text-3)', fontWeight: 500,
+        minWidth: '56px', paddingTop: '2px', flexShrink: 0,
+        fontVariantNumeric: 'tabular-nums',
       }}>
         {formatEventTime(event)}
       </span>
 
-      {/* Title + location */}
-      <div style={{ minWidth: 0 }}>
+      <span style={{
+        width: '5px', height: '5px', borderRadius: '50%',
+        background: dotColor, flexShrink: 0, marginTop: '6px',
+      }} />
+
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{
           fontSize: '13px', color: 'var(--text-1)', fontWeight: 500,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -76,7 +86,7 @@ function EventRow({ event }: { event: CalendarEvent }) {
         </div>
         {event.location && (
           <div style={{
-            fontSize: '11px', color: 'var(--text-3)', marginTop: '1px',
+            fontSize: '10.5px', color: 'var(--text-3)', marginTop: '1px', opacity: 0.8,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {event.location}
@@ -90,20 +100,23 @@ function EventRow({ event }: { event: CalendarEvent }) {
 function DayGroup({ label, events }: { label: string; events: CalendarEvent[] }) {
   const isToday = label === 'Today'
   return (
-    <div>
-      {/* Day header */}
-      <div style={{
-        fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.07em',
-        textTransform: 'uppercase',
-        color: isToday ? 'var(--gold)' : 'var(--text-3)',
-        marginBottom: '2px',
-      }}>
-        {label}
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+        <span style={{
+          fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+          color: isToday ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
+          background: isToday ? 'rgba(212,168,83,0.1)' : 'transparent',
+          borderRadius: '3px', padding: isToday ? '1px 5px' : '1px 0',
+          flexShrink: 0,
+        }}>
+          {label}
+        </span>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }} />
       </div>
-
-      {/* Events */}
-      <div style={{ borderLeft: `2px solid ${isToday ? 'var(--gold)' : 'var(--border)'}`, paddingLeft: '10px', marginBottom: '12px' }}>
-        {events.map(ev => <EventRow key={ev.id} event={ev} />)}
+      <div>
+        {events.map((ev, i) => (
+          <EventRow key={ev.id} event={ev} isLast={i === events.length - 1} />
+        ))}
       </div>
     </div>
   )
@@ -111,12 +124,13 @@ function DayGroup({ label, events }: { label: string; events: CalendarEvent[] })
 
 function Skeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 18px' }}>
-      {[40, 70, 55].map((w, i) => (
+    <div style={{ padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {[50, 75, 55, 40].map((w, i) => (
         <div key={i} style={{
-          height: '14px', width: `${w}%`, borderRadius: '6px',
-          background: 'var(--bg-3)', opacity: 0.6,
+          height: '13px', width: `${w}%`, borderRadius: '6px',
+          background: 'rgba(255,255,255,0.06)',
           animation: 'pulse-shimmer 1.5s ease-in-out infinite',
+          animationDelay: `${i * 0.1}s`,
         }} />
       ))}
     </div>
@@ -136,7 +150,6 @@ export default function CalendarWidget() {
       .catch(() => setError(true))
   }, [])
 
-  // Loading
   if (events === null && !error) return (
     <div style={{
       background: 'var(--bg-1)', border: '1px solid var(--border)',
@@ -146,11 +159,10 @@ export default function CalendarWidget() {
     </div>
   )
 
-  // Error or no events — render nothing (widget disappears gracefully)
   if (error || !events?.length) return null
 
   const grouped = groupByDay(events)
-  const visibleGroups = grouped.slice(0, 4) // show max 4 days
+  const visibleGroups = grouped.slice(0, 4)
   const totalHidden = events.length - visibleGroups.reduce((s, g) => s + g.events.length, 0)
 
   return (
@@ -162,24 +174,38 @@ export default function CalendarWidget() {
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '7px',
-        padding: '13px 18px 10px',
-        borderBottom: '1px solid var(--border)',
+        padding: '11px 16px 10px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        color: 'var(--text-3)',
       }}>
         <CalIcon />
-        <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+        <span style={{ fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
           Next 7 days
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{
+          fontSize: '10px', background: 'rgba(255,255,255,0.07)',
+          borderRadius: '10px', padding: '1px 7px', fontWeight: 600,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {events.length}
         </span>
       </div>
 
       {/* Event list */}
-      <div style={{ padding: '12px 18px' }}>
+      <div style={{ padding: '12px 16px 10px' }}>
         {visibleGroups.map(group => (
           <DayGroup key={group.label} label={group.label} events={group.events} />
         ))}
 
         {totalHidden > 0 && (
-          <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>
+          <div style={{
+            fontSize: '11px', color: 'var(--text-3)',
+            paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)',
+            display: 'flex', alignItems: 'center', gap: '4px',
+          }}>
             +{totalHidden} more event{totalHidden !== 1 ? 's' : ''}
+            <span style={{ opacity: 0.45, fontSize: '13px', lineHeight: 1 }}>›</span>
           </div>
         )}
       </div>
