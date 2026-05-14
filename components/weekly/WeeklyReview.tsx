@@ -303,7 +303,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px' }}>
-            {displayedReflection.paragraphs.map((p, i) => (
+            {(displayedReflection.paragraphs ?? []).map((p, i) => (
               <p key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 300, color: 'var(--ai-card-text)', lineHeight: 1.75, letterSpacing: '0.01em', margin: 0 }}>
                 <HighlightedText text={p} />
               </p>
@@ -314,7 +314,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
             <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '18px 20px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '14px' }}>What Worked</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {displayedReflection.what_worked.map((item, i) => (
+                {(displayedReflection.what_worked ?? []).map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                     <span style={{ color: 'var(--sage)', fontSize: '13px', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>✓</span>
                     <span style={{ fontSize: '13.5px', color: 'var(--text-1)', lineHeight: 1.5 }}>{item}</span>
@@ -325,7 +325,7 @@ export default function WeeklyReview({ checkins, habits, goals, initialReflectio
             <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '18px 20px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '14px' }}>What to Adjust</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {displayedReflection.what_to_adjust.map((item, i) => (
+                {(displayedReflection.what_to_adjust ?? []).map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                     <span style={{ color: 'var(--gold)', fontSize: '13px', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>→</span>
                     <span style={{ fontSize: '13.5px', color: 'var(--text-1)', lineHeight: 1.5 }}>{item}</span>
