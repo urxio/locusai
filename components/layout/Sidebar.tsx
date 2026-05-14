@@ -9,6 +9,7 @@ const MAIN_NAV = [
   { href: '/habits',  label: 'Habits',   icon: <HabitsIcon /> },
   { href: '/capture', label: 'Capture',  icon: <CaptureIcon /> },
   { href: '/goals',   label: 'Goals',    icon: <GoalsIcon /> },
+  { href: '/review',  label: 'Review',   icon: <ReviewIcon /> },
 ]
 
 export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
@@ -180,6 +181,10 @@ function CaptureIcon() {
 
 function GoalsIcon() {
   return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><path d="M4 15l4-4 3 3 5-7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+
+function ReviewIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20"><rect x="4" y="3" width="12" height="14" rx="2" /><path d="M7 7h6M7 10h6M7 13h4" strokeLinecap="round" /></svg>
 }
 
 function SettingsIcon() {
