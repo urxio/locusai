@@ -222,8 +222,17 @@ export function buildUserMessage(ctx: BriefContext): string {
     const vals = recent.map(c => c.energy_level)
     const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
     const trend = vals[0] > vals[vals.length - 1] ? '↓ declining' : vals[0] < vals[vals.length - 1] ? '↑ rising' : '→ stable'
-    lines.push(`ENERGY TREND (${recent.length} days): avg ${avg}/10, ${trend}`)
-    lines.push(`Daily readings: ${recent.map(c => `${c.date.slice(5)}: ${c.energy_level}`).join(' | ')}`)
+    lines.push(`ENERGY TREND (${recent.length} check-ins): avg ${avg}/10, ${trend}`)
+    // Show a full 7-day calendar window with — for days without a check-in so the
+    // AI can see actual gaps and won't incorrectly infer "two days in a row."
+    const checkinMap = new Map(recent.map(c => [c.date, c.energy_level]))
+    const todayDt = new Date(today + 'T12:00:00')
+    const last7 = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(todayDt)
+      d.setDate(todayDt.getDate() - i)
+      return d.toLocaleDateString('en-CA')
+    })
+    lines.push(`Daily readings (last 7 days): ${last7.map(d => `${d.slice(5)}: ${checkinMap.has(d) ? checkinMap.get(d) : '—'}`).join(' | ')}`)
     lines.push('')
   }
 
