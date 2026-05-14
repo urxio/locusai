@@ -271,37 +271,35 @@ export default function ConversationalCheckin({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* ── Header ── */}
+      {/* ── Identity bar ── */}
       <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        gap: '16px', padding: '26px 28px 20px', flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '13px 16px', flexShrink: 0,
         borderBottom: '1px solid var(--glass-card-border-subtle)',
       }}>
-        <div>
-          <div style={{
-            fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase',
-            color: 'var(--gold)', fontWeight: 700, marginBottom: '5px', opacity: 0.85,
-          }}>
-            {isRedo ? 'Updating Check-in' : existingCheckin && !isRedo ? 'Today\'s Check-in' : 'Daily Check-in'}
-          </div>
-          <div style={{
-            fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400,
-            color: 'var(--text-0)', lineHeight: 1.2,
-          }}>
-            How are you{' '}
-            <em style={{ fontStyle: 'italic', color: 'var(--text-1)' }}>showing up</em>{' '}
-            today?
-          </div>
-          <div style={{ fontSize: '12.5px', color: 'var(--text-3)', marginTop: '5px' }}>
-            {existingCheckin && !isRedo
-              ? 'Your check-in is logged for today.'
-              : 'Takes about 90 seconds · Helps Locus understand you better'}
+        <div style={{
+          width: '30px', height: '30px', borderRadius: '9px', flexShrink: 0,
+          background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 2px 8px rgba(212,168,83,0.25)',
+        }}>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
+            <circle cx="8" cy="8" r="3"/>
+            <circle cx="8" cy="2" r="1.2"/>
+            <circle cx="8" cy="14" r="1.2"/>
+            <circle cx="2" cy="8" r="1.2"/>
+            <circle cx="14" cy="8" r="1.2"/>
+          </svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1 }}>Locus</div>
+          <div style={{ fontSize: '11px', color: 'var(--sage)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--sage)', display: 'inline-block', flexShrink: 0 }} />
+            {isRedo ? 'updating your check-in' : existingCheckin && !isRedo ? 'checked in today' : 'listening'}
           </div>
         </div>
         {tab && setTab && (
-          <div style={{ marginTop: '4px', flexShrink: 0 }}>
-            <TabToggle tab={tab} setTab={setTab} todayJournalHasContent={todayJournalHasContent} />
-          </div>
+          <TabToggle tab={tab} setTab={setTab} todayJournalHasContent={todayJournalHasContent} />
         )}
       </div>
 
@@ -544,7 +542,9 @@ function CheckinSummaryCard({
   isRedo: boolean
   energyLabel: string
 }) {
-  const blockerCount = checkinData.blockers.filter(b => b !== 'No blockers today').length
+  const energyColor =
+    checkinData.energy_level >= 7 ? 'var(--sage)' :
+    checkinData.energy_level >= 5 ? 'var(--gold)' : '#c08060'
 
   return (
     <div style={{
@@ -552,9 +552,10 @@ function CheckinSummaryCard({
       border: '1px solid var(--glass-card-border)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
-      borderRadius: '18px', padding: '20px',
+      borderRadius: '18px', padding: '22px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+      {/* Warm acknowledgment */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: checkinData.highlight ? '18px' : '0' }}>
         <div style={{
           width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
           background: 'linear-gradient(135deg, rgba(122,158,138,0.28), rgba(122,158,138,0.08))',
@@ -565,63 +566,37 @@ function CheckinSummaryCard({
             <path d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.2 }}>
-            {isRedo ? 'Check-in updated.' : 'Check-in complete.'}
+            {isRedo ? 'Got it — updated.' : 'Good to hear from you.'}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '2px' }}>
-            {isRedo ? 'Your brief will regenerate with the new data.' : 'Locus has noted everything for today.'}
+          <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>Energy</span>
+            <span style={{
+              fontFamily: 'var(--font-serif)', fontSize: '15px',
+              color: energyColor, fontWeight: 400,
+            }}>{checkinData.energy_level}/10</span>
+            <span style={{ color: 'var(--text-3)' }}>·</span>
+            <span style={{ color: energyColor }}>{energyLabel}</span>
           </div>
+          {isRedo && (
+            <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '3px' }}>
+              Your brief will refresh with the new data.
+            </div>
+          )}
         </div>
-      </div>
-
-      <div className="stats-grid-3">
-        <SummaryTile label="Energy"    value={`${checkinData.energy_level}/10`} sub={energyLabel} />
-        <SummaryTile label="Mood note" value={checkinData.mood_note ? '✓ logged' : '—'}
-          sub={checkinData.mood_note
-            ? checkinData.mood_note.slice(0, 24) + (checkinData.mood_note.length > 24 ? '…' : '')
-            : 'skipped'} />
-        <SummaryTile label="Blockers"  value={`${blockerCount}`}
-          sub={blockerCount === 0
-            ? 'none today'
-            : checkinData.blockers.filter(b => b !== 'No blockers today')[0]?.slice(0, 20)} />
       </div>
 
       {checkinData.highlight && (
         <div style={{
-          marginTop: '12px', padding: '9px 13px',
+          padding: '10px 13px',
           background: 'rgba(122,158,138,0.07)', border: '1px solid rgba(122,158,138,0.18)',
-          borderRadius: '9px', fontSize: '13px', color: 'var(--text-1)',
+          borderRadius: '10px', fontSize: '13px', color: 'var(--text-1)',
           display: 'flex', alignItems: 'flex-start', gap: '7px',
         }}>
           <span style={{ color: 'var(--sage)', flexShrink: 0 }}>★</span>
           <span>{checkinData.highlight}</span>
         </div>
-      )}
-    </div>
-  )
-}
-
-function SummaryTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div style={{
-      background: 'var(--glass-card-bg)',
-      border: '1px solid var(--glass-card-border-subtle)',
-      borderRadius: '12px', padding: '12px 14px',
-    }}>
-      <div style={{
-        fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase',
-        letterSpacing: '0.07em', fontWeight: 600, marginBottom: '4px',
-      }}>{label}</div>
-      <div style={{
-        fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400,
-        color: 'var(--text-0)', lineHeight: 1,
-      }}>{value}</div>
-      {sub && (
-        <div style={{
-          fontSize: '11px', color: 'var(--text-3)', marginTop: '3px',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{sub}</div>
       )}
     </div>
   )

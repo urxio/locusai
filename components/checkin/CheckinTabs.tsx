@@ -203,13 +203,13 @@ function BriefPlaceholder() {
         fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 400,
         color: 'var(--text-1)', lineHeight: 1.4, marginBottom: '10px',
       }}>
-        Your brief awaits
+        Your brief is waiting
       </div>
       <div style={{
         fontSize: '12.5px', color: 'var(--text-3)', lineHeight: 1.6,
         maxWidth: '220px',
       }}>
-        Complete your check-in to unlock today's AI insight and priorities.
+        Check in with Locus and it will prepare your daily insight.
       </div>
 
       {/* Decorative skeleton lines */}
