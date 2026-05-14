@@ -1,14 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Goal, CheckIn, HabitWithLogs, Brief, MemoryNote } from '@/lib/types'
-import { moodWord } from '@/lib/utils/mood'
-import { StatPill, LiveDot } from './StatPills'
-import { buildPulseMessage, PulseMessage } from './PulseCard'
-
-/* ── Types ───────────────────────────────────────────── */
 
 type Props = {
   goals:        Goal[]
@@ -19,56 +13,43 @@ type Props = {
   memoryNotes?: MemoryNote[]
 }
 
-type LiveData = {
-  energy:      number | null
-  avgEnergy:   number | null
-  habitsDone:  number
-  habitsTotal: number
-  habitsAll:   number
-  goalsActive: number
-  avgPct:      number | null
-  mood:        string
-  hasCheckin:  boolean
-}
-
-/* ── Helpers ─────────────────────────────────────────── */
-
 function todayStr() {
   return new Date().toISOString().split('T')[0]
 }
 
-function formatDate(date: Date): { dayName: string; month: string; day: number } {
-  return {
-    dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-    month:   date.toLocaleDateString('en-US', { month: 'long' }),
-    day:     date.getDate(),
-  }
+function greeting(hour: number): string {
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
 }
 
-function propsToLive(goals: Goal[], checkin: CheckIn | null, habits: HabitWithLogs[]): LiveData {
-  const today          = todayStr()
-  const scheduledToday = habits.filter(h => h.isScheduledToday)
-  const doneToday      = scheduledToday.filter(h => h.logs.some(l => l.logged_date === today))
-  const active         = goals.filter(g => g.status === 'active')
-  const avgPct         = active.length
-    ? Math.round(active.reduce((s, g) => s + g.progress_pct, 0) / active.length)
-    : null
-  return {
-    energy:      checkin?.energy_level ?? null,
-    avgEnergy:   null,
-    habitsDone:  doneToday.length,
-    habitsTotal: scheduledToday.length,
-    habitsAll:   habits.length,
-    goalsActive: active.length,
-    avgPct,
-    mood:        moodWord(checkin?.mood_note ?? null),
-    hasCheckin:  !!checkin,
-  }
+function energyToLabel(level: number | null): string {
+  if (!level) return 'Not yet checked in'
+  if (level >= 9) return 'Charged, fully present'
+  if (level >= 7) return 'Strong, mostly clear'
+  if (level >= 5) return 'Steady, mostly clear'
+  if (level >= 3) return 'Low, a bit stretched'
+  return 'Running on empty'
 }
 
-const POLL_MS = 60_000
+function EnergyDial({ level }: { level: number }) {
+  const filled = Math.round((level / 10) * 5)
+  return (
+    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+      {[1, 2, 3, 4, 5].map(d => (
+        <span key={d} style={{
+          height: '6px',
+          borderRadius: '3px',
+          transition: 'all 0.3s',
+          background: d <= filled ? 'var(--gold)' : 'oklch(1 0 0 / 0.12)',
+          width: d <= filled ? '20px' : '8px',
+        }} />
+      ))}
+    </div>
+  )
+}
 
-/* ── Pulse cache ─────────────────────────────────────── */
+/* ── Pulse cache ── */
 
 function getPulseCacheKey() {
   const now = new Date()
@@ -96,8 +77,7 @@ function usePulse(hasCheckin: boolean) {
     setStreaming(true)
     setText('')
     try {
-      const url = force ? '/api/pulse?force=1' : '/api/pulse'
-      const res = await window.fetch(url, { cache: 'no-store', signal: ctrl.signal })
+      const res = await window.fetch(force ? '/api/pulse?force=1' : '/api/pulse', { cache: 'no-store', signal: ctrl.signal })
       if (!res.ok || !res.body) return
       const reader = res.body.getReader()
       const dec = new TextDecoder()
@@ -110,12 +90,11 @@ function usePulse(hasCheckin: boolean) {
       }
       if (acc) {
         try {
-          const key = getPulseCacheKey()
           for (let i = localStorage.length - 1; i >= 0; i--) {
             const k = localStorage.key(i)
-            if (k?.startsWith('locus_pulse_') && k !== key) localStorage.removeItem(k)
+            if (k?.startsWith('locus_pulse_') && k !== getPulseCacheKey()) localStorage.removeItem(k)
           }
-          localStorage.setItem(key, acc)
+          localStorage.setItem(getPulseCacheKey(), acc)
         } catch {}
       }
     } catch (e) {
@@ -147,196 +126,163 @@ function usePulse(hasCheckin: boolean) {
   return { text, streaming }
 }
 
-/* ── Component ───────────────────────────────────────── */
+/* ── Component ── */
 
-export default function HomeDashboard({ goals, checkin, habits, brief, userName, memoryNotes }: Props) {
-  const now = new Date()
-  const hour           = now.getHours()
-  const { dayName, month, day } = formatDate(now)
+export default function HomeDashboard({ goals, checkin, habits, brief, userName }: Props) {
+  const now        = new Date()
+  const hour       = now.getHours()
+  const today      = todayStr()
+  const firstName  = userName?.split(' ')[0] ?? ''
+  const hasCheckin = !!checkin
 
-  const [live,       setLive]   = useState<LiveData>(() => propsToLive(goals, checkin, habits))
-  const [refreshing, setRefresh] = useState(false)
-  const fetchingRef              = useRef(false)
-  const router                   = useRouter()
+  const { text: aiText, streaming } = usePulse(hasCheckin)
 
-  const refresh = useCallback(async () => {
-    if (fetchingRef.current) return
-    fetchingRef.current = true
-    setRefresh(true)
-    try {
-      const res = await fetch('/api/status', { cache: 'no-store' })
-      if (res.ok) setLive(await res.json())
-      router.refresh()
-    } catch { /* keep last known data */ }
-    finally { fetchingRef.current = false; setRefresh(false) }
-  }, [router])
+  const dateLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
 
-  useEffect(() => {
-    refresh()
-    const onVisible = () => { if (!document.hidden) refresh() }
-    const onFocus   = () => refresh()
-    document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', onFocus)
-    const timer = setInterval(refresh, POLL_MS)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible)
-      window.removeEventListener('focus', onFocus)
-      clearInterval(timer)
-    }
-  }, [refresh])
+  const energyLevel = checkin?.energy_level ?? brief?.energy_score ?? null
+  const insightText = aiText || brief?.insight_text || null
 
-  /* ── Derived stat display values ── */
-  const energyVal     = live.energy ?? live.avgEnergy
-  const energyDisplay = energyVal != null ? `${energyVal}` : '—'
-  const energyUnit    = energyVal != null ? '/10' : undefined
-  const energySub     = live.energy ? 'Today' : live.avgEnergy ? '7-day avg' : 'No check-in yet'
-  const energyBarPct  = energyVal != null ? (energyVal / 10) * 100 : 0
+  const priorities = brief?.priorities?.slice(0, 3) ?? []
 
-  const habitsDisplay = live.habitsTotal > 0 ? `${live.habitsDone}` : live.habitsAll > 0 ? `${live.habitsAll}` : '—'
-  const habitsUnit    = live.habitsTotal > 0 ? `/${live.habitsTotal}` : live.habitsAll > 0 ? ' total' : undefined
-  const habitsSub     = live.habitsTotal > 0 ? 'done today' : 'habits'
-  const habitsBarPct  = live.habitsTotal > 0 ? (live.habitsDone / live.habitsTotal) * 100 : 0
-
-  const goalsDisplay  = live.goalsActive > 0 ? `${live.goalsActive}` : '—'
-  const goalsSub      = live.goalsActive > 0 ? (live.avgPct != null ? `${live.avgPct}% avg` : 'active') : 'no active goals'
-  const goalsBarPct   = live.avgPct ?? 0
-
-  /* ── Pulse message ── */
-  const pulseLines = buildPulseMessage({
-    firstName:   userName?.split(' ')[0] ?? 'there',
-    hour,
-    dayName,
-    day,
-    month,
-    habitsTotal: live.habitsTotal > 0 ? live.habitsTotal : live.habitsAll,
-    goalsActive: live.goalsActive,
-    firstGoal:   goals.find(g => g.status === 'active') ?? null,
-    energyScore: checkin?.energy_level ?? brief?.energy_score ?? null,
-    topNote:     memoryNotes?.[0] ?? null,
-    brief,
-  })
-  const { text: aiText, streaming } = usePulse(live.hasCheckin)
-
-  const stats = [
-    { href: '/checkin', label: 'Energy', mainVal: energyDisplay, unit: energyUnit, sub: energySub, barPct: energyBarPct, warm: true },
-    { href: '/habits',  label: 'Habits', mainVal: habitsDisplay, unit: habitsUnit, sub: habitsSub, barPct: habitsBarPct },
-    { href: '/goals',   label: 'Goals',  mainVal: goalsDisplay,  sub: goalsSub,   barPct: goalsBarPct },
-    { href: '/checkin', label: 'Mood',   mainVal: live.mood,     sub: live.hasCheckin ? 'last check-in' : 'no check-in yet', moodDot: true },
-  ]
+  const todayHabits = habits
+    .filter(h => h.isScheduledToday)
+    .map(h => ({
+      id:   h.id,
+      name: h.name,
+      done: h.logs.some(l => l.logged_date === today),
+    }))
+    .slice(0, 4)
 
   return (
-    <div className="page-pad home-dashboard" style={{ maxWidth: '900px', width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
+    <div style={{ maxWidth: '480px', width: '100%', marginLeft: 'auto', marginRight: 'auto', padding: '56px 24px 0' }}>
 
-      {/* ── Pulse card ── */}
-      <div
-        className="glass-card home-pulse-card"
-        style={{ padding: 'clamp(28px, 4vw, 44px)', position: 'relative', overflow: 'hidden', marginBottom: '14px', animation: 'fadeUp 0.4s var(--ease) 0.05s both' }}
-      >
-        <div aria-hidden style={{ position: 'absolute', top: '-80px', right: '-80px', width: '320px', height: '320px', borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.78 0.09 75 / 0.10) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div aria-hidden style={{ position: 'absolute', bottom: '-60px', left: '-60px', width: '240px', height: '240px', borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.78 0.07 165 / 0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, background: 'var(--card-overlay)', opacity: 0.28 }} />
+      {/* ── Header ── */}
+      <header style={{ marginBottom: '40px', animation: 'fadeUp 0.4s var(--ease) both' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
+          {dateLabel}
+        </p>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(34px, 8vw, 42px)', fontWeight: 400, lineHeight: 1.05, color: 'var(--text-0)' }}>
+          {greeting(hour)},<br />
+          {firstName && (
+            <em style={{ fontStyle: 'italic', color: 'var(--gold)', opacity: 0.9 }}>{firstName}</em>
+          )}
+          {firstName ? '.' : ''}
+        </h1>
+      </header>
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '5px 13px 5px 9px', marginBottom: '22px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--sage)', animation: 'homePulse 2.4s ease-in-out infinite', flexShrink: 0 }} />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', letterSpacing: '0.04em' }}>
-              Locus AI · Today&apos;s pulse
-            </span>
+      {/* ── FROM LOCUS card ── */}
+      <section className="glass-card" style={{ padding: '24px', marginBottom: '32px', animation: 'fadeUp 0.4s var(--ease) 0.07s both' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', opacity: 0.85, marginBottom: '12px' }}>
+          From Locus
+        </p>
+        {insightText ? (
+          <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', lineHeight: 1.6, color: 'oklch(0.93 0.012 80 / 0.95)', margin: 0 }}>
+            {insightText}
+            {streaming && <span style={{ opacity: 0.4 }}> |</span>}
+          </p>
+        ) : streaming ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[88, 72, 60].map((w, i) => (
+              <div key={i} style={{ height: '14px', borderRadius: '4px', background: 'oklch(1 0 0 / 0.08)', width: `${w}%`, animation: `pulse 1.6s ease-in-out ${i * 0.15}s infinite` }} />
+            ))}
           </div>
+        ) : (
+          <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', lineHeight: 1.6, color: 'var(--text-2)', fontStyle: 'italic', margin: 0 }}>
+            {hasCheckin ? 'Your brief is being prepared…' : 'Check in to get your daily insight.'}
+          </p>
+        )}
+      </section>
 
-          <div style={{ marginBottom: '28px' }}>
-            <PulseMessage lines={[pulseLines[0]]} />
-            <div style={{ marginTop: '10px' }}>
-              {aiText ? (
-                <p style={{ margin: 0, fontSize: 'clamp(14px, 1.8vw, 16px)', lineHeight: 1.75, color: 'var(--text-1)', fontWeight: 400 }}>
-                  {aiText}
-                  {streaming && <span className="pulse-cursor"> |</span>}
-                </p>
-              ) : streaming ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '2px' }}>
-                  <div className="pulse-shimmer" style={{ height: '15px', width: '88%', borderRadius: '6px' }} />
-                  <div className="pulse-shimmer" style={{ height: '15px', width: '68%', borderRadius: '6px', animationDelay: '0.15s' }} />
-                </div>
-              ) : (
-                <PulseMessage lines={pulseLines.slice(1)} />
-              )}
-            </div>
+      {/* ── Energy ── */}
+      {energyLevel != null && (
+        <section style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', animation: 'fadeUp 0.4s var(--ease) 0.12s both' }}>
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
+              Energy
+            </p>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text-0)', margin: 0 }}>
+              {energyToLabel(energyLevel)}
+            </p>
           </div>
+          <EnergyDial level={energyLevel} />
+        </section>
+      )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <Link
-              href="/checkin"
-              id="home-checkin-btn"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--text-0)', color: 'var(--bg-0)', borderRadius: '14px', padding: '11px 22px', fontSize: '14px', fontWeight: 600, textDecoration: 'none', transition: 'opacity 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+      {/* ── Today's priorities ── */}
+      {priorities.length > 0 && (
+        <section style={{ marginBottom: '40px', animation: 'fadeUp 0.4s var(--ease) 0.17s both' }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '16px' }}>
+            Today
+          </p>
+          <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {priorities.map((p, i) => (
+              <li key={i} style={{ display: 'flex', gap: '16px', alignItems: 'baseline' }}>
+                <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--gold)', opacity: 0.8, fontSize: '13px', width: '12px', flexShrink: 0 }}>
+                  {i + 1}
+                </span>
+                <span style={{ fontSize: '15px', lineHeight: 1.5, color: 'oklch(0.93 0.012 80 / 0.9)' }}>
+                  {p.title}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* ── Habits strip ── */}
+      {todayHabits.length > 0 && (
+        <section style={{ marginBottom: '40px', animation: 'fadeUp 0.4s var(--ease) 0.22s both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', margin: 0 }}>
+              Habits
+            </p>
+            <Link href="/habits" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', transition: 'color 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
             >
-              {live.hasCheckin ? 'View Brief' : 'Start Check-in'}
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              All
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
             </Link>
-
-            {!live.hasCheckin && (
-              <Link
-                href="/goals"
-                id="home-skip-btn"
-                style={{ display: 'inline-flex', alignItems: 'center', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '11px 20px', fontSize: '14px', fontWeight: 500, textDecoration: 'none', transition: 'background 0.15s, border-color 0.15s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-md)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
-              >
-                Skip today
-              </Link>
-            )}
           </div>
-        </div>
-      </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {todayHabits.map((h, i) => (
+              <li key={h.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 0',
+                borderTop: i === 0 ? 'none' : '1px solid oklch(1 0 0 / 0.06)',
+              }}>
+                <span style={{ fontSize: '15px', color: h.done ? 'var(--text-3)' : 'oklch(0.93 0.012 80 / 0.9)', transition: 'color 0.2s' }}>
+                  {h.name}
+                </span>
+                <span style={{
+                  width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                  background: h.done ? 'var(--sage)' : 'transparent',
+                  border: h.done ? 'none' : '1.5px solid oklch(1 0 0 / 0.25)',
+                  transition: 'all 0.2s',
+                }} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      {/* ── Status pills ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
-        <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-          Today&apos;s Status
-        </span>
-        <LiveDot refreshing={refreshing} />
-      </div>
+      {/* ── Check-in CTA ── */}
+      {!hasCheckin && (
+        <Link
+          href="/checkin"
+          className="glass-card"
+          style={{ display: 'block', padding: '20px', textAlign: 'center', textDecoration: 'none', transition: 'border-color 0.2s', marginBottom: '16px', animation: 'fadeUp 0.4s var(--ease) 0.27s both' }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = 'oklch(0.78 0.11 78 / 0.4)')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = '')}
+        >
+          <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontStyle: 'italic', color: 'var(--gold)' }}>
+            Check in with Locus →
+          </span>
+        </Link>
+      )}
 
-      <div
-        className="home-stat-grid"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', animation: 'fadeUp 0.45s var(--ease) 0.10s both' }}
-      >
-        {stats.map(s => (
-          <StatPill key={s.label} {...s} refreshing={refreshing} />
-        ))}
-      </div>
-
-
-<style>{`
-        @media (max-width: 600px) {
-          .home-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .home-pulse-card { padding: 24px !important; }
-        }
-        @keyframes homePulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.4; }
-        }
-        .pulse-cursor {
-          color: var(--text-3);
-          font-weight: 300;
-          animation: pulseCursorBlink 1s step-end infinite;
-        }
-        @keyframes pulseCursorBlink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-        .pulse-shimmer {
-          background: var(--bg-2);
-          animation: pulseShimmer 1.4s ease-in-out infinite;
-        }
-        @keyframes pulseShimmer {
-          0%, 100% { opacity: 0.4; }
-          50%       { opacity: 0.9; }
-        }
-      `}</style>
     </div>
   )
 }

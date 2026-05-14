@@ -371,44 +371,29 @@ export default function ConversationalCheckin({
 
                       if (msg.role === 'assistant') {
                         return (
-                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '88%' }}>
-                            <div style={{
-                              width: '28px', height: '28px', borderRadius: '9px', flexShrink: 0,
-                              background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: '0 2px 10px rgba(212,168,83,0.3)', marginTop: '1px',
-                            }}>
-                              <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
-                                <circle cx="8" cy="8" r="3"/>
-                                <circle cx="8" cy="2" r="1.2"/>
-                                <circle cx="8" cy="14" r="1.2"/>
-                                <circle cx="2" cy="8" r="1.2"/>
-                                <circle cx="14" cy="8" r="1.2"/>
-                              </svg>
-                            </div>
-                            <div style={{
-                              padding: '10px 13px',
-                              borderRadius: '4px 16px 16px 16px',
-                              background: 'var(--glass-card-bg-strong)',
-                              border: '1px solid var(--glass-card-border)',
-                              backdropFilter: 'blur(16px)',
-                              WebkitBackdropFilter: 'blur(16px)',
-                              fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.65,
-                              flex: 1,
-                            }}>
-                              {showCursor ? (
-                                <span style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', paddingTop: '2px' }}>
-                                  {[0, 180, 360].map(delay => (
-                                    <span key={delay} style={{
-                                      width: '5px', height: '5px', borderRadius: '50%',
-                                      background: 'var(--text-3)',
-                                      animation: 'pulse 1.4s ease-in-out infinite',
-                                      animationDelay: `${delay}ms`,
-                                    }} />
-                                  ))}
-                                </span>
-                              ) : msg.content}
-                            </div>
+                          <div key={i} style={{ display: 'flex', justifyContent: 'flex-start', maxWidth: '88%' }}>
+                            {showCursor ? (
+                              <div style={{ display: 'flex', gap: '5px', alignItems: 'center', padding: '6px 0' }}>
+                                {[0, 150, 300].map(delay => (
+                                  <span key={delay} style={{
+                                    width: '5px', height: '5px', borderRadius: '50%',
+                                    background: 'var(--text-3)',
+                                    animation: 'pulse 1.4s ease-in-out infinite',
+                                    animationDelay: `${delay}ms`,
+                                  }} />
+                                ))}
+                              </div>
+                            ) : (
+                              <p style={{
+                                fontFamily: 'var(--font-serif)',
+                                fontSize: '18px',
+                                lineHeight: 1.55,
+                                color: 'oklch(0.93 0.012 80 / 0.95)',
+                                margin: 0,
+                              }}>
+                                {msg.content}
+                              </p>
+                            )}
                           </div>
                         )
                       }
@@ -416,11 +401,11 @@ export default function ConversationalCheckin({
                       return (
                         <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
                           <div style={{
-                            maxWidth: '78%', padding: '10px 14px',
-                            borderRadius: '16px 4px 16px 16px',
-                            background: 'var(--gold-dim)',
-                            border: '1px solid rgba(212,168,83,0.28)',
-                            fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.6,
+                            maxWidth: '78%', padding: '11px 16px',
+                            borderRadius: '18px 4px 18px 18px',
+                            background: 'oklch(0.26 0.012 60 / 0.70)',
+                            border: '1px solid oklch(1 0 0 / 0.10)',
+                            fontSize: '15px', color: 'var(--text-0)', lineHeight: 1.55,
                             backdropFilter: 'blur(12px)',
                             WebkitBackdropFilter: 'blur(12px)',
                           }}>
@@ -478,9 +463,11 @@ export default function ConversationalCheckin({
                   {error}
                 </div>
               )}
-              <div style={{
+              <div className="glass-card" style={{
                 display: 'flex', alignItems: 'flex-end', gap: '8px',
+                margin: '12px 16px',
                 padding: '12px 16px',
+                borderRadius: '9999px',
               }}>
                 <textarea
                   ref={inputRef}
@@ -490,20 +477,17 @@ export default function ConversationalCheckin({
                   placeholder={
                     streaming    ? '' :
                     checkinSaved ? 'Reply to Locus…' :
-                    'Share how you\'re doing…'
+                    'Say what\'s on your mind…'
                   }
                   readOnly={streaming || isSaving}
                   rows={1}
                   style={{
                     flex: 1,
-                    background: 'var(--glass-card-bg-strong)',
-                    border: '1px solid var(--glass-card-border)',
-                    borderRadius: '14px', outline: 'none',
+                    background: 'transparent',
+                    border: 'none', outline: 'none',
                     fontFamily: 'var(--font-sans)', fontSize: '15px',
                     color: 'var(--text-0)', resize: 'none', lineHeight: 1.5,
-                    overflow: 'hidden', padding: '11px 14px',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
+                    overflow: 'hidden', padding: '4px 0',
                   }}
                 />
                 <button
@@ -511,17 +495,20 @@ export default function ConversationalCheckin({
                   disabled={!canSend}
                   aria-label="Send"
                   style={{
-                    width: '38px', height: '38px', borderRadius: '12px', flexShrink: 0,
-                    background: canSend ? 'var(--gold)' : 'var(--bg-4)', border: 'none',
+                    width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                    background: canSend ? 'var(--gold)' : 'oklch(1 0 0 / 0.08)', border: 'none',
                     color: canSend ? '#131110' : 'var(--text-3)',
                     cursor: canSend ? 'pointer' : 'default',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.2s, color 0.2s, transform 0.1s',
-                    fontSize: '16px', fontWeight: 700, fontFamily: 'inherit',
+                    transition: 'background 0.2s, opacity 0.2s',
                     alignSelf: 'flex-end',
-                    transform: canSend ? 'scale(1)' : 'scale(0.95)',
+                    opacity: canSend ? 1 : 0.35,
                   }}
-                >↑</button>
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 13V3M3 8l5-5 5 5"/>
+                  </svg>
+                </button>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-3)', padding: '0 16px 10px', opacity: 0.55 }}>
                 Enter to send · Shift+Enter for new line

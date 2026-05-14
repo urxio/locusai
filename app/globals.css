@@ -14,10 +14,10 @@
   --linen: oklch(0.18 0.012 60);
   --ink: oklch(0.96 0.01 85);
   --ink-soft: oklch(0.78 0.012 75);
-  --ink-faint: oklch(0.58 0.012 70);
-  --sea: oklch(0.78 0.07 165);
-  --sea-soft: oklch(0.42 0.05 165);
-  --sun: oklch(0.78 0.09 75);
+  --ink-faint: oklch(0.64 0.015 70);
+  --sea: oklch(0.74 0.06 150);
+  --sea-soft: oklch(0.42 0.05 150);
+  --sun: oklch(0.78 0.11 78);
   --glass: oklch(1 0 0 / 0.04);
   --glass-border: oklch(1 0 0 / 0.08);
   --shadow-glass: 0 8px 32px oklch(0 0 0 / 0.4), inset 0 0 0 1px oklch(1 0 0 / 0.06);
@@ -151,38 +151,18 @@ html[data-theme="light"] {
   background: transparent !important;
 }
 
-/* ── Dark mode ambient glow blobs ── */
-body::after {
-  content: '';
-  position: fixed;
-  top: -160px; left: -128px;
-  width: 60vw; height: 60vw;
-  border-radius: 50%;
-  background: oklch(0.78 0.07 165 / 0.15);
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: 0;
-}
-html::before {
-  content: '';
-  position: fixed;
-  bottom: -160px; right: -128px;
-  width: 55vw; height: 55vw;
-  border-radius: 50%;
-  background: oklch(0.78 0.09 75 / 0.10);
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: 0;
+/* ── Ambient background gradients ── */
+body {
+  background-image:
+    radial-gradient(at 15% 0%, oklch(0.28 0.04 78 / 0.55) 0px, transparent 55%),
+    radial-gradient(at 85% 100%, oklch(0.26 0.03 50 / 0.45) 0px, transparent 55%);
+  background-attachment: fixed;
 }
 
-/* Light mode glow blobs — softer, green-tinted */
-[data-theme="light"] body::after {
-  background: oklch(0.86 0.04 165 / 0.35);
-  mix-blend-mode: multiply;
-}
-[data-theme="light"] html::before {
-  background: oklch(0.92 0.06 80 / 0.40);
-  mix-blend-mode: multiply;
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(at 15% 0%, oklch(0.88 0.04 150 / 0.45) 0px, transparent 55%),
+    radial-gradient(at 85% 100%, oklch(0.92 0.06 80 / 0.40) 0px, transparent 55%);
 }
 
 /* ── Bottom nav glass ── */
@@ -265,6 +245,11 @@ body::before {
   pointer-events: none;
   z-index: 9999;
   opacity: var(--noise-opacity);
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(0.9); opacity: 0.25; }
+  50% { transform: scale(1.4); opacity: 0; }
 }
 
 @keyframes fadeUp {
@@ -415,36 +400,38 @@ input:focus,    input:focus-visible {
   gap: 16px;
 }
 
-/* ── BOTTOM NAV (mobile only) ── */
+/* ── BOTTOM NAV (mobile only) — floating pill ── */
 .bottom-nav {
   display: none;
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
-  background: oklch(0.20 0.010 60 / 0.92);
+  background: oklch(0.22 0.012 60 / 0.85);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-top: 1px solid var(--border);
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
-  padding-top: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  align-items: stretch;
-  justify-content: space-around;
+  border: 1px solid oklch(0.55 0.02 70 / 0.22);
+  box-shadow: 0 8px 32px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.06);
+  border-radius: 9999px;
+  padding: 8px;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="light"] .bottom-nav {
+  background: oklch(0.97 0.008 80 / 0.88);
+  border-color: oklch(0.85 0.01 80 / 0.50);
 }
 
 .bottom-nav-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  flex: 1;
-  height: 60px;
-  padding: 8px 4px;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
   text-decoration: none;
   color: var(--text-3);
   transition: color 0.15s;
@@ -455,11 +442,20 @@ input:focus,    input:focus-visible {
   color: var(--gold);
 }
 
+.bottom-nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
 .bottom-nav-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1;
+  display: none;
 }
 
 /* ── MODAL ── */
@@ -543,7 +539,7 @@ input:focus,    input:focus-visible {
   }
 
   .app-main {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px) + 20px);
   }
 
   .page-pad {

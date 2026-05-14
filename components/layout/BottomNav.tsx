@@ -23,25 +23,19 @@ export default function BottomNav({ overdueStepCount = 0 }: { overdueStepCount?:
           <Link
             key={item.href}
             href={item.href}
+            aria-label={item.label}
             className={`bottom-nav-item${active ? ' active' : ''}`}
           >
-            <span style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {item.icon}
               {showBadge && (
                 <span style={{
-                  position: 'absolute',
-                  top: '-1px',
-                  right: '-2px',
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  background: '#e05c4a',
-                  border: '1.5px solid var(--bg-0)',
-                  animation: 'pulse 2s ease-in-out infinite',
+                  position: 'absolute', top: '-2px', right: '-3px',
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: '#e05c4a', border: '1.5px solid var(--bg-0)',
                 }} />
               )}
             </span>
-            <span className="bottom-nav-label">{item.label}</span>
           </Link>
         )
       })}
@@ -61,8 +55,8 @@ function HomeIcon() {
 function CheckinIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20">
-      <path d="M10 3v2M10 15v2M3 10h2M15 10h2" strokeLinecap="round" />
-      <circle cx="10" cy="10" r="4" />
+      <path d="M17 11.5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+      <path d="M10 8.5v3l2 1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -79,7 +73,8 @@ function HabitsIcon() {
 function CaptureIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" width="20" height="20">
-      <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+      <path d="M13 3H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z" />
+      <path d="M10 8v6M7 11h6" strokeLinecap="round" />
     </svg>
   )
 }
@@ -91,4 +86,3 @@ function GoalsIcon() {
     </svg>
   )
 }
-
