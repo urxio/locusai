@@ -1,1 +1,2 @@
 @AGENTS.md
+@LOCUS_CHARACTER.md
