@@ -14,7 +14,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { count: overdueStepCount }] = await Promise.all([
+  const todayDow = new Date().getDay() // 0=Sun … 6=Sat
+
+  const [
+    { data: profile },
+    { count: overdueStepCount },
+    { data: checkinRow },
+    { data: habits },
+    { data: habitLogsToday },
+  ] = await Promise.all([
     supabase
       .from('users')
       .select('name, avatar_url, onboarded_at, cover_url')
@@ -27,7 +35,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .eq('completed', false)
       .not('due_date', 'is', null)
       .lt('due_date', today),
+    supabase
+      .from('check_ins')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .maybeSingle(),
+    supabase
+      .from('habits')
+      .select('id, days_of_week')
+      .eq('user_id', user.id)
+      .eq('archived', false),
+    supabase
+      .from('habit_logs')
+      .select('habit_id')
+      .eq('user_id', user.id)
+      .eq('date', today),
   ])
+
+  const checkinDoneToday = !!checkinRow
+  const loggedHabitIds = new Set((habitLogsToday ?? []).map((l: { habit_id: string }) => l.habit_id))
+  const habitsRemainingToday = (habits ?? []).filter((h: { id: string; days_of_week: number[] }) =>
+    h.days_of_week.includes(todayDow) && !loggedHabitIds.has(h.id)
+  ).length
 
   if (profile && !profile.onboarded_at) {
     redirect('/onboarding')
@@ -70,6 +100,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
           avatarUrl={profile?.avatar_url ?? null}
           overdueStepCount={overdueCount}
+          checkinDoneToday={checkinDoneToday}
+          habitsRemainingToday={habitsRemainingToday}
         />
         <BottomNav overdueStepCount={overdueCount} />
         <TimezoneSync />

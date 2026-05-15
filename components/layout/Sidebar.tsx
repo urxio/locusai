@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 
 const MAIN_NAV = [
   { href: '/',        label: 'Home',     icon: <HomeIcon /> },
@@ -12,61 +13,143 @@ const MAIN_NAV = [
   { href: '/review',  label: 'Review',   icon: <ReviewIcon /> },
 ]
 
-export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0 }: {
+export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0, checkinDoneToday = true, habitsRemainingToday = 0 }: {
   userName: string
   avatarUrl: string | null
   overdueStepCount?: number
+  checkinDoneToday?: boolean
+  habitsRemainingToday?: number
 }) {
   const pathname = usePathname()
   const initial = userName.charAt(0).toUpperCase()
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  const hasAttention = !checkinDoneToday || habitsRemainingToday > 0 || overdueStepCount > 0
+
+  useEffect(() => {
+    if (!popoverOpen) return
+    function handleClick(e: MouseEvent) {
+      if (
+        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
+        setPopoverOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [popoverOpen])
 
   return (
     <aside className="app-sidebar">
       {/* Floating nav pill — centered */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '2px',
-        background: 'var(--glass-card-bg)',
-        border: '1px solid var(--glass-card-border)',
-        borderRadius: 'var(--radius-card)',
-        backdropFilter: 'blur(32px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-        boxShadow: 'var(--glass-card-shadow)',
-        padding: '6px 8px',
-        height: '52px',
-        position: 'absolute',
-        left: '50%',
-        transform: 'translateX(-50%)',
-      }}>
-        {/* Brand mark */}
-        <div style={{
-          width: '32px', height: '32px',
-          borderRadius: '10px',
-          background: 'var(--glass-card-bg-tint)',
-          border: '1px solid var(--glass-card-border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, marginRight: '4px',
-        }}>
-          <div style={{
-            width: '10px', height: '10px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
-          }} />
-        </div>
+      <div style={{ position: 'relative' }}>
+        {/* Status popover */}
+        {popoverOpen && (
+          <div ref={popoverRef} style={{
+            position: 'absolute',
+            top: 'calc(100% + 10px)',
+            left: 0,
+            zIndex: 200,
+            background: 'var(--glass-card-bg)',
+            border: '1px solid var(--glass-card-border)',
+            borderRadius: '14px',
+            backdropFilter: 'blur(32px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+            boxShadow: 'var(--glass-card-shadow)',
+            padding: '14px 16px',
+            minWidth: '200px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)', margin: 0 }}>
+              Today&rsquo;s status
+            </p>
+            <StatusRow
+              done={checkinDoneToday}
+              label="Check-in"
+              detail={checkinDoneToday ? 'Done' : 'Pending'}
+              href="/checkin"
+              onClose={() => setPopoverOpen(false)}
+            />
+            <StatusRow
+              done={habitsRemainingToday === 0}
+              label="Habits"
+              detail={habitsRemainingToday === 0 ? 'All done' : `${habitsRemainingToday} remaining`}
+              href="/habits"
+              onClose={() => setPopoverOpen(false)}
+            />
+            <StatusRow
+              done={overdueStepCount === 0}
+              label="Goal steps"
+              detail={overdueStepCount === 0 ? 'On track' : `${overdueStepCount} overdue`}
+              href="/goals"
+              onClose={() => setPopoverOpen(false)}
+            />
+          </div>
+        )}
 
-        {/* Main nav — horizontal */}
-        <nav style={{
-          display: 'flex', flexDirection: 'row', alignItems: 'center',
-          gap: '2px',
+        {/* Glass pill */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '2px',
+          background: 'var(--glass-card-bg)',
+          border: '1px solid var(--glass-card-border)',
+          borderRadius: 'var(--radius-card)',
+          backdropFilter: 'blur(32px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+          boxShadow: 'var(--glass-card-shadow)',
+          padding: '6px 8px',
+          height: '52px',
         }}>
-          {MAIN_NAV.map(item => {
-            const active = item.href === '/' ? pathname === '/' : pathname === item.href
-            const showBadge = item.href === '/goals' && overdueStepCount > 0
-            return (
-              <DockItem key={item.href} href={item.href} label={item.label} active={active} badge={showBadge}>
-                {item.icon}
-              </DockItem>
-            )
-          })}
-        </nav>
+          {/* Brand mark — pulse trigger */}
+          <button
+            ref={triggerRef}
+            onClick={() => setPopoverOpen(o => !o)}
+            title="Today's status"
+            style={{
+              width: '32px', height: '32px',
+              borderRadius: '10px',
+              background: 'var(--glass-card-bg-tint)',
+              border: '1px solid var(--glass-card-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, marginRight: '4px',
+              cursor: 'pointer',
+              padding: 0,
+              position: 'relative',
+            }}
+          >
+            <div style={{
+              width: '10px', height: '10px', borderRadius: '50%',
+              background: hasAttention
+                ? 'linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%)'
+                : 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
+              animation: hasAttention ? 'statusPulse 2.4s ease-in-out infinite' : 'none',
+            }} />
+            {hasAttention && (
+              <span style={{
+                position: 'absolute', inset: 0, borderRadius: '10px',
+                animation: 'statusRing 2.4s ease-in-out infinite',
+                pointerEvents: 'none',
+              }} />
+            )}
+          </button>
+
+          {/* Main nav — horizontal */}
+          <nav style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '2px' }}>
+            {MAIN_NAV.map(item => {
+              const active = item.href === '/' ? pathname === '/' : pathname === item.href
+              const showBadge = item.href === '/goals' && overdueStepCount > 0
+              return (
+                <DockItem key={item.href} href={item.href} label={item.label} active={active} badge={showBadge}>
+                  {item.icon}
+                </DockItem>
+              )
+            })}
+          </nav>
+        </div>
       </div>
 
       {/* Spacer */}
@@ -158,6 +241,26 @@ function DockItem({ href, label, active, badge = false, children }: {
           animation: 'pulse 2s ease-in-out infinite',
         }} />
       )}
+    </Link>
+  )
+}
+
+function StatusRow({ done, label, detail, href, onClose }: {
+  done: boolean
+  label: string
+  detail: string
+  href: string
+  onClose: () => void
+}) {
+  return (
+    <Link href={href} onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit' }}>
+      <span style={{
+        width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+        background: done ? 'var(--sage, #8aab9a)' : '#c9a96e',
+        boxShadow: done ? 'none' : '0 0 6px #c9a96e88',
+      }} />
+      <span style={{ fontSize: '13px', color: 'var(--text-1)', flex: 1 }}>{label}</span>
+      <span style={{ fontSize: '12px', color: done ? 'var(--text-3)' : 'var(--gold, #c9a96e)' }}>{detail}</span>
     </Link>
   )
 }
