@@ -285,7 +285,8 @@ export default function WeeklyReview({ checkins, habits, goals, briefs }: Props)
 
       {/* ── Mid: Energy by day + Habits side by side on desktop ── */}
       {(weekCheckins.length > 0 || habitWeekStats.length > 0) && (
-        <div className="review-mid">
+        <div className="glass-card" style={{ padding: '24px 26px', marginBottom: '20px' }}>
+        <div className="review-mid" style={{ marginBottom: 0 }}>
 
           {/* Energy by day */}
           {weekCheckins.length > 0 && (
@@ -342,11 +343,13 @@ export default function WeeklyReview({ checkins, habits, goals, briefs }: Props)
           )}
 
         </div>
+        </div>
       )}
 
       {/* ── Goals — full width ── */}
       {activeGoals.length > 0 && (
-        <section style={{ marginBottom: '32px' }}>
+        <div className="glass-card" style={{ padding: '24px 26px', marginBottom: '20px' }}>
+        <section style={{ marginBottom: 0 }}>
           <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '16px' }}>
             Goals
           </p>
@@ -369,6 +372,7 @@ export default function WeeklyReview({ checkins, habits, goals, briefs }: Props)
             ))}
           </ul>
         </section>
+        </div>
       )}
 
       {/* ── Weekly Reflection from Locus ── */}
