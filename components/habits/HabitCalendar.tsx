@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import type { HabitWithLogs } from '@/lib/types'
 import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
 import { useToast } from '@/components/ui/ToastContext'
-import { HABIT_COLORS } from '@/lib/habits/colors'
 
 /* ── CONSTANTS ── */
 const MONTHS = [
@@ -28,24 +27,9 @@ function isHabitScheduledOnDate(habit: HabitWithLogs, dateStr: string): boolean 
   return habit.days_of_week.includes(new Date(dateStr + 'T12:00:00').getDay())
 }
 
-/* Completion tier → fill color
-   4 bands: none | some (<40%) | most (40–79%) | all (≥80%) */
-function completionTier(pct: number): 'none' | 'some' | 'most' | 'all' {
-  if (pct === 0)    return 'none'
-  if (pct < 0.4)   return 'some'
-  if (pct < 0.8)   return 'most'
-  return 'all'
-}
-const TIER_COLORS = {
-  none: 'rgba(255,255,255,0.07)',
-  some: '#5C3D10',
-  most: '#8A5F14',
-  all:  '#BF8B1C',
-} as const
-function completionColor(pct: number, scheduled: boolean): string {
-  if (!scheduled || pct < 0) return 'transparent'
-  return TIER_COLORS[completionTier(pct)]
-}
+/* SVG ring arc constants — r=15 inside a 40×40 viewBox */
+const RING_R = 15
+const RING_CIRC = 2 * Math.PI * RING_R  // ≈ 94.25
 
 type LogMap = Map<string, Set<string>>
 
@@ -255,73 +239,88 @@ export default function HabitCalendar({ habits, today }: {
             const pct = totalCount > 0 && !isFuture ? doneCount / totalCount : -1
             const hasScheduled = totalCount > 0
 
-            const bgColor = isFuture ? 'transparent' : completionColor(pct, hasScheduled)
             const isPending = scheduledHabits.some(h => pendingSet.has(`${h.id}:${dateStr}`))
-
             const isSelected = selectedDay === dateStr
             const isClickable = hasScheduled && !isFuture
+
+            // arc stroke: gold at full, dimmer at partial, no arc at 0
+            const arcStroke = pct >= 1 ? '#D4A84B' : '#A67C1E'
+            const arcOffset = pct > 0 ? RING_CIRC * (1 - pct) : RING_CIRC
 
             return (
               <div
                 key={dateStr}
                 role={isClickable ? 'button' : undefined}
                 tabIndex={isClickable ? 0 : -1}
-                onClick={() => {
-                  if (isClickable) setSelectedDay(isSelected ? null : dateStr)
-                }}
+                onClick={() => { if (isClickable) setSelectedDay(isSelected ? null : dateStr) }}
                 onKeyDown={e => {
-                  if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+                  if (isClickable && (e.key === 'Enter' || e.key === ' '))
                     setSelectedDay(isSelected ? null : dateStr)
-                  }
                 }}
                 style={{
                   aspectRatio: '1',
                   borderRadius: '10px',
-                  background: bgColor,
-                  border: isSelected
-                    ? '2px solid var(--gold)'
+                  background: isSelected
+                    ? 'rgba(212,168,83,0.10)'
                     : isToday
-                    ? '2px solid rgba(212,168,83,0.45)'
-                    : '1px solid rgba(255,255,255,0.05)',
+                    ? 'rgba(212,168,83,0.06)'
+                    : hasScheduled && !isFuture
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'transparent',
+                  border: isSelected
+                    ? '1px solid rgba(212,168,83,0.35)'
+                    : '1px solid rgba(255,255,255,0.04)',
                   cursor: isClickable ? 'pointer' : 'default',
                   opacity: isFuture ? 0.22 : isPending ? 0.5 : 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  justifyContent: 'flex-start',
-                  padding: '7px 6px 5px',
-                  transition: 'border-color 0.15s, opacity 0.15s',
-                  boxSizing: 'border-box',
                   position: 'relative',
-                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
+                  boxSizing: 'border-box',
                 }}
               >
+                {/* SVG ring */}
+                {hasScheduled && !isFuture && (
+                  <svg
+                    viewBox="0 0 40 40"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                    aria-hidden
+                  >
+                    {/* track */}
+                    <circle cx="20" cy="20" r={RING_R} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2.5" />
+                    {/* arc */}
+                    {pct > 0 && (
+                      <circle
+                        cx="20" cy="20" r={RING_R}
+                        fill="none"
+                        stroke={arcStroke}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeDasharray={RING_CIRC}
+                        strokeDashoffset={arcOffset}
+                        transform="rotate(-90 20 20)"
+                        style={{ transition: 'stroke-dashoffset 0.45s cubic-bezier(0.22,1,0.36,1), stroke 0.2s' }}
+                      />
+                    )}
+                  </svg>
+                )}
+
                 {/* Day number */}
                 <span style={{
+                  position: 'relative',
                   fontSize: '13px',
                   fontWeight: isSelected || isToday ? 700 : 500,
                   color: isSelected || isToday
                     ? 'var(--gold)'
-                    : pct >= 0.8
-                    ? '#E8C96A'
+                    : isFuture
+                    ? 'var(--text-3)'
                     : 'var(--text-1)',
                   lineHeight: 1,
+                  userSelect: 'none',
                 }}>
                   {day}
                 </span>
-
-                {/* Completion fraction */}
-                {hasScheduled && !isFuture && (
-                  <span style={{
-                    fontSize: '10px',
-                    fontWeight: 500,
-                    color: pct >= 0.8 ? 'rgba(232,201,106,0.80)' : 'var(--text-3)',
-                    lineHeight: 1,
-                    marginTop: '3px',
-                  }}>
-                    {doneCount}/{totalCount}
-                  </span>
-                )}
               </div>
             )
           })}
@@ -333,15 +332,30 @@ export default function HabitCalendar({ habits, today }: {
           marginTop: '20px', paddingTop: '16px',
           borderTop: '1px solid var(--border)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {[
-              { label: 'none',  color: TIER_COLORS.none },
-              { label: 'some',  color: TIER_COLORS.some },
-              { label: 'most',  color: TIER_COLORS.most },
-              { label: 'all',   color: TIER_COLORS.all  },
-            ].map(({ label, color }) => (
+          {/* Mini arc legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {([
+              { label: 'none', pct: 0 },
+              { label: 'some', pct: 0.33 },
+              { label: 'most', pct: 0.66 },
+              { label: 'all',  pct: 1 },
+            ] as const).map(({ label, pct: p }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                  <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
+                  {p > 0 && (
+                    <circle
+                      cx="8" cy="8" r="5.5"
+                      fill="none"
+                      stroke={p >= 1 ? '#D4A84B' : '#A67C1E'}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 5.5}
+                      strokeDashoffset={2 * Math.PI * 5.5 * (1 - p)}
+                      transform="rotate(-90 8 8)"
+                    />
+                  )}
+                </svg>
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
               </div>
             ))}
