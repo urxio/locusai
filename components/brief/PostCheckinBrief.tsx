@@ -186,26 +186,6 @@ export default function PostCheckinBrief({ memory, sidebar = false }: Props) {
         <MemoryCard memory={memory} />
       )}
 
-      {/* ── Link to full brief page ── */}
-      {!generating && (
-        <a
-          href="/checkin"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginTop: '8px', padding: '13px 16px',
-            background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-            border: '1px solid var(--glass-card-border)', boxShadow: 'var(--glass-card-shadow-sm)',
-            borderRadius: '12px', textDecoration: 'none',
-            color: 'var(--text-1)', fontSize: '13px', fontWeight: 500,
-            transition: 'border-color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.22)'}
-          onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--glass-card-border)'}
-        >
-          <span>Open full brief</span>
-          <span style={{ color: 'var(--gold)' }}>→</span>
-        </a>
-      )}
     </div>
   )
 }
