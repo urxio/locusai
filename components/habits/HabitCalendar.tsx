@@ -11,13 +11,14 @@ const MONTHS = [
   'January','February','March','April','May','June',
   'July','August','September','October','November','December',
 ]
+const DOW = ['S','M','T','W','T','F','S']
 
 /* ── HELPERS ── */
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
 function getFirstDayOfMonth(year: number, month: number) {
-  return new Date(year, month, 1).getDay() // 0 = Sunday
+  return new Date(year, month, 1).getDay()
 }
 function toDateStr(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -27,7 +28,16 @@ function isHabitScheduledOnDate(habit: HabitWithLogs, dateStr: string): boolean 
   return habit.days_of_week.includes(new Date(dateStr + 'T12:00:00').getDay())
 }
 
-type LogMap = Map<string, Set<string>> // habitId → Set<dateStr>
+/* Completion tier → fill color */
+function completionColor(pct: number, scheduled: boolean): string {
+  if (!scheduled || pct < 0) return 'transparent'
+  if (pct === 0)   return 'rgba(255,255,255,0.04)'
+  if (pct < 0.5)   return '#3D2F12'   // some  — dark brown
+  if (pct < 1)     return '#6B4E17'   // most  — medium gold-brown
+  return '#A67C1E'                     // all   — bright gold
+}
+
+type LogMap = Map<string, Set<string>>
 
 /* ── MAIN COMPONENT ── */
 export default function HabitCalendar({ habits, today }: {
@@ -69,14 +79,15 @@ export default function HabitCalendar({ habits, today }: {
     if (month === 11) { setYear(y => y + 1); setMonth(0) }
     else setMonth(m => m + 1)
   }
+  const goToday = () => {
+    setYear(todayDate.getFullYear())
+    setMonth(todayDate.getMonth())
+  }
 
   const toggleLog = async (habitId: string, date: string) => {
     const key = `${habitId}:${date}`
     if (pendingSet.has(key) || date > today) return
-
     const wasDone = (logMap.get(habitId) ?? new Set()).has(date)
-
-    // Optimistic update
     setLogMap(prev => {
       const next = new Map(prev)
       const d = new Set(next.get(habitId) ?? [])
@@ -85,12 +96,10 @@ export default function HabitCalendar({ habits, today }: {
       return next
     })
     setPendingSet(p => new Set([...p, key]))
-
     try {
       if (wasDone) await unlogHabitAction(habitId, date)
       else         await logHabitAction(habitId, date)
     } catch {
-      // Revert on error
       setLogMap(prev => {
         const next = new Map(prev)
         const d = new Set(next.get(habitId) ?? [])
@@ -112,266 +121,226 @@ export default function HabitCalendar({ habits, today }: {
   ]
   while (cells.length % 7 !== 0) cells.push(null)
 
+  /* Month-level completion % for the footer stat */
+  const daysInMonth2 = getDaysInMonth(year, month)
+  const pastDays = Array.from({ length: daysInMonth2 }, (_, i) => {
+    const d = toDateStr(year, month, i + 1)
+    return d <= today ? d : null
+  }).filter(Boolean) as string[]
+
+  let totalOpps = 0, totalDone = 0
+  pastDays.forEach(d => {
+    const scheduled = habits.filter(h => isHabitScheduledOnDate(h, d))
+    totalOpps += scheduled.length
+    totalDone += scheduled.filter(h => (logMap.get(h.id) ?? new Set()).has(d)).length
+  })
+  const monthPct = totalOpps > 0 ? Math.round((totalDone / totalOpps) * 100) : 0
+
   return (
     <div style={{ marginTop: '20px' }}>
-
-      {/* Month navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <button
-          onClick={prevMonth}
-          className="icon-btn"
-          style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 16px', color: 'var(--text-1)', cursor: 'pointer', fontSize: '20px', lineHeight: 1 }}
-        >
-          ‹
-        </button>
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--text-0)', letterSpacing: '-0.01em' }}>
-          {MONTHS[month]} {year}
-        </div>
-        <button
-          onClick={nextMonth}
-          className="icon-btn"
-          disabled={isCurrentMonth}
-          style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 16px', color: isCurrentMonth ? 'var(--text-3)' : 'var(--text-1)', cursor: isCurrentMonth ? 'default' : 'pointer', fontSize: '20px', lineHeight: 1, opacity: isCurrentMonth ? 0.35 : 1 }}
-        >
-          ›
-        </button>
-      </div>
-
-      {/* Habit colour legend */}
-      {habits.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginBottom: '14px' }}>
-          {habits.map((h, i) => (
-            <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: HABIT_COLORS[i % HABIT_COLORS.length], flexShrink: 0 }} />
-              <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{h.emoji} {h.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Grid */}
+      {/* ── Outer card ── */}
       <div style={{
         background: 'var(--bg-1)',
         border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        opacity: loading ? 0.55 : 1,
+        borderRadius: 'var(--radius-card)',
+        padding: '24px',
+        opacity: loading ? 0.65 : 1,
         transition: 'opacity 0.2s',
       }}>
-        {/* Day-of-week headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
-          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-            <div key={d} style={{ padding: '10px 4px', textAlign: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+
+        {/* ── Header: OVERVIEW label + month heading + nav ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>
+              Overview
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.1 }}>
+              {MONTHS[month]} {year}
+            </div>
+          </div>
+
+          {/* prev / Today / next */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              onClick={prevMonth}
+              className="icon-btn"
+              style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border)',
+                borderRadius: '50%', width: '34px', height: '34px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-1)', cursor: 'pointer', fontSize: '16px', lineHeight: 1,
+                transition: 'background 0.15s',
+              }}
+              aria-label="Previous month"
+            >
+              ‹
+            </button>
+            <button
+              onClick={goToday}
+              className="icon-btn"
+              style={{
+                background: isCurrentMonth ? 'var(--bg-0)' : 'var(--bg-2)',
+                border: '1px solid var(--border)',
+                borderRadius: '20px', padding: '0 16px', height: '34px',
+                color: isCurrentMonth ? 'var(--text-0)' : 'var(--text-2)',
+                cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                boxShadow: isCurrentMonth ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Today
+            </button>
+            <button
+              onClick={nextMonth}
+              disabled={isCurrentMonth}
+              className="icon-btn"
+              style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border)',
+                borderRadius: '50%', width: '34px', height: '34px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isCurrentMonth ? 'var(--text-3)' : 'var(--text-1)',
+                cursor: isCurrentMonth ? 'default' : 'pointer',
+                fontSize: '16px', lineHeight: 1,
+                opacity: isCurrentMonth ? 0.3 : 1,
+                transition: 'all 0.15s',
+              }}
+              aria-label="Next month"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        {/* ── Day-of-week headers (single letter) ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '6px' }}>
+          {DOW.map((d, i) => (
+            <div key={i} style={{
+              textAlign: 'center', fontSize: '10px', fontWeight: 700,
+              color: 'var(--text-3)', letterSpacing: '0.06em',
+              paddingBottom: '6px',
+            }}>
               {d}
             </div>
           ))}
         </div>
 
-        {/* Day cells */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        {/* ── Calendar tile grid ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
           {cells.map((day, idx) => {
             if (day === null) {
-              return (
-                <div
-                  key={`pad-${idx}`}
-                  style={{ borderRight: idx % 7 !== 6 ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border)', minHeight: '72px', background: 'var(--bg-0)', opacity: 0.4 }}
-                />
-              )
+              return <div key={`pad-${idx}`} style={{ aspectRatio: '1' }} />
             }
+
             const dateStr  = toDateStr(year, month, day)
             const isToday  = dateStr === today
             const isFuture = dateStr > today
 
-            // Only habits scheduled for this day of week count toward "all done"
             const scheduledHabits = habits.filter(h => isHabitScheduledOnDate(h, dateStr))
-            const allDone = !isFuture && scheduledHabits.length > 0 &&
-              scheduledHabits.every(h => (logMap.get(h.id) ?? new Set()).has(dateStr))
+            const doneCount = isFuture ? 0 : scheduledHabits.filter(h =>
+              (logMap.get(h.id) ?? new Set()).has(dateStr)
+            ).length
+            const totalCount = scheduledHabits.length
+            const pct = totalCount > 0 && !isFuture ? doneCount / totalCount : -1
+            const hasScheduled = totalCount > 0
+
+            const bgColor = isFuture ? 'transparent' : completionColor(pct, hasScheduled)
+            const isPending = scheduledHabits.some(h => pendingSet.has(`${h.id}:${dateStr}`))
 
             return (
-              <DayCell
+              <div
                 key={dateStr}
-                day={day}
-                dateStr={dateStr}
-                isToday={isToday}
-                isFuture={isFuture}
-                isLastCol={idx % 7 === 6}
-                habits={habits}
-                habitColors={HABIT_COLORS}
-                doneMap={logMap}
-                allDone={allDone}
-                pendingSet={pendingSet}
-                onToggle={toggleLog}
-              />
+                role={hasScheduled && !isFuture ? 'button' : undefined}
+                tabIndex={hasScheduled && !isFuture ? 0 : -1}
+                onClick={() => {
+                  if (!isFuture && hasScheduled) {
+                    scheduledHabits.forEach(h => toggleLog(h.id, dateStr))
+                  }
+                }}
+                onKeyDown={e => {
+                  if (!isFuture && hasScheduled && (e.key === 'Enter' || e.key === ' ')) {
+                    scheduledHabits.forEach(h => toggleLog(h.id, dateStr))
+                  }
+                }}
+                style={{
+                  aspectRatio: '1',
+                  borderRadius: '10px',
+                  background: bgColor,
+                  border: isToday ? '2px solid var(--gold)' : '1px solid rgba(255,255,255,0.05)',
+                  cursor: hasScheduled && !isFuture && !isPending ? 'pointer' : 'default',
+                  opacity: isFuture ? 0.22 : isPending ? 0.5 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-start',
+                  padding: '7px 6px 5px',
+                  transition: 'background 0.15s, opacity 0.15s',
+                  boxSizing: 'border-box',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Day number */}
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: isToday ? 700 : 500,
+                  color: isToday
+                    ? 'var(--gold)'
+                    : pct === 1
+                    ? '#E8C96A'
+                    : 'var(--text-1)',
+                  lineHeight: 1,
+                }}>
+                  {day}
+                </span>
+
+                {/* Completion fraction */}
+                {hasScheduled && !isFuture && (
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 500,
+                    color: pct === 1 ? 'rgba(232,201,106,0.75)' : 'var(--text-3)',
+                    lineHeight: 1,
+                    marginTop: '3px',
+                  }}>
+                    {doneCount}/{totalCount}
+                  </span>
+                )}
+              </div>
             )
           })}
         </div>
-      </div>
 
-      {/* Summary row */}
-      {habits.length > 0 && !loading && (
-        <CalendarSummary habits={habits} logMap={logMap} year={year} month={month} today={today} />
-      )}
+        {/* ── Legend + month % ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginTop: '20px', paddingTop: '16px',
+          borderTop: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            {[
+              { label: 'none',  color: 'rgba(255,255,255,0.18)' },
+              { label: 'some',  color: '#3D2F12' },
+              { label: 'most',  color: '#6B4E17' },
+              { label: 'all',   color: '#A67C1E' },
+            ].map(({ label, color }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
+              </div>
+            ))}
+          </div>
+          {totalOpps > 0 && (
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>
+              {monthPct}% this month
+            </span>
+          )}
+        </div>
+      </div>
 
       {habits.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-3)', fontSize: '14px' }}>
           Add habits to see your monthly progress.
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ── DAY CELL ── */
-function DayCell({ day, dateStr, isToday, isFuture, isLastCol, habits, habitColors, doneMap, allDone, pendingSet, onToggle }: {
-  day: number
-  dateStr: string
-  isToday: boolean
-  isFuture: boolean
-  isLastCol: boolean
-  habits: HabitWithLogs[]
-  habitColors: string[]
-  doneMap: LogMap
-  allDone: boolean
-  pendingSet: Set<string>
-  onToggle: (habitId: string, date: string) => void
-}) {
-  const [hovered, setHovered] = useState<string | null>(null)
-
-  return (
-    <div
-      style={{
-        borderRight: !isLastCol ? '1px solid var(--border)' : 'none',
-        borderBottom: '1px solid var(--border)',
-        minHeight: '72px',
-        padding: '8px 6px 6px',
-        background: allDone
-          ? 'rgba(122,158,138,0.09)'
-          : isToday
-          ? 'rgba(212,168,83,0.06)'
-          : 'transparent',
-        position: 'relative',
-      }}
-    >
-      {/* Day number */}
-      <div style={{ marginBottom: '5px', lineHeight: 1 }}>
-        {isToday ? (
-          <span style={{
-            background: 'var(--gold)', color: '#131110', borderRadius: '50%',
-            width: '20px', height: '20px', display: 'inline-flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: '11px', fontWeight: 800,
-          }}>
-            {day}
-          </span>
-        ) : (
-          <span style={{
-            fontSize: '12px',
-            fontWeight: 400,
-            color: isFuture ? 'var(--text-3)' : 'var(--text-2)',
-          }}>
-            {day}
-          </span>
-        )}
-        {allDone && (
-          <span style={{ fontSize: '9px', color: 'var(--sage)', marginLeft: '3px' }}>✓</span>
-        )}
-      </div>
-
-      {/* Per-habit dots — only show scheduled habits, skip others */}
-      {!isFuture && habits.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-          {habits.map((h, i) => {
-            const scheduled = isHabitScheduledOnDate(h, dateStr)
-            if (!scheduled) return null  // not scheduled this day — no dot
-
-            const done    = (doneMap.get(h.id) ?? new Set()).has(dateStr)
-            const color   = habitColors[i % habitColors.length]
-            const isPend  = pendingSet.has(`${h.id}:${dateStr}`)
-            const isHov   = hovered === h.id
-
-            return (
-              <button
-                key={h.id}
-                onClick={() => onToggle(h.id, dateStr)}
-                onMouseEnter={() => setHovered(h.id)}
-                onMouseLeave={() => setHovered(null)}
-                title={`${h.emoji} ${h.name} — ${done ? 'done · click to undo' : 'not done · click to log'}`}
-                className="icon-btn"
-                style={{
-                  width: '11px',
-                  height: '11px',
-                  borderRadius: '50%',
-                  background: done ? color : 'transparent',
-                  border: `1.5px solid ${done ? color : 'var(--bg-4)'}`,
-                  cursor: isPend ? 'wait' : 'pointer',
-                  opacity: isPend ? 0.35 : isHov ? 0.65 : 1,
-                  transition: 'all 0.12s',
-                  padding: 0,
-                  flexShrink: 0,
-                  transform: isHov && !isPend ? 'scale(1.25)' : 'scale(1)',
-                }}
-              />
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ── MONTHLY SUMMARY ── */
-function CalendarSummary({ habits, logMap, year, month, today }: {
-  habits: HabitWithLogs[]
-  logMap: LogMap
-  year: number
-  month: number
-  today: string
-}) {
-  const daysInMonth = getDaysInMonth(year, month)
-
-  // Only count days up to today (or end of month)
-  const pastDays = Array.from({ length: daysInMonth }, (_, i) => {
-    const d = toDateStr(year, month, i + 1)
-    return d <= today ? d : null
-  }).filter(Boolean) as string[]
-
-  if (pastDays.length === 0) return null
-
-  // Per-habit completion rate — denominator is scheduled days only
-  const habitStats = habits.map(h => {
-    const loggedDates  = logMap.get(h.id) ?? new Set()
-    const scheduledDays = pastDays.filter(d => isHabitScheduledOnDate(h, d))
-    const doneCount    = scheduledDays.filter(d => loggedDates.has(d)).length
-    const total        = scheduledDays.length
-    return { h, doneCount, total, pct: total > 0 ? Math.round((doneCount / total) * 100) : 0 }
-  })
-
-  // Perfect days — all scheduled habits done for that day
-  const perfectDays = pastDays.filter(d => {
-    const scheduled = habits.filter(h => isHabitScheduledOnDate(h, d))
-    return scheduled.length > 0 && scheduled.every(h => (logMap.get(h.id) ?? new Set()).has(d))
-  }).length
-
-  return (
-    <div style={{ marginTop: '14px', background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px' }}>
-        Month summary · {pastDays.length} days tracked
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {habitStats.map(({ h, doneCount, total, pct }, i) => (
-          <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.emoji}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-1)', minWidth: '0', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.name}</span>
-            <div style={{ flex: 2, height: '4px', background: 'var(--bg-3)', borderRadius: '4px', overflow: 'hidden', minWidth: '60px' }}>
-              <div style={{ height: '100%', width: `${pct}%`, borderRadius: '4px', background: HABIT_COLORS[i % HABIT_COLORS.length], transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-2)', flexShrink: 0, minWidth: '44px', textAlign: 'right' }}>{doneCount}/{total}</span>
-            <span style={{ fontSize: '11px', color: 'var(--text-3)', flexShrink: 0, minWidth: '30px', textAlign: 'right' }}>{pct}%</span>
-          </div>
-        ))}
-      </div>
-      {habits.length > 1 && (
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-2)' }}>
-          <span style={{ color: 'var(--sage)', fontWeight: 600 }}>{perfectDays}</span> perfect {perfectDays === 1 ? 'day' : 'days'} — all habits completed
         </div>
       )}
     </div>
