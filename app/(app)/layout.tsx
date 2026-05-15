@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import BottomNav from '@/components/layout/BottomNav'
 import TimezoneSync from '@/components/layout/TimezoneSync'
 import ToastShell from '@/components/ui/ToastShell'
+import { dateInTz } from '@/lib/utils/date'
 
 const DEFAULT_BG = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=85'
 
@@ -12,22 +13,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const today = new Date().toISOString().split('T')[0]
+  // Fetch profile first so we can use the user's timezone for all date comparisons
+  const { data: profile } = await supabase
+    .from('users')
+    .select('name, avatar_url, onboarded_at, cover_url, timezone')
+    .eq('id', user.id)
+    .single()
 
-  const todayDow = new Date().getDay() // 0=Sun … 6=Sat
+  if (profile && !profile.onboarded_at) redirect('/onboarding')
+
+  const tz = (profile as { timezone?: string | null } | null)?.timezone ?? 'UTC'
+  const today = dateInTz(tz)
+  const todayDow = new Date(
+    new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date()) + 'T00:00:00'
+  ).getDay()
 
   const [
-    { data: profile },
     { count: overdueStepCount },
     { data: checkinRow },
     { data: habits },
     { data: habitLogsToday },
   ] = await Promise.all([
-    supabase
-      .from('users')
-      .select('name, avatar_url, onboarded_at, cover_url')
-      .eq('id', user.id)
-      .single(),
     supabase
       .from('goal_steps')
       .select('id', { count: 'exact', head: true })
@@ -58,10 +64,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const habitsRemainingToday = (habits ?? []).filter((h: { id: string; days_of_week: number[] }) =>
     h.days_of_week.includes(todayDow) && !loggedHabitIds.has(h.id)
   ).length
-
-  if (profile && !profile.onboarded_at) {
-    redirect('/onboarding')
-  }
 
   const overdueCount = overdueStepCount ?? 0
   const bgUrl = (profile as { cover_url?: string | null } | null)?.cover_url || DEFAULT_BG
