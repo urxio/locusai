@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import type { Goal, CheckIn, HabitWithLogs, Brief, MemoryNote } from '@/lib/types'
+import { logHabitAction, unlogHabitAction } from '@/app/actions/habits'
 
 type Props = {
   goals:        Goal[]
@@ -152,7 +153,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName 
 
   const priorities = brief?.priorities?.slice(0, 3) ?? []
 
-  const todayHabits = habits
+  const todayHabitsBase = habits
     .filter(h => h.isScheduledToday)
     .map(h => ({
       id:   h.id,
@@ -160,6 +161,28 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName 
       done: h.logs.some(l => l.logged_date === today),
     }))
     .slice(0, 4)
+
+  const [habitDone, setHabitDone] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(todayHabitsBase.map(h => [h.id, h.done]))
+  )
+  const [habitLoading, setHabitLoading] = useState<Record<string, boolean>>({})
+
+  const todayHabits = todayHabitsBase.map(h => ({ ...h, done: habitDone[h.id] ?? h.done }))
+
+  async function toggleHabit(id: string) {
+    if (habitLoading[id]) return
+    const next = !habitDone[id]
+    setHabitDone(prev => ({ ...prev, [id]: next }))
+    setHabitLoading(prev => ({ ...prev, [id]: true }))
+    try {
+      if (next) await logHabitAction(id, today)
+      else await unlogHabitAction(id, today)
+    } catch {
+      setHabitDone(prev => ({ ...prev, [id]: !next }))
+    } finally {
+      setHabitLoading(prev => ({ ...prev, [id]: false }))
+    }
+  }
 
   return (
     <div className="home-shell">
@@ -278,20 +301,33 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName 
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {todayHabits.map((h, i) => (
-                  <li key={h.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '10px 0',
-                    borderTop: i === 0 ? 'none' : '1px solid oklch(1 0 0 / 0.06)',
-                  }}>
-                    <span style={{ fontSize: '14px', color: h.done ? 'var(--text-3)' : 'oklch(0.93 0.012 80 / 0.9)', transition: 'color 0.2s' }}>
+                  <li
+                    key={h.id}
+                    onClick={() => toggleHabit(h.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 0',
+                      borderTop: i === 0 ? 'none' : '1px solid oklch(1 0 0 / 0.06)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px', color: h.done ? 'var(--text-3)' : 'oklch(0.93 0.012 80 / 0.9)', transition: 'color 0.2s', textDecoration: h.done ? 'line-through' : 'none' }}>
                       {h.name}
                     </span>
                     <span style={{
-                      width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                      width: '16px', height: '16px', borderRadius: '50%', flexShrink: 0,
                       background: h.done ? 'var(--sage)' : 'transparent',
-                      border: h.done ? 'none' : '1.5px solid oklch(1 0 0 / 0.25)',
+                      border: h.done ? 'none' : '1.5px solid oklch(1 0 0 / 0.3)',
                       transition: 'all 0.2s',
-                    }} />
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: habitLoading[h.id] ? 0.5 : 1,
+                    }}>
+                      {h.done && (
+                        <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="oklch(0.2 0.05 150)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 5l2.5 2.5L8 3" />
+                        </svg>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
