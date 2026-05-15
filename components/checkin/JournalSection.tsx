@@ -358,7 +358,7 @@ export default function JournalSection({
     : recentJournals
 
   return (
-    <div className="page-pad" style={{ maxWidth: '1180px' }}>
+    <div className="page-pad" style={{ maxWidth: '1180px', marginLeft: 'auto', marginRight: 'auto' }}>
       <div className="journal-layout">
 
         {/* ── LEFT: Date sidebar ── */}
