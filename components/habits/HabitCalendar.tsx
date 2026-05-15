@@ -31,6 +31,14 @@ function isHabitScheduledOnDate(habit: HabitWithLogs, dateStr: string): boolean 
 const RING_R = 15
 const RING_CIRC = 2 * Math.PI * RING_R  // ≈ 94.25
 
+function arcColor(pct: number): string {
+  if (pct <= 0)   return 'transparent'
+  if (pct < 0.4)  return '#8B5E14'   // some  — copper
+  if (pct < 0.75) return '#C48418'   // most  — amber gold
+  if (pct < 1)    return '#DFA020'   // high  — warm gold
+  return '#F0C050'                   // all   — gleaming gold
+}
+
 type LogMap = Map<string, Set<string>>
 
 /* ── MAIN COMPONENT ── */
@@ -244,7 +252,7 @@ export default function HabitCalendar({ habits, today }: {
             const isClickable = hasScheduled && !isFuture
 
             // arc stroke: gold at full, dimmer at partial, no arc at 0
-            const arcStroke = pct >= 1 ? '#D4A84B' : '#A67C1E'
+            const arcStroke = arcColor(pct)
             const arcOffset = pct > 0 ? RING_CIRC * (1 - pct) : RING_CIRC
 
             return (
@@ -347,7 +355,7 @@ export default function HabitCalendar({ habits, today }: {
                     <circle
                       cx="8" cy="8" r="5.5"
                       fill="none"
-                      stroke={p >= 1 ? '#D4A84B' : '#A67C1E'}
+                      stroke={arcColor(p)}
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 5.5}
