@@ -110,17 +110,18 @@ function DockItem({ href, label, active, badge = false, children }: {
       style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        width: '44px',
-        height: '44px',
-        borderRadius: '14px',
+        gap: '7px',
+        padding: '0 14px',
+        height: '40px',
+        borderRadius: '12px',
         background: active ? 'var(--nav-active-bg)' : 'transparent',
         border: active ? '1px solid var(--nav-active-border)' : '1px solid transparent',
-        color: active ? 'var(--text-0)' : 'var(--text-3)',
+        color: active ? 'var(--gold, #c9a96e)' : 'var(--text-3)',
         textDecoration: 'none',
         position: 'relative',
         transition: 'background 0.15s, color 0.15s, border-color 0.15s',
         flexShrink: 0,
+        whiteSpace: 'nowrap',
       }}
       onMouseEnter={e => {
         if (!active) {
@@ -135,21 +136,21 @@ function DockItem({ href, label, active, badge = false, children }: {
         }
       }}
     >
-      {children}
-      {/* Active indicator bar */}
-      {active && (
-        <span style={{
-          position: 'absolute', bottom: '-1px',
-          left: '50%', transform: 'translateX(-50%)',
-          width: '18px', height: '3px',
-          borderRadius: '3px 3px 0 0',
-          background: 'var(--sage)',
-        }} />
-      )}
+      <span style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {children}
+      </span>
+      <span style={{
+        fontSize: '13px',
+        fontWeight: active ? 500 : 400,
+        letterSpacing: '0.01em',
+        lineHeight: 1,
+      }}>
+        {label}
+      </span>
       {/* Overdue badge */}
       {badge && (
         <span style={{
-          position: 'absolute', top: '8px', right: '8px',
+          position: 'absolute', top: '8px', right: '6px',
           width: '7px', height: '7px',
           borderRadius: '50%',
           background: '#e05c4a',
