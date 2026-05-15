@@ -143,8 +143,11 @@ export default function HabitCalendar({ habits, today }: {
     <div style={{ marginTop: '20px' }}>
       {/* ── Outer card ── */}
       <div style={{
-        background: 'var(--bg-1)',
-        border: '1px solid var(--border)',
+        background: 'var(--glass-card-bg)',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        border: '1px solid var(--glass-card-border)',
+        boxShadow: 'var(--glass-card-shadow-sm)',
         borderRadius: 'var(--radius-card)',
         padding: '24px',
         opacity: loading ? 0.65 : 1,
