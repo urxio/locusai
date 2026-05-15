@@ -27,7 +27,8 @@ function energyToLabel(level: number | null): string {
   if (!level) return 'Not yet checked in'
   if (level >= 9) return 'Charged, fully present'
   if (level >= 7) return 'Strong, mostly clear'
-  if (level >= 5) return 'Steady, mostly clear'
+  if (level >= 6) return 'Steady, mostly clear'
+  if (level >= 5) return 'Getting by, some friction'
   if (level >= 3) return 'Low, a bit stretched'
   return 'Running on empty'
 }
