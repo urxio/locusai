@@ -450,7 +450,7 @@ export default function JournalSection({
             {/* ── Writing area ── */}
             <div style={{
               flex: 1, overflowY: 'auto', scrollbarWidth: 'none',
-              padding: '24px max(28px, calc((100% - 680px) / 2))',
+              padding: '24px 28px',
             }}>
               <textarea
                 ref={textareaRef}
