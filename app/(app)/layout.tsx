@@ -24,9 +24,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const tz = (profile as { timezone?: string | null } | null)?.timezone ?? 'UTC'
   const today = dateInTz(tz)
-  const todayDow = new Date(
-    new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date()) + 'T00:00:00'
-  ).getDay()
+  // Parse day-of-week directly from the tz-aware date string to avoid server-local ambiguity
+  const todayDow = new Date(today + 'T12:00:00Z').getUTCDay()
 
   const [
     { count: overdueStepCount },
