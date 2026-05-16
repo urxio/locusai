@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/login', '/signup', '/auth/callback']
+  const publicPaths = ['/login', '/signup', '/auth/callback', '/landing', '/privacy']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
   // Onboarding is authenticated-only but not a "public" auth page
   const isOnboarding = pathname.startsWith('/onboarding')
@@ -34,8 +34,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from auth pages (but not onboarding)
-  if (user && isPublic && !isOnboarding) {
+  const isLanding = pathname.startsWith('/landing')
+
+  // Redirect authenticated users away from auth pages (but not onboarding or landing)
+  if (user && isPublic && !isOnboarding && !isLanding) {
     return NextResponse.redirect(new URL('/brief', request.url))
   }
 
