@@ -13,10 +13,11 @@ const MAIN_NAV = [
   { href: '/review',  label: 'Review',   icon: <ReviewIcon /> },
 ]
 
-export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0, checkinDoneToday = true, habitsRemainingToday = 0 }: {
+export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0, dueTodayStepCount = 0, checkinDoneToday = true, habitsRemainingToday = 0 }: {
   userName: string
   avatarUrl: string | null
   overdueStepCount?: number
+  dueTodayStepCount?: number
   checkinDoneToday?: boolean
   habitsRemainingToday?: number
 }) {
@@ -28,7 +29,13 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0, che
   const popoverRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
-  const hasAttention = !checkinDoneToday || habitsRemainingToday > 0 || overdueStepCount > 0
+  const goalStepsDone = overdueStepCount === 0 && dueTodayStepCount === 0
+  const goalStepsDetail = overdueStepCount > 0
+    ? `${overdueStepCount} overdue`
+    : dueTodayStepCount > 0
+      ? `${dueTodayStepCount} due today`
+      : 'On track'
+  const hasAttention = !checkinDoneToday || habitsRemainingToday > 0 || !goalStepsDone
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -98,9 +105,9 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0, che
             onClose={() => setPopoverOpen(false)}
           />
           <StatusRow
-            done={overdueStepCount === 0}
+            done={goalStepsDone}
             label="Goal steps"
-            detail={overdueStepCount === 0 ? 'On track' : `${overdueStepCount} overdue`}
+            detail={goalStepsDetail}
             href="/goals"
             onClose={() => setPopoverOpen(false)}
           />

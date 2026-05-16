@@ -29,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const [
     { count: overdueStepCount },
+    { count: dueTodayStepCount },
     { data: checkinRow },
     { data: habits },
     { data: habitLogsToday },
@@ -40,6 +41,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .eq('completed', false)
       .not('due_date', 'is', null)
       .lt('due_date', today),
+    supabase
+      .from('goal_steps')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('completed', false)
+      .eq('due_date', today),
     supabase
       .from('check_ins')
       .select('id')
@@ -108,6 +115,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userName={profile?.name ?? user.email?.split('@')[0] ?? 'You'}
           avatarUrl={profile?.avatar_url ?? null}
           overdueStepCount={overdueCount}
+          dueTodayStepCount={dueTodayStepCount ?? 0}
           checkinDoneToday={checkinDoneToday}
           habitsRemainingToday={habitsRemainingToday}
         />

@@ -41,6 +41,7 @@ export async function generateAndSaveStepsAction(goalId: string): Promise<GoalSt
 
   revalidatePath('/goals')
   revalidatePath('/brief')
+  revalidatePath('/', 'layout')
   return (saved ?? []) as GoalStep[]
 }
 
@@ -67,6 +68,7 @@ export async function toggleStepAction(stepId: string, completed: boolean): Prom
   await syncGoalProgress(step.goal_id, user.id)
   revalidatePath('/goals')
   revalidatePath('/brief')
+  revalidatePath('/', 'layout')
 }
 
 /* ── CREATE ─────────────────────────────────────────── */
@@ -99,6 +101,7 @@ export async function createStepAction(
 
   await syncGoalProgress(goalId, user.id)
   revalidatePath('/goals')
+  revalidatePath('/', 'layout')
   return data as GoalStep
 }
 
@@ -119,6 +122,7 @@ export async function updateStepAction(
     .eq('user_id', user.id)
   if (error) throw new Error(error.message)
   revalidatePath('/goals')
+  revalidatePath('/', 'layout')
 }
 
 /* ── DELETE ─────────────────────────────────────────── */
@@ -139,6 +143,7 @@ export async function deleteStepAction(stepId: string): Promise<void> {
   if (step?.goal_id) await syncGoalProgress(step.goal_id, user.id)
   revalidatePath('/goals')
   revalidatePath('/brief')
+  revalidatePath('/', 'layout')
 }
 
 /* ── INTERNAL: recalculate goal.progress_pct from steps ── */
