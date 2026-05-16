@@ -10,9 +10,9 @@ import { createClient } from '@/lib/supabase/client'
 
 const COVER_PRESETS = [
   { id: 'locus-1', url: '/wallpapers/locus-1.jpg',  label: 'Silk' },
-  { id: 'locus-2', url: '/wallpapers/locus-2.jpg',  label: 'Chrome' },
+  { id: 'locus-2', url: '/wallpapers/locus-2.jpg',  label: 'Frost' },
   { id: 'locus-3', url: '/wallpapers/locus-3.avif', label: 'Ember' },
-  { id: 'locus-4', url: '/wallpapers/locus-4.jpg',  label: 'Frost' },
+  { id: 'locus-4', url: '/wallpapers/locus-4.jpg',  label: 'Chrome' },
   { id: 'locus-5', url: '/wallpapers/locus-5.jpg',  label: 'Dusk' },
 ]
 
