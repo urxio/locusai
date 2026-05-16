@@ -52,7 +52,7 @@ const btnPrimary: React.CSSProperties = {
 }
 
 const btnSocial: React.CSSProperties = {
-  flex: 1,
+  width: '100%',
   padding: '11px 16px',
   background: C.inputBg,
   border: `1px solid ${C.inputBdr}`,
@@ -80,13 +80,6 @@ function GoogleIcon() {
   )
 }
 
-function AppleIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
-      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.32.07 2.24.72 3.01.76 1.15-.24 2.24-.93 3.42-.84 1.45.12 2.54.7 3.27 1.78-2.96 1.77-2.27 5.66.45 6.74-.55 1.47-1.28 2.93-2.15 4.44zM12.03 7.25c-.14-2.47 1.86-4.52 4.22-4.73.35 2.82-2.56 4.96-4.22 4.73z"/>
-    </svg>
-  )
-}
 
 function DarkInput({ type, placeholder, value, onChange, autoFocus }: {
   type: string; placeholder: string; value: string
@@ -134,13 +127,6 @@ export default function LoginPage() {
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
-  }
-
-  async function handleApple() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'apple',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
   }
@@ -326,20 +312,12 @@ export default function LoginPage() {
                 <div style={{ flex: 1, height: '1px', background: C.divider }} />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={handleGoogle} style={btnSocial}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.11)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
-                >
-                  <GoogleIcon /> Google
-                </button>
-                <button onClick={handleApple} style={btnSocial}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.11)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
-                >
-                  <AppleIcon /> Apple
-                </button>
-              </div>
+              <button onClick={handleGoogle} style={btnSocial}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.11)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.inputBg }}
+              >
+                <GoogleIcon /> Continue with Google
+              </button>
 
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p style={{ fontSize: '13px', color: C.muted, margin: 0 }}>
