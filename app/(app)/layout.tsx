@@ -60,9 +60,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const checkinDoneToday = !!checkinRow
   const loggedHabitIds = new Set((habitLogsToday ?? []).map((l: { habit_id: string }) => l.habit_id))
-  const habitsRemainingToday = (habits ?? []).filter((h: { id: string; days_of_week: number[] }) =>
-    h.days_of_week.includes(todayDow) && !loggedHabitIds.has(h.id)
-  ).length
+  const habitsRemainingToday = (habits ?? []).filter((h: { id: string; days_of_week: number[] | null }) => {
+    // null or empty days_of_week = daily habit (scheduled every day)
+    const scheduledToday = !h.days_of_week || h.days_of_week.length === 0 || h.days_of_week.includes(todayDow)
+    return scheduledToday && !loggedHabitIds.has(h.id)
+  }).length
 
   const overdueCount = overdueStepCount ?? 0
   const bgUrl = (profile as { cover_url?: string | null } | null)?.cover_url || DEFAULT_BG
