@@ -8,7 +8,7 @@ import Link from 'next/link'
 
 type View = 'login' | 'forgot' | 'forgot-code' | 'forgot-reset' | 'magic-sent'
 
-const PHOTO = '/login-bg.jpg'
+const PHOTO = '/wallpapers/locus-5.jpg'
 
 /* ── Design tokens ─────────────────────────────────── */
 const C = {
