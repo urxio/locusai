@@ -144,7 +144,7 @@ function WeeklyReflection({
             {worked.map((item, i) => (
               <li key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '11px', color: 'var(--sage)', opacity: 0.6, marginTop: '3px', flexShrink: 0 }}>—</span>
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', lineHeight: 1.65, color: 'var(--text-1)', margin: 0 }}>{item}</p>
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 300, lineHeight: 1.75, color: 'var(--ai-card-text)', margin: 0 }}>{item}</p>
               </li>
             ))}
           </ul>
@@ -162,7 +162,7 @@ function WeeklyReflection({
             {adjust.map((item, i) => (
               <li key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '11px', color: 'var(--gold)', opacity: 0.6, marginTop: '3px', flexShrink: 0 }}>—</span>
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', lineHeight: 1.65, color: 'var(--text-1)', margin: 0 }}>{item}</p>
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 300, lineHeight: 1.75, color: 'var(--ai-card-text)', margin: 0 }}>{item}</p>
               </li>
             ))}
           </ul>
