@@ -7,19 +7,19 @@
     </radialGradient>
   </defs>
 
-  <!-- White background -->
-  <circle cx="50" cy="50" r="50" fill="#FFFFFF"/>
+  <!-- Black background -->
+  <circle cx="50" cy="50" r="50" fill="#0A0A0A"/>
 
-  <!-- Back layer — 4 petals at 45° offsets, slightly lighter black -->
-  <g fill="#1A1A1A" opacity="0.75">
+  <!-- Back layer — 4 petals at 45° offsets, slightly off-white -->
+  <g fill="#E8E8E8" opacity="0.65">
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(45,50,50)"/>
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(135,50,50)"/>
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(225,50,50)"/>
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(315,50,50)"/>
   </g>
 
-  <!-- Front layer — 4 petals at cardinal angles, true black -->
-  <g fill="#0A0A0A">
+  <!-- Front layer — 4 petals at cardinal angles, pure white -->
+  <g fill="#FFFFFF">
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50"/>
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(90,50,50)"/>
     <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(180,50,50)"/>
