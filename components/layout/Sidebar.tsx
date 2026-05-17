@@ -8,13 +8,13 @@ import { createPortal } from 'react-dom'
 function LocusIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden>
-      <g fill="#c9a84c" opacity="0.65">
+      <g fill="#FFFFFF" opacity="0.55">
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(45,50,50)" />
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(135,50,50)" />
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(225,50,50)" />
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(315,50,50)" />
       </g>
-      <g fill="#c9a84c">
+      <g fill="#FFFFFF">
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" />
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(90,50,50)" />
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(180,50,50)" />
