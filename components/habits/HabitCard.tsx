@@ -193,10 +193,10 @@ export default function HabitCard({ habit, loggedDates, streak, colorIndex, last
           {/* Streak pill */}
           {streak > 0 && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'oklch(0.78 0.13 70)' }}>
-              <svg viewBox="0 0 16 16" fill="none" width="12" height="12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg viewBox="0 0 16 16" fill="none" width="16" height="16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M8 14c-2.5 0-5-1.8-5-5 0-2.2 1.8-4 3-5.5.6 1 1.2 1.8 2 2.5.8-1.2.8-2.8.8-4 1.2 1 3.2 3.2 3.2 7 0 2.8-2 5-4 5Z" />
               </svg>
-              <span style={{ fontSize: '13px', fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em' }}>{streak}</span>
+              <span style={{ fontSize: '16px', fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em' }}>{streak}</span>
             </div>
           )}
           {/* Edit / delete */}
