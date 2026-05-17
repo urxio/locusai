@@ -61,9 +61,17 @@ function getPulseCacheKey() {
   return `locus_pulse_${now.toISOString().split('T')[0]}_${now.getHours()}`
 }
 
+function isValidPulse(s: string): boolean {
+  const t = s.trimStart()
+  return t.length > 0 && !t.startsWith('<')
+}
+
 function usePulse(hasCheckin: boolean) {
   const [text, setText] = useState<string>(() => {
-    try { return localStorage.getItem(getPulseCacheKey()) ?? '' } catch { return '' }
+    try {
+      const cached = localStorage.getItem(getPulseCacheKey()) ?? ''
+      return isValidPulse(cached) ? cached : ''
+    } catch { return '' }
   })
   const [streaming, setStreaming] = useState(false)
   const abortRef    = useRef<AbortController | null>(null)
@@ -73,7 +81,7 @@ function usePulse(hasCheckin: boolean) {
     if (!force) {
       try {
         const cached = localStorage.getItem(getPulseCacheKey())
-        if (cached) { setText(cached); return }
+        if (cached && isValidPulse(cached)) { setText(cached); return }
       } catch {}
     }
     abortRef.current?.abort()
@@ -93,7 +101,7 @@ function usePulse(hasCheckin: boolean) {
         acc += dec.decode(value, { stream: true })
         setText(acc)
       }
-      if (acc) {
+      if (acc && isValidPulse(acc)) {
         try {
           for (let i = localStorage.length - 1; i >= 0; i--) {
             const k = localStorage.key(i)
