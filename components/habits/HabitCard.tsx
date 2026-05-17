@@ -192,12 +192,11 @@ export default function HabitCard({ habit, loggedDates, streak, colorIndex, last
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
           {/* Streak pill */}
           {streak > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '5px 10px 5px 8px' }}>
-              <span style={{ fontSize: '13px', lineHeight: 1 }}>{streak >= 30 ? '🔥🔥' : streak >= 14 ? '🔥' : '⚡'}</span>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold)', lineHeight: 1, letterSpacing: '-0.01em' }}>{streak}</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500, letterSpacing: '0.02em' }}>
-                day{streak !== 1 ? 's' : ''}
-              </span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'oklch(0.78 0.13 70)' }}>
+              <svg viewBox="0 0 16 16" fill="none" width="12" height="12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M8 14c-2.5 0-5-1.8-5-5 0-2.2 1.8-4 3-5.5.6 1 1.2 1.8 2 2.5.8-1.2.8-2.8.8-4 1.2 1 3.2 3.2 3.2 7 0 2.8-2 5-4 5Z" />
+              </svg>
+              <span style={{ fontSize: '13px', fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em' }}>{streak}</span>
             </div>
           )}
           {/* Edit / delete */}
