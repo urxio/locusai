@@ -5,6 +5,25 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 
+function LocusIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden>
+      <g fill="#c9a84c" opacity="0.65">
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(45,50,50)" />
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(135,50,50)" />
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(225,50,50)" />
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(315,50,50)" />
+      </g>
+      <g fill="#c9a84c">
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" />
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(90,50,50)" />
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(180,50,50)" />
+        <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(270,50,50)" />
+      </g>
+    </svg>
+  )
+}
+
 const MAIN_NAV = [
   { href: '/home',    label: 'Home',     icon: <HomeIcon /> },
   { href: '/checkin', label: 'Check-in', icon: <CheckinIcon /> },
@@ -146,13 +165,7 @@ export default function Sidebar({ userName, avatarUrl, overdueStepCount = 0, due
               position: 'relative',
             }}
           >
-            <div style={{
-              width: '10px', height: '10px', borderRadius: '50%',
-              background: hasAttention
-                ? 'linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%)'
-                : 'linear-gradient(135deg, var(--sea-soft, #c8ddd7) 0%, var(--sage) 100%)',
-              animation: hasAttention ? 'statusPulse 2.4s ease-in-out infinite' : 'none',
-            }} />
+            <LocusIcon size={18} />
             {hasAttention && (
               <span style={{
                 position: 'absolute', inset: 0, borderRadius: '10px',
