@@ -519,9 +519,27 @@ export default async function Landing() {
   if (user) redirect("/home");
   return (
     <main
-      className="landing-page silk-bg min-h-screen relative overflow-x-hidden"
-      style={{ color: "oklch(0.96 0.005 250)", fontFamily: "var(--font-sans)" }}
+      className="landing-page min-h-screen relative overflow-x-hidden"
+      style={{
+        color: "oklch(0.96 0.005 250)",
+        fontFamily: "var(--font-sans)",
+        backgroundImage: "url('/wallpapers/dusk.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center top",
+        backgroundAttachment: "fixed",
+      }}
     >
+      {/* Dark overlay to maintain text legibility */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "linear-gradient(160deg, oklch(0.08 0.015 75 / 0.72) 0%, oklch(0.06 0.01 250 / 0.78) 100%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
       <Nav />
       <Hero />
       <HowItWorks />
