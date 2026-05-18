@@ -5,6 +5,47 @@ import Link from 'next/link'
 
 type Tab = 'home' | 'checkin' | 'habits' | 'goals' | 'review'
 
+/* ── Multilingual greetings ── */
+
+const GREETINGS = {
+  morning: [
+    { text: 'Good morning',        lang: 'en' },
+    { text: 'おはようございます',    lang: 'ja' },
+    { text: 'Bonjour',             lang: 'fr' },
+    { text: '早上好',               lang: 'zh' },
+    { text: 'Buenos días',         lang: 'es' },
+    { text: 'こんにちは',           lang: 'ja' },  // casual morning
+    { text: 'Guten Morgen',        lang: 'de' },
+    { text: 'Bom dia',             lang: 'pt' },
+    { text: '좋은 아침이에요',        lang: 'ko' },
+    { text: 'Buongiorno',          lang: 'it' },
+  ],
+  afternoon: [
+    { text: 'Good afternoon',      lang: 'en' },
+    { text: 'こんにちは',           lang: 'ja' },
+    { text: 'Bon après-midi',      lang: 'fr' },
+    { text: '下午好',               lang: 'zh' },
+    { text: 'Buenas tardes',       lang: 'es' },
+    { text: 'おつかれさまです',      lang: 'ja' },  // "good work so far"
+    { text: 'Guten Tag',           lang: 'de' },
+    { text: 'Boa tarde',           lang: 'pt' },
+    { text: '안녕하세요',            lang: 'ko' },
+    { text: 'Buon pomeriggio',     lang: 'it' },
+  ],
+  evening: [
+    { text: 'Good evening',        lang: 'en' },
+    { text: 'こんばんは',           lang: 'ja' },
+    { text: 'Bonsoir',             lang: 'fr' },
+    { text: '晚上好',               lang: 'zh' },
+    { text: 'Buenas noches',       lang: 'es' },
+    { text: 'おやすみなさい',        lang: 'ja' },  // "good night" / wind down
+    { text: 'Guten Abend',         lang: 'de' },
+    { text: 'Boa noite',           lang: 'pt' },
+    { text: '좋은 저녁이에요',        lang: 'ko' },
+    { text: 'Buonasera',           lang: 'it' },
+  ],
+}
+
 /* ── Demo Data ── */
 
 const DEMO_HABITS = [
@@ -155,10 +196,32 @@ function useLiveDate() {
   return now
 }
 
-function greeting(hour: number): string {
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
+function getTimeKey(hour: number): 'morning' | 'afternoon' | 'evening' {
+  if (hour < 12) return 'morning'
+  if (hour < 17) return 'afternoon'
+  return 'evening'
+}
+
+function useCyclingGreeting(hour: number | null) {
+  const timeKey = hour != null ? getTimeKey(hour) : 'morning'
+  const list = GREETINGS[timeKey]
+
+  const [index, setIndex]     = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      // fade out → swap → fade in
+      setVisible(false)
+      setTimeout(() => {
+        setIndex(i => (i + 1) % list.length)
+        setVisible(true)
+      }, 380)
+    }, 2600)
+    return () => clearInterval(id)
+  }, [list.length])
+
+  return { text: list[index].text, lang: list[index].lang, visible }
 }
 
 function HomeView({
@@ -167,13 +230,14 @@ function HomeView({
   habitDone: Record<string, boolean>
   setHabitDone: (id: string) => void
 }) {
-  const now = useLiveDate()
+  const now  = useLiveDate()
+  const hour = now?.getHours() ?? null
+  const { text: greetingText, lang: greetingLang, visible: greetingVisible } = useCyclingGreeting(hour)
   const todayHabits = DEMO_HABITS.slice(0, 4).map(h => ({ ...h, done: habitDone[h.id] ?? h.done }))
 
   const dateLabel = now
     ? now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
     : ' '
-  const greetingText = now ? greeting(now.getHours()) : 'Welcome'
 
   return (
     <div className="home-shell" style={{ animation: 'fadeUp 0.35s var(--ease) both' }}>
@@ -181,7 +245,23 @@ function HomeView({
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
           {dateLabel}
         </p>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(34px, 4.5vw, 54px)', fontWeight: 400, lineHeight: 1.05, color: 'var(--text-0)' }}>
+        <h1
+          suppressHydrationWarning
+          style={{
+            fontFamily: greetingLang === 'ja'
+              ? '"Hiragino Mincho ProN", "Yu Mincho", var(--font-serif), serif'
+              : 'var(--font-serif)',
+            fontSize: ['ja','zh','ko'].includes(greetingLang) ? 'clamp(30px, 3.8vw, 48px)' : 'clamp(34px, 4.5vw, 54px)',
+            fontWeight: ['ja','zh','ko'].includes(greetingLang) ? 300 : 400,
+            lineHeight: 1.1,
+            color: 'var(--text-0)',
+            opacity:   greetingVisible ? 1 : 0,
+            transform: greetingVisible ? 'translateY(0)' : 'translateY(8px)',
+            transition: 'opacity 0.36s var(--ease), transform 0.36s var(--ease)',
+            willChange: 'opacity, transform',
+            minHeight: 'clamp(42px, 5.5vw, 66px)',
+          }}
+        >
           {greetingText}.
         </h1>
       </header>
