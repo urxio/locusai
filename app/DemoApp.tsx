@@ -1007,7 +1007,7 @@ function MobileSignInBanner() {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 20px',
       background: 'oklch(0.12 0.015 75 / 0.88)',
       backdropFilter: 'blur(16px)',
