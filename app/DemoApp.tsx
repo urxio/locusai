@@ -448,7 +448,7 @@ function CheckinView() {
     : ' '
 
   return (
-    <div className="page-pad" style={{ maxWidth: '680px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
+    <div className="page-pad" style={{ width: '100%', maxWidth: '680px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
       <header style={{ marginBottom: '40px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
           {dateLabel}
@@ -572,7 +572,7 @@ function HabitsView({
     : ' '
 
   return (
-    <div className="page-pad" style={{ maxWidth: '680px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
+    <div className="page-pad" style={{ width: '100%', maxWidth: '680px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
       <header style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
@@ -670,7 +670,7 @@ function GoalRing({ progress, size = 80 }: { progress: number; size?: number }) 
 
 function GoalsView() {
   return (
-    <div className="page-pad" style={{ maxWidth: '760px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
+    <div className="page-pad" style={{ width: '100%', maxWidth: '760px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
       <header style={{ marginBottom: '32px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
           ACTIVE GOALS
