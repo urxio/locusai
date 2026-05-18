@@ -5,7 +5,7 @@ import type { GoalWithSteps, GoalStep, Habit } from '@/lib/types'
 import { updateGoalAction, deleteGoalAction } from '@/app/actions/goals'
 import {
   computeGoalVitality,
-  VITALITY_STRIPE, VITALITY_BADGE, VITALITY_PROGRESS,
+  VITALITY_PROGRESS,
   type GoalVitality,
 } from '@/lib/utils/goal-vitality'
 import { PencilIcon, TrashIcon } from '@/components/ui/Icons'
@@ -24,12 +24,60 @@ export const CATEGORY_COLORS: Record<string, string> = {
   other:     'linear-gradient(90deg, #4a7a60 0%, #8ab89a 100%)',
 }
 export const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
-  product:   { bg: 'rgba(212,168,83,0.12)',  color: 'var(--gold)' },
-  health:    { bg: 'rgba(200,144,96,0.12)',  color: '#c89060' },
-  learning:  { bg: 'rgba(96,144,200,0.12)',  color: '#6090c8' },
-  financial: { bg: 'rgba(212,168,83,0.12)',  color: 'var(--gold)' },
-  wellbeing: { bg: 'rgba(122,158,138,0.12)', color: 'var(--sage)' },
-  other:     { bg: 'rgba(122,158,138,0.12)', color: 'var(--sage)' },
+  product:   { bg: 'rgba(100,130,180,0.18)', color: '#8ab0e0' },
+  health:    { bg: 'rgba(80,140,100,0.18)',  color: '#70b888' },
+  learning:  { bg: 'rgba(96,144,200,0.18)',  color: '#6090c8' },
+  financial: { bg: 'rgba(212,168,83,0.15)',  color: 'var(--gold)' },
+  wellbeing: { bg: 'rgba(122,158,138,0.18)', color: 'var(--sage)' },
+  other:     { bg: 'rgba(122,158,138,0.18)', color: 'var(--sage)' },
+}
+
+const VITALITY_STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
+  on_track:    { bg: 'rgba(60,110,80,0.28)',   color: '#70b888', label: 'ON PACE' },
+  near_finish: { bg: 'rgba(60,110,80,0.28)',   color: '#70b888', label: 'ALMOST THERE' },
+  at_risk:     { bg: 'rgba(160,80,60,0.28)',   color: '#c87878', label: 'NEEDS PUSH' },
+  urgent:      { bg: 'rgba(180,60,60,0.28)',   color: '#e07070', label: 'URGENT' },
+  overdue:     { bg: 'rgba(180,60,60,0.28)',   color: '#e07070', label: 'OVERDUE' },
+}
+
+const RING_STROKE: Record<string, string> = {
+  on_track:    '#d4a853',
+  near_finish: '#8ab89a',
+  at_risk:     '#e0a060',
+  urgent:      '#e06060',
+  overdue:     '#e06060',
+}
+
+/* ── CIRCULAR PROGRESS RING ── */
+const RING_SIZE = 88
+const STROKE_W  = 7
+const RADIUS    = (RING_SIZE - STROKE_W) / 2
+const CIRC      = 2 * Math.PI * RADIUS
+
+function ProgressRing({ pct, signal }: { pct: number; signal: string }) {
+  const offset = CIRC * (1 - Math.min(100, Math.max(0, pct)) / 100)
+  const stroke = RING_STROKE[signal] ?? '#d4a853'
+  return (
+    <svg width={RING_SIZE} height={RING_SIZE} style={{ flexShrink: 0, transform: 'rotate(-90deg)' }}>
+      <circle cx={RING_SIZE/2} cy={RING_SIZE/2} r={RADIUS} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={STROKE_W} />
+      <circle
+        cx={RING_SIZE/2} cy={RING_SIZE/2} r={RADIUS}
+        fill="none" stroke={stroke} strokeWidth={STROKE_W}
+        strokeLinecap="round"
+        strokeDasharray={CIRC}
+        strokeDashoffset={offset}
+        style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.22,1,0.36,1)' }}
+      />
+      {/* Inline text needs counter-rotation – use a foreignObject trick via transform */}
+      <text
+        x={RING_SIZE/2} y={RING_SIZE/2}
+        dominantBaseline="central" textAnchor="middle"
+        style={{ transform: `rotate(90deg)`, transformOrigin: `${RING_SIZE/2}px ${RING_SIZE/2}px`, fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 300, fill: 'var(--text-0)' }}
+      >
+        {pct}%
+      </text>
+    </svg>
+  )
 }
 
 /* ── ADD STEP FORM ── */
@@ -121,21 +169,16 @@ export default function GoalCard({
 
   const gradient = CATEGORY_COLORS[goal.category] ?? CATEGORY_COLORS.other
   const badge    = CATEGORY_BADGE[goal.category]  ?? CATEGORY_BADGE.other
-  const daysLeft = goal.target_date
-    ? Math.ceil((new Date(goal.target_date).getTime() - Date.now()) / 86400000)
-    : null
 
   const vitality: GoalVitality = goal.status === 'active'
     ? computeGoalVitality(goal, steps)
-    : { signal: 'on_track', label: '', detail: null }
+    : { signal: 'on_track', label: 'On track', detail: null }
 
-  const stripeColor  = VITALITY_STRIPE[vitality.signal]
   const progressGrad = vitality.signal !== 'on_track'
     ? VITALITY_PROGRESS[vitality.signal]
     : gradient
-  const vBadge = vitality.signal !== 'on_track'
-    ? VITALITY_BADGE[vitality.signal]
-    : null
+
+  const statusBadge = VITALITY_STATUS_BADGE[vitality.signal] ?? VITALITY_STATUS_BADGE.on_track
 
   useEffect(() => { setProgressVal(goal.progress_pct) }, [goal.progress_pct])
 
@@ -154,113 +197,134 @@ export default function GoalCard({
     })
   }
 
+  /* Timeframe label */
+  const now = new Date()
+  const timeframeLabel = goal.timeframe === 'quarter'
+    ? `Q${Math.ceil((now.getMonth() + 1) / 3)} ${now.getFullYear()}`
+    : goal.timeframe === 'year'
+    ? String(now.getFullYear())
+    : 'Ongoing'
+
+  /* Subtitle: timeframe · steps or habit info */
+  const stepsMeta = hasSteps ? `${doneCount} of ${steps.length} steps` : null
+  const daysLeft = goal.target_date
+    ? Math.ceil((new Date(goal.target_date).getTime() - Date.now()) / 86400000)
+    : null
+
   return (
     <div
-      style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: `1px solid ${hovered ? 'rgba(255,255,255,0.22)' : 'var(--glass-card-border)'}`, boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', marginBottom: '10px', transition: 'border-color 0.2s', position: 'relative', overflow: 'hidden' }}
+      style={{ background: 'var(--glass-card-bg)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: `1px solid ${hovered ? 'rgba(255,255,255,0.18)' : 'var(--glass-card-border)'}`, boxShadow: 'var(--glass-card-shadow-sm)', borderRadius: 'var(--radius-lg)', marginBottom: '10px', transition: 'border-color 0.2s', position: 'relative', overflow: 'hidden' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setConfirmDelete(false) }}
     >
-      {/* Vitality left-stripe */}
-      {vitality.signal !== 'on_track' && (
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: stripeColor, borderRadius: '4px 0 0 4px', zIndex: 1 }} />
-      )}
-
       {/* Card body */}
-      <div style={{ padding: '18px 22px 14px', paddingLeft: vitality.signal !== 'on_track' ? '25px' : '22px' }}>
-        {/* Top row */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3, marginBottom: '5px' }}>
-              {goal.status === 'completed' && <span style={{ color: 'var(--sage)', marginRight: '6px' }}>✓</span>}
-              {goal.title}
-            </div>
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', background: badge.bg, color: badge.color }}>
-                {goal.category}
+      <div style={{ padding: '20px 22px 0', display: 'flex', gap: '20px', alignItems: 'center' }}>
+
+        {/* Left: circular progress ring */}
+        <div
+          style={{ position: 'relative', flexShrink: 0, cursor: (!hasSteps && !isHabitTracked) ? 'pointer' : 'default' }}
+          onClick={() => !hasSteps && !isHabitTracked && setEditingProgress(true)}
+          title={isHabitTracked ? 'Progress auto-tracked from habit completions' : hasSteps ? 'Progress driven by steps' : 'Click to update progress'}
+        >
+          <ProgressRing pct={goal.progress_pct} signal={vitality.signal} />
+          {isHabitTracked && (
+            <span title="Habit-tracked" style={{ position: 'absolute', bottom: 2, right: 2, fontSize: '10px', color: 'var(--sage)' }}>⟳</span>
+          )}
+        </div>
+
+        {/* Right: content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Badges row */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '6px' }}>
+            <span style={{ fontSize: '10px', padding: '2px 9px', borderRadius: '5px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', background: badge.bg, color: badge.color }}>
+              {goal.category}
+            </span>
+            {goal.status === 'active' && (
+              <span style={{ fontSize: '10px', padding: '2px 9px', borderRadius: '5px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', background: statusBadge.bg, color: statusBadge.color }}>
+                {statusBadge.label}
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                {goal.timeframe === 'quarter' ? `Q${Math.ceil((new Date().getMonth() + 1) / 3)}` : goal.timeframe === 'year' ? new Date().getFullYear() : 'Ongoing'}
+            )}
+            {goal.status === 'completed' && (
+              <span style={{ fontSize: '10px', padding: '2px 9px', borderRadius: '5px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', background: 'rgba(122,158,138,0.18)', color: 'var(--sage)' }}>
+                ✓ Complete
               </span>
-              {hasSteps && (
-                <span style={{ fontSize: '10.5px', color: doneCount === steps.length ? 'var(--sage)' : 'var(--text-3)', fontWeight: 600 }}>
-                  {doneCount === steps.length ? '✓ ' : ''}{doneCount}/{steps.length} steps
-                </span>
-              )}
-              {vBadge && (
-                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 700, letterSpacing: '0.04em', background: vBadge.bg, color: vBadge.color, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <span>{vBadge.icon}</span>
-                  <span>{vitality.label}{vitality.detail ? ` · ${vitality.detail}` : ''}</span>
-                </span>
-              )}
-            </div>
+            )}
+            {goal.status === 'paused' && (
+              <span style={{ fontSize: '10px', padding: '2px 9px', borderRadius: '5px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', background: 'rgba(180,180,180,0.1)', color: 'var(--text-3)' }}>
+                Paused
+              </span>
+            )}
           </div>
 
-          {/* Actions + Progress % */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {hovered && !confirmDelete && !editingProgress && (
-              <div style={{ display: 'flex', gap: '4px' }}>
+          {/* Title */}
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.2, marginBottom: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {goal.title}
+          </div>
+
+          {/* Subtitle */}
+          <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span>{timeframeLabel}</span>
+            {stepsMeta && <><span style={{ opacity: 0.4 }}>·</span><span>{stepsMeta}</span></>}
+            {isHabitTracked && !hasSteps && <><span style={{ opacity: 0.4 }}>·</span><span style={{ color: 'var(--sage)' }}>habit-tracked</span></>}
+            {daysLeft !== null && (
+              <><span style={{ opacity: 0.4 }}>·</span>
+              <span style={{ color: daysLeft <= 0 ? '#e07060' : daysLeft < 7 ? '#e0a060' : 'var(--text-3)' }}>
+                {daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? 'due today' : 'overdue'}
+              </span></>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          {editingProgress && !hasSteps && !isHabitTracked ? (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <input type="range" min={0} max={100} value={progressVal} onChange={e => setProgressVal(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--gold)', cursor: 'pointer' }} />
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--text-0)', width: '40px', textAlign: 'right' }}>{progressVal}%</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={saveProgress} disabled={isPending} style={{ background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '7px', padding: '6px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>{isPending ? 'Saving…' : 'Save'}</button>
+                <button onClick={() => setEditingProgress(false)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: '7px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ height: '3px', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', overflow: 'hidden', marginBottom: '0' }}>
+              <div style={{ height: '100%', borderRadius: '4px', background: progressGrad, width: `${goal.progress_pct}%`, transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
+            </div>
+          )}
+        </div>
+
+        {/* Hover actions */}
+        {(hovered || confirmDelete) && (
+          <div style={{ position: 'absolute', top: '14px', right: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {!confirmDelete && (
+              <>
                 <IconBtn title="Edit" onClick={() => onEdit(goal)}><PencilIcon /></IconBtn>
                 <IconBtn title="Delete" danger onClick={() => setConfirmDelete(true)}><TrashIcon /></IconBtn>
-              </div>
+              </>
             )}
             {confirmDelete && (
               <ConfirmDelete onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {isHabitTracked && (
-                <span title="Progress auto-tracked from habit completions" style={{ fontSize: '13px', color: 'var(--sage)', lineHeight: 1 }}>⟳</span>
-              )}
-              <button
-                onClick={() => !hasSteps && !isHabitTracked && setEditingProgress(true)}
-                title={isHabitTracked ? 'Progress auto-tracked from habit completions' : hasSteps ? 'Progress driven by steps' : 'Update progress'}
-                style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 300, color: 'var(--text-0)', background: 'none', border: 'none', cursor: (hasSteps || isHabitTracked) ? 'default' : 'pointer', padding: 0, lineHeight: 1 }}
-              >
-                {goal.progress_pct}%
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress bar or inline slider */}
-        {editingProgress && !hasSteps && !isHabitTracked ? (
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <input type="range" min={0} max={100} value={progressVal} onChange={e => setProgressVal(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--gold)', cursor: 'pointer' }} />
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text-0)', width: '44px', textAlign: 'right' }}>{progressVal}%</span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={saveProgress} disabled={isPending} style={{ background: 'var(--gold)', color: '#131110', border: 'none', borderRadius: '7px', padding: '7px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>{isPending ? 'Saving…' : 'Save'}</button>
-              <button onClick={() => setEditingProgress(false)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: '7px', padding: '7px 12px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ height: '3px', background: 'var(--bg-4)', borderRadius: '4px', overflow: 'hidden', marginBottom: '10px' }}>
-            <div style={{ height: '100%', borderRadius: '4px', background: progressGrad, width: `${goal.progress_pct}%`, transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
           </div>
         )}
+      </div>
 
-        {/* Deadline */}
-        {daysLeft !== null && (
-          <div style={{ fontSize: '11.5px', color: daysLeft <= 0 ? '#e07060' : daysLeft < 7 ? '#e0a060' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Due</span>
-            <span>{daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? 'Today' : 'Overdue'}</span>
-          </div>
-        )}
-
+      {/* Steps/habit footer strip */}
+      <div style={{ padding: '10px 22px 14px 22px', paddingLeft: `${22 + RING_SIZE + 20}px` }}>
         {/* Steps toggle button */}
         {isHabitTracked ? (
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', padding: '3px 8px', borderRadius: '20px', background: 'rgba(122,158,138,0.12)', border: '1px solid rgba(122,158,138,0.2)' }}>
-              ⟳ Habit-tracked · updates on each check
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', padding: '2px 8px', borderRadius: '20px', background: 'rgba(122,158,138,0.12)', border: '1px solid rgba(122,158,138,0.18)' }}>
+              ⟳ Habit-tracked
             </span>
           </div>
         ) : (
           <button
             onClick={() => onToggleExpand(goal.id)}
             className="icon-btn"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '12px', fontWeight: 600, padding: '0', letterSpacing: '0.04em', textTransform: 'uppercase' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '11px', fontWeight: 600, padding: '0', letterSpacing: '0.05em', textTransform: 'uppercase' }}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
+            <svg width="11" height="11" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
             {isGenerating ? 'Locus is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
           </button>
         )}
