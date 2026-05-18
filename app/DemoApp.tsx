@@ -1007,14 +1007,12 @@ function MobileSignInBanner() {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-      alignItems: 'center', justifyContent: 'space-between',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 20px',
       background: 'oklch(0.12 0.015 75 / 0.88)',
       backdropFilter: 'blur(16px)',
       borderBottom: '1px solid oklch(1 0 0 / 0.08)',
-    }}
-    className="mobile-only-banner"
-    >
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <LocusLogo size={16} />
         <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-1)' }}>
@@ -1096,8 +1094,8 @@ export default function DemoApp() {
       />
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }} />
 
-      {/* Mobile top banner */}
-      <MobileSignInBanner />
+      {/* Top banner — home only */}
+      {tab === 'home' && <MobileSignInBanner />}
 
       {/* App shell — exact same as real app */}
       <div className="app-shell">
