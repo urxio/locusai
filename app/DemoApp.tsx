@@ -253,10 +253,20 @@ function useCyclingGreeting(hour: number | null) {
 
   const [index, setIndex]     = useState(0)
   const [visible, setVisible] = useState(true)
+  const prevTimeKey = useRef(timeKey)
 
+  // Smoothly transition when time period first becomes known (clock tick)
+  useEffect(() => {
+    if (prevTimeKey.current !== timeKey) {
+      prevTimeKey.current = timeKey
+      setVisible(false)
+      setTimeout(() => { setIndex(0); setVisible(true) }, 380)
+    }
+  }, [timeKey])
+
+  // Cycle through greetings every 4.8 s
   useEffect(() => {
     const id = setInterval(() => {
-      // fade out → swap → fade in
       setVisible(false)
       setTimeout(() => {
         setIndex(i => (i + 1) % list.length)
@@ -448,7 +458,7 @@ function CheckinView() {
     : ' '
 
   return (
-    <div className="page-pad" style={{ width: '100%', maxWidth: '680px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
+    <div className="page-pad inner-shell-sm" style={{ animation: 'fadeUp 0.35s var(--ease) both' }}>
       <header style={{ marginBottom: '40px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
           {dateLabel}
@@ -572,7 +582,7 @@ function HabitsView({
     : ' '
 
   return (
-    <div className="page-pad" style={{ width: '100%', maxWidth: '680px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
+    <div className="page-pad inner-shell-sm" style={{ animation: 'fadeUp 0.35s var(--ease) both' }}>
       <header style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
@@ -670,7 +680,7 @@ function GoalRing({ progress, size = 80 }: { progress: number; size?: number }) 
 
 function GoalsView() {
   return (
-    <div className="page-pad" style={{ width: '100%', maxWidth: '760px', margin: '0 auto', animation: 'fadeUp 0.35s var(--ease) both' }}>
+    <div className="page-pad inner-shell-md" style={{ animation: 'fadeUp 0.35s var(--ease) both' }}>
       <header style={{ marginBottom: '32px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
           ACTIVE GOALS
