@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
 type Tab = 'home' | 'checkin' | 'habits' | 'goals' | 'review'
@@ -188,12 +188,37 @@ function SignInCTA({ label = 'Sign in to get started →' }: { label?: string })
 
 /* ── HOME VIEW ── */
 
-function useLiveDate() {
+function useLiveClock() {
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
     setNow(new Date())
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
   }, [])
   return now
+}
+
+const LOCUS_MESSAGE =
+  "Welcome to Locus. I’m your daily intelligence — I learn your rhythm " +
+  "from check-ins, hold the shape of your goals and habits, and each morning " +
+  "I write you a brief: what deserves your attention, what the pattern in your " +
+  "week is telling you, and what can safely wait."
+
+function useTypewriter(text: string, speed = 16) {
+  const [displayed, setDisplayed] = useState('')
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    setDisplayed('')
+    setDone(false)
+    let i = 0
+    const id = setInterval(() => {
+      i++
+      setDisplayed(text.slice(0, i))
+      if (i >= text.length) { setDone(true); clearInterval(id) }
+    }, speed)
+    return () => clearInterval(id)
+  }, [text, speed])
+  return { displayed, done }
 }
 
 function getTimeKey(hour: number): 'morning' | 'afternoon' | 'evening' {
@@ -217,7 +242,7 @@ function useCyclingGreeting(hour: number | null) {
         setIndex(i => (i + 1) % list.length)
         setVisible(true)
       }, 380)
-    }, 2600)
+    }, 4800)
     return () => clearInterval(id)
   }, [list.length])
 
@@ -230,14 +255,19 @@ function HomeView({
   habitDone: Record<string, boolean>
   setHabitDone: (id: string) => void
 }) {
-  const now  = useLiveDate()
+  const now  = useLiveClock()
   const hour = now?.getHours() ?? null
   const { text: greetingText, lang: greetingLang, visible: greetingVisible } = useCyclingGreeting(hour)
   const todayHabits = DEMO_HABITS.slice(0, 4).map(h => ({ ...h, done: habitDone[h.id] ?? h.done }))
 
   const dateLabel = now
-    ? now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
-    : ' '
+    ? (() => {
+        const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
+        const hh   = String(now.getHours()).padStart(2, '0')
+        const mm   = String(now.getMinutes()).padStart(2, '0')
+        return `${date} · ${hh}:${mm}`
+      })()
+    : ' '
 
   return (
     <div className="home-shell" style={{ animation: 'fadeUp 0.35s var(--ease) both' }}>
@@ -275,10 +305,11 @@ function HomeView({
           <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', opacity: 0.85, marginBottom: '18px' }}>
             From Locus
           </p>
-          <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(17px, 2vw, 21px)', lineHeight: 1.7, color: 'oklch(0.93 0.012 80 / 0.95)', flex: 1 }}>
-            Welcome to Locus. I&apos;m your daily intelligence — I learn your rhythm from check-ins, hold the shape of your goals and habits, and each morning I write you a brief: what deserves your attention, what the pattern in your week is telling you, and what can safely wait.
+          <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(17px, 2vw, 21px)', lineHeight: 1.7, color: 'oklch(0.93 0.012 80 / 0.95)', flex: 1, minHeight: '6em' }}>
+            {locusText}
+            {!locusDone && <span style={{ opacity: 0.35, animation: 'pulse 1s ease-in-out infinite' }}> |</span>}
           </p>
-          <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 'clamp(14px, 1.6vw, 17px)', lineHeight: 1.65, color: 'var(--text-3)', marginTop: '20px' }}>
+          <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 'clamp(14px, 1.6vw, 17px)', lineHeight: 1.65, color: 'var(--text-3)', marginTop: '20px', opacity: locusDone ? 1 : 0, transition: 'opacity 0.7s ease 0.2s' }}>
             You&apos;re exploring a preview with template data. Explore the tabs to see what your Locus looks like — then{' '}
             <Link href="/login" style={{ color: 'var(--gold)', textDecoration: 'none' }}>
               sign in or create an account
@@ -386,7 +417,7 @@ function HomeView({
 /* ── CHECK-IN VIEW ── */
 
 function CheckinView() {
-  const now = useLiveDate()
+  const now = useLiveClock()
   const [energy, setEnergy] = useState(7)
   const [submitted, setSubmitted] = useState(false)
   const dateLabel = now
@@ -510,7 +541,7 @@ function HabitsView({
   habitDone: Record<string, boolean>
   setHabitDone: (id: string) => void
 }) {
-  const now = useLiveDate()
+  const now = useLiveClock()
   const habits = DEMO_HABITS.map(h => ({ ...h, done: habitDone[h.id] ?? h.done }))
   const doneCount = habits.filter(h => h.done).length
   const dateLabel = now
@@ -982,6 +1013,18 @@ function MobileSignInBanner() {
 
 export default function DemoApp() {
   const [tab, setTab] = useState<Tab>('home')
+  const bgRef = useRef<HTMLImageElement>(null)
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!bgRef.current) return
+      const x = (e.clientX / window.innerWidth  - 0.5) * 16
+      const y = (e.clientY / window.innerHeight - 0.5) * 10
+      bgRef.current.style.transform = `translate(${x}px, ${y}px) scale(1.06)`
+    }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [])
   const [habitDone, setHabitDoneMap] = useState<Record<string, boolean>>(
     () => Object.fromEntries(DEMO_HABITS.map(h => [h.id, h.done]))
   )
@@ -995,6 +1038,7 @@ export default function DemoApp() {
       {/* Background wallpaper */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={bgRef}
         aria-hidden
         src="/wallpapers/locus-5.jpg"
         alt=""
@@ -1003,6 +1047,9 @@ export default function DemoApp() {
         style={{
           position: 'fixed', inset: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'center', zIndex: -1,
+          transform: 'scale(1.06)',
+          transition: 'transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          willChange: 'transform',
         }}
       />
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }} />
