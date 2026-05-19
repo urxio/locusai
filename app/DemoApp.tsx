@@ -727,139 +727,276 @@ function GoalsView() {
 
 /* ── REVIEW VIEW ── */
 
+function smoothCurvePath(pts: [number, number][]): string {
+  if (pts.length === 0) return ''
+  if (pts.length === 1) return `M ${pts[0][0]} ${pts[0][1]}`
+  const d: string[] = [`M ${pts[0][0]} ${pts[0][1]}`]
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = i === 0 ? pts[0] : pts[i - 1]
+    const [x1, y1] = pts[i]
+    const [x2, y2] = pts[i + 1]
+    const [x3, y3] = i + 2 < pts.length ? pts[i + 2] : pts[i + 1]
+    const cp1x = x1 + (x2 - x0) / 6
+    const cp1y = y1 + (y2 - y0) / 6
+    const cp2x = x2 - (x3 - x1) / 6
+    const cp2y = y2 - (y3 - y1) / 6
+    d.push(`C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${x2.toFixed(2)} ${y2.toFixed(2)}`)
+  }
+  return d.join(' ')
+}
+
+function DemoEnergyCurveChart() {
+  const W = 560, H = 220
+  const padL = 28, padR = 12, padT = 24, padB = 36
+  const chartW = W - padL - padR
+  const chartH = H - padT - padB
+  const xOf = (i: number) => padL + (i / (DAYS_SHORT.length - 1)) * chartW
+  const yOf = (v: number) => padT + (1 - (v - 1) / 9) * chartH
+
+  const pts: [number, number][] = WEEK_ENERGY.map((v, i) => [xOf(i), yOf(v)])
+  const linePath = smoothCurvePath(pts)
+  const areaPath = `${linePath} L ${pts[pts.length - 1][0]} ${padT + chartH} L ${pts[0][0]} ${padT + chartH} Z`
+  const gridLines = [2, 4, 6, 8, 10]
+  let peakIdx = 0
+  WEEK_ENERGY.forEach((v, i) => { if (v > WEEK_ENERGY[peakIdx]) peakIdx = i })
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }} aria-label="Energy this week">
+      <defs>
+        <linearGradient id="dv-energyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#7eb89a" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#7eb89a" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="dv-lineGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#c8a96e" />
+          <stop offset="100%" stopColor="#7eb89a" />
+        </linearGradient>
+        <filter id="dv-dotGlow">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {gridLines.map(v => (
+        <g key={v}>
+          <line x1={padL} y1={yOf(v)} x2={W - padR} y2={yOf(v)}
+            stroke="oklch(1 0 0 / 0.07)" strokeWidth="1" strokeDasharray={v === 10 || v === 2 ? '0' : '4 4'} />
+          <text x={padL - 6} y={yOf(v) + 4} textAnchor="end" fontSize="9"
+            fill="oklch(1 0 0 / 0.28)" fontFamily="var(--font-sans, sans-serif)">{v}</text>
+        </g>
+      ))}
+
+      <path d={areaPath} fill="url(#dv-energyGrad)" />
+      <path d={linePath} fill="none" stroke="url(#dv-lineGrad)" strokeWidth="2.5"
+        strokeLinecap="round" strokeLinejoin="round" />
+
+      {WEEK_ENERGY.map((v, i) => {
+        const x = xOf(i), y = yOf(v)
+        const color = v >= 7 ? '#7eb89a' : v >= 5 ? '#c8a96e' : '#c08060'
+        const isPeak = i === peakIdx
+        return (
+          <g key={i}>
+            {isPeak && <circle cx={x} cy={y} r="9" fill={color} opacity="0.15" filter="url(#dv-dotGlow)" />}
+            <circle cx={x} cy={y} r={isPeak ? 5.5 : 4} fill={color} stroke="oklch(0.13 0 0)" strokeWidth="1.5" />
+            <text x={x} y={y - 12} textAnchor="middle" fontSize="11"
+              fontFamily="var(--font-serif)" fill={isPeak ? color : 'oklch(1 0 0 / 0.65)'}
+              fontWeight={isPeak ? '600' : '400'}>{v}</text>
+          </g>
+        )
+      })}
+
+      {DAYS_SHORT.map((d, i) => (
+        <text key={d} x={xOf(i)} y={H - 6} textAnchor="middle" fontSize="10"
+          fill="oklch(1 0 0 / 0.5)" fontFamily="var(--font-sans, sans-serif)"
+          fontWeight="500" letterSpacing="0.06em">{d}</text>
+      ))}
+    </svg>
+  )
+}
+
+const HABIT_EMOJI: Record<string, string> = {
+  '1': '🎯', '2': '📚', '3': '🏃', '4': '📵', '5': '✍️', '6': '🚿',
+}
+
 function ReviewView() {
-  const avgEnergy = (WEEK_ENERGY.reduce((a, b) => a + b, 0) / WEEK_ENERGY.length).toFixed(1)
-  const maxE = Math.max(...WEEK_ENERGY)
-  const H = 80
-  const W = 300
+  const avgEnergy = WEEK_ENERGY.reduce((a, b) => a + b, 0) / WEEK_ENERGY.length
+  const peakIdx = WEEK_ENERGY.reduce((bi, v, i) => v > WEEK_ENERGY[bi] ? i : bi, 0)
+  const checkInsThisWeek = WEEK_ENERGY.length
 
-  const pts = WEEK_ENERGY.map((v, i) => {
-    const x = (i / (WEEK_ENERGY.length - 1)) * W
-    const y = H - ((v - 1) / 9) * H
-    return `${x},${y}`
-  }).join(' ')
+  const habitStats = DEMO_HABITS.map(h => ({
+    id: h.id,
+    name: h.name,
+    emoji: HABIT_EMOJI[h.id] || '•',
+    done: HABIT_GRID[h.id].filter(Boolean).length,
+    target: 7,
+  }))
+  const totalHabitsDone   = habitStats.reduce((s, h) => s + h.done, 0)
+  const totalHabitsTarget = habitStats.reduce((s, h) => s + h.target, 0)
+  const habitRate = Math.round((totalHabitsDone / totalHabitsTarget) * 100)
 
-  const areaPath = `M0,${H - ((WEEK_ENERGY[0] - 1) / 9) * H} ` +
-    WEEK_ENERGY.map((v, i) => `L${(i / (WEEK_ENERGY.length - 1)) * W},${H - ((v - 1) / 9) * H}`).join(' ') +
-    ` L${W},${H} L0,${H} Z`
-
-  const totalHabitsLogged = Object.values(HABIT_GRID).flat().filter(Boolean).length
-  const checkInsThisWeek = 6
+  const avgGoalProgress = Math.round(DEMO_GOALS.reduce((s, g) => s + g.progress, 0) / DEMO_GOALS.length)
 
   const stats = [
-    { label: 'Check-ins',     value: String(checkInsThisWeek),   sub: 'this week' },
-    { label: 'Habits logged', value: String(totalHabitsLogged),  sub: 'this week'  },
-    { label: 'Goals active',  value: String(DEMO_GOALS.length),  sub: 'in progress' },
-    { label: 'Avg energy',    value: avgEnergy,                  sub: 'trending up' },
+    { label: 'Check-ins',   value: String(checkInsThisWeek),          sub: 'of 7 days',  color: checkInsThisWeek >= 5 ? 'var(--sage)' : 'var(--text-0)' },
+    { label: 'Avg energy',  value: avgEnergy.toFixed(1),              sub: 'Steady',     color: avgEnergy >= 6 ? 'var(--sage)' : 'var(--text-0)' },
+    { label: 'Habits done', value: `${habitRate}%`,                   sub: `${totalHabitsDone} of ${totalHabitsTarget}`, color: habitRate >= 70 ? 'var(--sage)' : 'var(--text-0)' },
+    { label: 'Active goals',value: String(DEMO_GOALS.length),         sub: `${avgGoalProgress}% avg`,                    color: 'var(--text-0)' },
+  ]
+
+  const worked = [
+    `Strong energy across ${WEEK_ENERGY.filter(v => v >= 7).length} days — you were consistently at 7 or above.`,
+    `${DEMO_HABITS[0].name} hit a ${DEMO_HABITS[0].streak}-day streak — consistency is compounding.`,
+    `"${DEMO_GOALS[0].title}" is past the halfway mark — you're in motion.`,
+  ]
+  const adjust = [
+    `${DEMO_HABITS[2].name} came in at ${habitStats[2].done}/7 — consider a smaller daily target.`,
+    `${DEMO_HABITS[5].name} fell short of halfway — reduce friction or reset the target.`,
   ]
 
   return (
     <div className="review-shell" style={{ animation: 'fadeUp 0.35s var(--ease) both' }}>
+
+      {/* ── Header ── */}
       <header style={{ marginBottom: '32px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
-          WEEK IN REVIEW
+          Weekly Review
         </p>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 3.5vw, 42px)', fontWeight: 400, lineHeight: 1.1, color: 'var(--text-0)' }}>
-          May 11–17
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 400, lineHeight: 1.1, color: 'var(--text-0)', margin: 0 }}>
+            This <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>week.</em>
+          </h1>
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+            {[0, 1].map(i => (
+              <span key={i} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid oklch(1 0 0 / 0.12)', background: 'transparent', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: i === 1 ? 0.3 : 1 }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  {i === 0 ? <path d="M10 4L6 8l4 4" /> : <path d="M6 4l4 4-4 4" />}
+                </svg>
+              </span>
+            ))}
+          </div>
+        </div>
       </header>
 
-      {/* Stat pills */}
-      <div className="review-stats-4" style={{ marginBottom: '20px' }}>
+      {/* ── Stats — 4 across ── */}
+      <div className="review-stats-4">
         {stats.map(s => (
           <div key={s.label} className="glass-card" style={{ padding: '20px 22px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
-              {s.label}
-            </p>
-            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', fontWeight: 400, color: 'var(--text-0)', margin: '0 0 4px', lineHeight: 1 }}>
-              {s.value}
-            </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>{s.sub}</p>
+            <p style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>{s.label}</p>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(22px, 2.5vw, 30px)', fontWeight: 400, color: s.color, lineHeight: 1, marginBottom: '5px' }}>{s.value}</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>{s.sub}</p>
           </div>
         ))}
       </div>
 
-      <div className="review-mid">
-        {/* Energy chart */}
-        <div className="glass-card" style={{ padding: '24px 28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+      {/* ── Mid: Energy + Habits ── */}
+      <div className="glass-card" style={{ padding: '24px 26px', marginBottom: '20px' }}>
+        <div className="review-mid" style={{ marginBottom: 0 }}>
+          <section>
+            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '16px' }}>
               Energy this week
             </p>
-            <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>avg {avgEnergy} · trending up</span>
-          </div>
-          <svg viewBox={`0 0 ${W} ${H + 10}`} style={{ width: '100%', height: '80px', overflow: 'visible' }}>
-            <defs>
-              <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="oklch(0.82 0.15 75)" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="oklch(0.82 0.15 75)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path d={areaPath} fill="url(#eg)" />
-            <polyline points={pts} fill="none" stroke="oklch(0.82 0.15 75)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-            {WEEK_ENERGY.map((v, i) => {
-              const x = (i / (WEEK_ENERGY.length - 1)) * W
-              const y = H - ((v - 1) / 9) * H
-              return <circle key={i} cx={x} cy={y} r="2.5" fill="oklch(0.82 0.15 75)" />
-            })}
-          </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-            {DAYS_SHORT.map(d => (
-              <span key={d} style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)' }}>{d}</span>
-            ))}
-          </div>
-        </div>
-
-        {/* Locus weekly note */}
-        <div className="glass-card" style={{ padding: '24px 28px' }}>
-          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold)', opacity: 0.85, marginBottom: '16px' }}>
-            From Locus
-          </p>
-          <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', lineHeight: 1.7, color: 'oklch(0.93 0.012 80 / 0.9)' }}>
-            Solid week. Energy climbed from Monday&apos;s low and held above six for five of seven days. Deep work held — eleven days unbroken. The proposal is the outstanding thread: it shows up in your check-ins, your energy dips track with when you avoided it. Clear what needs to happen next week.
-          </p>
-        </div>
-      </div>
-
-      {/* Habit grid */}
-      <div className="glass-card" style={{ padding: '24px 28px' }}>
-        <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '20px' }}>
-          Habit completion
-        </p>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', fontSize: '11px', color: 'var(--text-3)', fontWeight: 400, paddingBottom: '12px', minWidth: '140px' }} />
-                {DAYS_SHORT.map(d => (
-                  <th key={d} style={{ textAlign: 'center', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 500, paddingBottom: '12px', minWidth: '38px' }}>
-                    {d}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {DEMO_HABITS.map((h, hi) => (
-                <tr key={h.id}>
-                  <td style={{ fontSize: '13px', color: 'var(--text-2)', paddingRight: '16px', paddingBottom: '8px', whiteSpace: 'nowrap' }}>
-                    {h.name}
-                  </td>
-                  {HABIT_GRID[h.id].map((done, di) => (
-                    <td key={di} style={{ textAlign: 'center', paddingBottom: '8px' }}>
-                      <span style={{
-                        display: 'inline-block', width: '22px', height: '22px', borderRadius: '6px',
-                        background: done ? 'oklch(0.78 0.13 70 / 0.85)' : 'oklch(1 0 0 / 0.06)',
-                        border: done ? 'none' : '1px solid oklch(1 0 0 / 0.08)',
-                        transition: 'background 0.2s',
-                      }} />
-                    </td>
-                  ))}
-                </tr>
+            <DemoEnergyCurveChart />
+            <div style={{ display: 'flex', marginTop: '16px', borderTop: '1px solid oklch(1 0 0 / 0.07)', paddingTop: '16px' }}>
+              {[
+                { label: 'Avg energy', value: avgEnergy.toFixed(1) },
+                { label: 'Peak day',   value: DAYS_SHORT[peakIdx] },
+                { label: 'Logged',     value: `${WEEK_ENERGY.length}/7` },
+              ].map((c, i) => (
+                <div key={c.label} style={{ flex: 1, textAlign: 'center', borderLeft: i > 0 ? '1px solid oklch(1 0 0 / 0.07)' : 'none', padding: '0 12px' }}>
+                  <p style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text-0)', margin: '0 0 3px', fontWeight: 400 }}>{c.value}</p>
+                  <p style={{ fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>{c.label}</p>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </section>
+
+          <section>
+            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '16px' }}>
+              Habits
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {habitStats.map((h, i) => {
+                const pct = Math.round((h.done / h.target) * 100)
+                const onTrack = pct >= 100
+                const barColor = onTrack ? 'var(--sage)' : pct >= 50 ? 'var(--gold)' : 'oklch(1 0 0 / 0.2)'
+                const valueColor = onTrack ? 'var(--sage)' : pct >= 50 ? 'var(--gold)' : 'var(--text-3)'
+                return (
+                  <li key={h.id} style={{ padding: '11px 0', borderTop: i === 0 ? 'none' : '1px solid oklch(1 0 0 / 0.06)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '15px', flexShrink: 0, lineHeight: 1 }}>{h.emoji}</span>
+                      <p style={{ flex: 1, fontSize: '14px', color: 'var(--text-1)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</p>
+                      <span style={{ fontSize: '11px', fontWeight: 600, flexShrink: 0, minWidth: '36px', textAlign: 'right', color: valueColor }}>
+                        {h.done}/{h.target}
+                      </span>
+                    </div>
+                    <div style={{ height: '4px', background: 'oklch(1 0 0 / 0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, pct)}%`, background: barColor, borderRadius: '4px' }} />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
         </div>
       </div>
+
+      {/* ── Goals ── */}
+      <div className="glass-card" style={{ padding: '24px 26px', marginBottom: '32px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '16px' }}>
+          Goals
+        </p>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {DEMO_GOALS.map(g => {
+            const barColor = g.progress > 0 ? 'var(--gold)' : 'oklch(1 0 0 / 0.25)'
+            return (
+              <li key={g.id}>
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', color: 'var(--text-0)', margin: '0 0 8px', lineHeight: 1.3 }}>{g.title}</p>
+                <div style={{ height: '2px', background: 'oklch(1 0 0 / 0.08)', borderRadius: '2px', overflow: 'hidden', marginBottom: '6px' }}>
+                  <div style={{ height: '100%', width: `${g.progress}%`, background: barColor, borderRadius: '2px' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic', fontFamily: 'var(--font-serif)', margin: 0, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {g.steps} of {g.total} steps · {g.timeframe}
+                  </p>
+                  <span style={{ fontSize: '11px', color: g.progress > 0 ? 'var(--gold)' : 'var(--text-3)', opacity: g.progress > 0 ? 0.9 : 0.5, flexShrink: 0 }}>
+                    {g.progress}%
+                  </span>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+
+      {/* ── Weekly Reflection from Locus ── */}
+      <section style={{ marginBottom: '32px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '20px' }}>
+          Weekly Reflection from Locus
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          {[
+            { items: worked, color: 'var(--sage)', icon: '↑', title: 'What worked' },
+            { items: adjust, color: 'var(--gold)', icon: '↻', title: 'What to adjust' },
+          ].map((col, i) => (
+            <div key={i} className="glass-card" style={{ padding: '22px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <span style={{ fontSize: '13px', color: col.color, opacity: 0.9 }}>{col.icon}</span>
+                <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: col.color, margin: 0, opacity: 0.9 }}>
+                  {col.title}
+                </p>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {col.items.map((item, j) => (
+                  <li key={j} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '11px', color: col.color, opacity: 0.6, marginTop: '3px', flexShrink: 0 }}>—</span>
+                    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 300, lineHeight: 1.75, color: 'var(--ai-card-text)', margin: 0 }}>{item}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <SignInCTA label="Start your own review →" />
     </div>
