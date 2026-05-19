@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { dateInTz } from '@/lib/utils/date'
 import type { Goal, Habit, HabitLog, HabitWithLogs } from '@/lib/types'
 
 export async function getUserHabits(userId: string): Promise<Habit[]> {
@@ -14,7 +15,10 @@ export async function getUserHabits(userId: string): Promise<Habit[]> {
 
 export async function getUserHabitsWithLogs(userId: string): Promise<HabitWithLogs[]> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+
+  const { data: profile } = await supabase.from('users').select('timezone').eq('id', userId).single()
+  const tz = profile?.timezone ?? 'UTC'
+  const today = dateInTz(tz)
 
   // Fetch 60 days of logs to support longer streaks
   const since = new Date()
@@ -27,7 +31,8 @@ export async function getUserHabitsWithLogs(userId: string): Promise<HabitWithLo
     supabase.from('habit_logs').select('*').eq('user_id', userId).gte('logged_date', since.toISOString().split('T')[0])
   ])
 
-  const todayDow = new Date(today + 'T12:00:00').getDay()
+  const [ty, tm, td] = today.split('-').map(Number)
+  const todayDow = new Date(Date.UTC(ty, tm - 1, td)).getUTCDay()
 
   return ((habitsRaw ?? []) as HabitRow[])
     // Filter out habits whose end date has passed
