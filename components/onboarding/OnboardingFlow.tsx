@@ -265,10 +265,10 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
           <svg width="22" height="22" viewBox="0 0 16 16" fill="#131110"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="2" r="1.2"/><circle cx="8" cy="14" r="1.2"/><circle cx="2" cy="8" r="1.2"/><circle cx="14" cy="8" r="1.2"/></svg>
         </div>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.2 }}>
-          {isRedo ? 'Update your profile' : 'Meet Locus'}
+          {isRedo ? 'Update your profile' : 'Meet Jaune'}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '6px' }}>
-          {isRedo ? 'Tell Locus what\'s changed — takes about 2 minutes.' : 'A quick chat to get you set up. About 2 minutes.'}
+          {isRedo ? 'Tell Jaune what\'s changed — takes about 2 minutes.' : 'A quick chat to get you set up. About 2 minutes.'}
         </div>
       </div>
 
@@ -540,7 +540,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
           <button onClick={handleLaunch}
             disabled={isPending || goals.length === 0 || habits.length === 0}
             style={{ flex: 1, padding: '13px', background: (goals.length > 0 && habits.length > 0) ? 'var(--gold)' : 'var(--bg-3)', color: (goals.length > 0 && habits.length > 0) ? '#131110' : 'var(--text-3)', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: (isPending || goals.length === 0 || habits.length === 0) ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1, fontFamily: 'inherit', transition: 'all 0.2s' }}>
-            {isPending ? 'Setting up your OS…' : 'Launch my Locus →'}
+            {isPending ? 'Setting up your OS…' : 'Launch my Jaune →'}
           </button>
         </div>
 

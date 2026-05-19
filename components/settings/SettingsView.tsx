@@ -444,7 +444,7 @@ export default function SettingsView({
       </Section>
 
       <div style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-        <span>Locus · AI Life OS</span>
+        <span>Jaune · AI Life OS</span>
         <span style={{ opacity: 0.4 }}>·</span>
         <a href="/privacy" style={{ color: 'var(--text-3)', textDecoration: 'none' }}
           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}

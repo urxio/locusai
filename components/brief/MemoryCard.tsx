@@ -63,7 +63,7 @@ export default function MemoryCard({ memory, initialExpanded = false }: { memory
             animation: 'pulse 2.5s ease-in-out infinite',
           }} />
           <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', letterSpacing: '-0.01em' }}>
-            Locus knows you
+            Jaune knows you
           </span>
           <span style={{
             fontSize: '10px', fontWeight: 600, color: 'var(--sage)',

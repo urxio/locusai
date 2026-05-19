@@ -486,7 +486,7 @@ export default function JournalSection({
                     padding: '14px 28px',
                   }}>
                     <LocusIcon />
-                    <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Locus is reading…</span>
+                    <span style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>Jaune is reading…</span>
                     <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
                       {[0, 200, 400].map(delay => (
                         <span key={delay} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms` }} />
@@ -505,7 +505,7 @@ export default function JournalSection({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <LocusIcon />
                         <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.9 }}>
-                          Locus is curious
+                          Jaune is curious
                         </span>
                       </div>
                       <button
@@ -583,7 +583,7 @@ export default function JournalSection({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <LocusIcon />
                         <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                          Locus noticed
+                          Jaune noticed
                         </span>
                       </div>
                       <button
@@ -610,7 +610,7 @@ export default function JournalSection({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 28px' }}>
                     <LocusIcon />
                     <span style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic' }}>
-                      Couldn't reach Locus — try again in a moment.
+                      Couldn't reach Jaune — try again in a moment.
                     </span>
                   </div>
                 )}
@@ -661,7 +661,7 @@ export default function JournalSection({
                       opacity: locusCommentLoading ? 0.6 : 1,
                     }}
                   >
-                    {locusCommentLoading ? 'Sharing…' : 'Share with Locus'}
+                    {locusCommentLoading ? 'Sharing…' : 'Share with Jaune'}
                   </button>
                 )}
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', opacity: 0.5 }}>

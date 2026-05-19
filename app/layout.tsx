@@ -18,7 +18,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Locus — AI Life OS',
+  title: 'Jaune — AI Life OS',
   description: 'Your AI-native life operating system',
 }
 

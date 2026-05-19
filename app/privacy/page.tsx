@@ -80,7 +80,7 @@ export default function PrivacyPage() {
           </P>
           <Ul>
             <li>Read your upcoming calendar events (next 7 days) from all calendars you have access to</li>
-            <li>Surface relevant events in your daily AI brief to help Locus understand your schedule and energy context</li>
+            <li>Surface relevant events in your daily AI brief to help Jaune understand your schedule and energy context</li>
           </Ul>
           <P>
             We do <strong>not</strong> modify or delete existing calendar events. We do{' '}

@@ -348,7 +348,7 @@ export default function HomeDashboard({ goals, checkin, habits, brief, userName 
               onMouseLeave={e => (e.currentTarget.style.borderColor = '')}
             >
               <span style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontStyle: 'italic', color: 'var(--gold)' }}>
-                Check in with Locus →
+                Check in with Jaune →
               </span>
             </Link>
           )}

@@ -188,7 +188,7 @@ export function formatMemoryForPrompt(memory: UserMemory | null): string {
 
   const lines: string[] = []
   lines.push('── LONG-TERM MEMORY ──')
-  lines.push(`Locus has learned the following from ${memory.checkin_count} check-ins with this user:`)
+  lines.push(`Jaune has learned the following from ${memory.checkin_count} check-ins with this user:`)
   lines.push('')
 
   // Energy patterns
@@ -277,7 +277,7 @@ export function formatClarifyingQAForPrompt(memory: UserMemory | null): string {
   if (!qa?.length) return ''
   const lines: string[] = []
   lines.push('── CLARIFIED CONTEXT ──')
-  lines.push('The user has directly answered these questions to help Locus understand them better:')
+  lines.push('The user has directly answered these questions to help Jaune understand them better:')
   lines.push('')
   qa.forEach(item => {
     lines.push(`Q: ${item.question}`)

@@ -199,7 +199,7 @@ function useLiveClock() {
 }
 
 const LOCUS_MESSAGES = [
-  "Welcome to Locus. I’m your daily intelligence — I learn your rhythm from check-ins, " +
+  "Welcome to Jaune. I’m your daily intelligence — I learn your rhythm from check-ins, " +
   "hold the shape of your goals and habits, and each morning I write you a brief: what " +
   "deserves your attention, what the pattern in your week is telling you, and what can safely wait.",
 
@@ -207,7 +207,7 @@ const LOCUS_MESSAGES = [
   "the phone before 9am — those streaks don’t happen by accident. They happen because " +
   "someone decided to notice. That’s what I help you do, every single morning.",
 
-  "Most tools ask you to do more. Locus asks you to do the right thing — which is usually " +
+  "Most tools ask you to do more. Jaune asks you to do the right thing — which is usually " +
   "a shorter list. The goals here aren’t aspirations. They’re commitments with steps, " +
   "timelines, and a pace. I track whether they’re on track so you don’t carry that weight alone.",
 
@@ -219,7 +219,7 @@ const LOCUS_MESSAGES = [
   "energy, your habits, your goals, and what you’ve been quietly avoiding. " +
   "When you sign in, it’s built from your actual life, not example data.",
 
-  "Clarity is a habit. The people who use Locus don’t become more productive — they become " +
+  "Clarity is a habit. The people who use Jaune don’t become more productive — they become " +
   "more deliberate. There’s a real difference. " +
   "Sign in and find out what your week actually looks like when someone’s paying attention.",
 ]
@@ -343,7 +343,7 @@ function HomeView({
             {!locusDone && <span style={{ opacity: 0.35, animation: 'pulse 1s ease-in-out infinite' }}> |</span>}
           </p>
           <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 'clamp(14px, 1.6vw, 17px)', lineHeight: 1.65, color: 'var(--text-3)', marginTop: '20px', opacity: locusDone ? 1 : 0, transition: 'opacity 0.7s ease 0.2s' }}>
-            You&apos;re exploring a preview with template data. Explore the tabs to see what your Locus looks like — then{' '}
+            You&apos;re exploring a preview with template data. Explore the tabs to see what your Jaune looks like — then{' '}
             <Link href="/login" style={{ color: 'var(--gold)', textDecoration: 'none' }}>
               sign in or create an account
             </Link>
@@ -639,7 +639,7 @@ function HabitsView({
         ))}
       </div>
 
-      <SignInCTA label="Track your own habits in Locus →" />
+      <SignInCTA label="Track your own habits in Jaune →" />
     </div>
   )
 }
@@ -959,7 +959,7 @@ function ReviewView() {
       {/* ── Weekly Reflection from Locus ── */}
       <section style={{ marginBottom: '32px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '20px' }}>
-          Weekly Reflection from Locus
+          Weekly Reflection from Jaune
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           {[
@@ -1114,7 +1114,7 @@ function MobileSignInBanner() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <LocusLogo size={16} />
         <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-1)' }}>
-          Locus<em style={{ fontStyle: 'italic', color: 'oklch(0.82 0.15 75)' }}>AI</em>
+          Jaune
         </span>
         <span style={{
           fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',

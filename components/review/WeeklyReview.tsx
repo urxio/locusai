@@ -128,7 +128,7 @@ function WeeklyReflection({
   return (
     <section style={{ marginBottom: '32px' }}>
       <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '20px' }}>
-        Weekly Reflection from Locus
+        Weekly Reflection from Jaune
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
 
@@ -517,7 +517,7 @@ export default function WeeklyReview({ checkins, habits, goals, briefs }: Props)
         </div>
       )}
 
-      {/* ── Weekly Reflection from Locus ── */}
+      {/* ── Weekly Reflection from Jaune ── */}
       {(weekCheckins.length > 0 || weekBriefs.length > 0) && (
         <WeeklyReflection
           checkins={weekCheckins}

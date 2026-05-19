@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   // Format conversation for Claude
   const convo = messages
     .filter(m => m.content.trim())
-    .map(m => `${m.role === 'user' ? 'User' : 'Locus'}: ${m.content.trim()}`)
+    .map(m => `${m.role === 'user' ? 'User' : 'Jaune'}: ${m.content.trim()}`)
     .join('\n')
 
   try {

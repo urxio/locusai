@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 /* ─── Locus logo — amber petals ─── */
 function LocusLogo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-label="Locus">
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-label="Jaune">
       <g fill="#c9a84c" opacity="0.65">
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(45,50,50)" />
         <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(135,50,50)" />
@@ -286,9 +286,9 @@ function WeeklyReviewMock() {
         </ul>
       </div>
 
-      {/* ── Weekly Reflection from Locus ── */}
+      {/* ── Weekly Reflection from Jaune ── */}
       <section>
-        <p style={{ ...sectionLabel, marginBottom: '20px' }}>Weekly Reflection from Locus</p>
+        <p style={{ ...sectionLabel, marginBottom: '20px' }}>Weekly Reflection from Jaune</p>
         <div className="lc-review-reflect" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           {[
             { items: worked, color: SAGE, icon: '↑', title: 'What worked' },
@@ -600,7 +600,7 @@ export default function LandingPage() {
         <nav className="lc-nav" style={{ zIndex: 50 }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
             <LocusLogo size={26} />
-            <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '18px', color: '#f0ede8' }}>Locus</span>
+            <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '18px', color: '#f0ede8' }}>Jaune</span>
           </a>
           <a href="#cta" style={{ textDecoration: 'none' }}>
             <button className="lc-btn-outline">Start for free</button>
@@ -626,7 +626,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="l-reveal l-d2" style={{ fontSize: '17px', color: '#8a8580', lineHeight: 1.65, marginBottom: '36px', maxWidth: '420px' }}>
-                  Most apps track your habits. Locus understands what they mean.
+                  Most apps track your habits. Jaune understands what they mean.
                   Every check-in, every pattern — remembered, and put to work for you.
                 </p>
 
@@ -686,7 +686,7 @@ export default function LandingPage() {
                 },
                 {
                   num: '02',
-                  title: 'Locus connects the dots',
+                  title: 'Jaune connects the dots',
                   body: 'Your goals × your habits × your energy pattern. Claude generates a brief specific to this exact day.',
                   detail: '"Your fundraising goal. Your 14-day streak. What you said yesterday."',
                 },
@@ -725,9 +725,9 @@ export default function LandingPage() {
             {/* Arc cards */}
             <div className="lc-arc-grid" style={{ display: 'flex', gap: '16px', marginBottom: '56px' }}>
               {[
-                { era: 'Day 1', title: 'Locus knows what you shared.', body: "It doesn't know you yet — and it says so. No false confidence. Just a first brief built on what you told it.", accentBorder: 'rgba(138,133,128,0.2)' },
-                { era: 'Week 2', title: 'Locus starts noticing.', body: 'Energy dips on Thursdays. The writing habit holds, but the workout streak is softening. It starts to say so.', accentBorder: 'rgba(201,168,76,0.25)' },
-                { era: 'Month 1+', title: 'Locus knows this person.', body: "It catches when something's off before you name it. It references what you said three weeks ago. It remembers.", accentBorder: 'rgba(201,168,76,0.4)' },
+                { era: 'Day 1', title: 'Jaune knows what you shared.', body: "It doesn't know you yet — and it says so. No false confidence. Just a first brief built on what you told it.", accentBorder: 'rgba(138,133,128,0.2)' },
+                { era: 'Week 2', title: 'Jaune starts noticing.', body: 'Energy dips on Thursdays. The writing habit holds, but the workout streak is softening. It starts to say so.', accentBorder: 'rgba(201,168,76,0.25)' },
+                { era: 'Month 1+', title: 'Jaune knows this person.', body: "It catches when something's off before you name it. It references what you said three weeks ago. It remembers.", accentBorder: 'rgba(201,168,76,0.4)' },
               ].map((arc, i) => (
                 <div key={i} className={`l-reveal l-d${i + 1}`} style={{ ...G.card, flex: 1, padding: '28px 24px', borderTop: `2px solid ${arc.accentBorder}`, borderRadius: '0 0 28px 28px' }}>
                   <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c9a84c', opacity: 0.6 + i * 0.15, marginBottom: '14px' }}>{arc.era}</p>
@@ -741,7 +741,7 @@ export default function LandingPage() {
             <div className="lc-quote-grid" style={{ display: 'flex', gap: '16px' }}>
               {[
                 { quote: "It told me I'd been avoiding the investor email for 11 days. I hadn't noticed.", author: 'Boris', role: 'Founder' },
-                { quote: "I said I was fine in the check-in. Locus said: 'Energy lower than usual three days running — what's actually in the way?' It was right.", author: 'Sarah', role: 'Product designer' },
+                { quote: "I said I was fine in the check-in. Jaune said: 'Energy lower than usual three days running — what's actually in the way?' It was right.", author: 'Sarah', role: 'Product designer' },
                 { quote: "It remembered I had a hard month in March. In April, it adjusted what it asked of me. That felt like being known.", author: 'Marcus', role: 'Writer' },
               ].map((q, i) => (
                 <div key={i} className={`l-reveal l-d${i + 1}`} style={{ ...G.card, flex: 1, padding: '28px 24px', borderLeft: '2px solid rgba(201,168,76,0.3)' }}>
@@ -907,9 +907,9 @@ export default function LandingPage() {
         <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '28px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <LocusLogo size={16} />
-            <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', color: 'rgba(240,237,232,0.3)' }}>Locus</span>
+            <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', color: 'rgba(240,237,232,0.3)' }}>Jaune</span>
           </div>
-          <p style={{ fontSize: '13px', color: 'rgba(138,133,128,0.35)' }}>© 2025 Locus. All rights reserved.</p>
+          <p style={{ fontSize: '13px', color: 'rgba(138,133,128,0.35)' }}>© 2025 Jaune. All rights reserved.</p>
           <a href="/privacy" style={{ fontSize: '13px', color: 'rgba(138,133,128,0.35)', textDecoration: 'none' }}>Privacy</a>
         </footer>
 

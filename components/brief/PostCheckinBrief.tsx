@@ -115,7 +115,7 @@ export default function PostCheckinBrief({ memory, sidebar = false }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
             <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', opacity: noteLoading ? 0 : 1, animation: noteLoading ? 'pulse 1s ease-in-out infinite' : 'none' }} />
             <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
-              {noteLoading ? 'Locus is reflecting on your answers…' : 'Locus · Clarification'}
+              {noteLoading ? 'Jaune is reflecting on your answers…' : 'Jaune · Clarification'}
             </span>
           </div>
           {noteLoading ? (

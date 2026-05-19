@@ -292,7 +292,7 @@ export default function ConversationalCheckin({
           </svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1 }}>Locus</div>
+          <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1 }}>Jaune</div>
           <div style={{ fontSize: '11px', color: 'var(--sage)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--sage)', display: 'inline-block', flexShrink: 0 }} />
             {isRedo ? 'updating your check-in' : existingCheckin && !isRedo ? 'checked in today' : 'listening'}
@@ -476,7 +476,7 @@ export default function ConversationalCheckin({
                   onKeyDown={handleKeyDown}
                   placeholder={
                     streaming    ? '' :
-                    checkinSaved ? 'Reply to Locus…' :
+                    checkinSaved ? 'Reply to Jaune…' :
                     'Say what\'s on your mind…'
                   }
                   readOnly={streaming || isSaving}

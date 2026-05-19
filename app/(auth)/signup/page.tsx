@@ -120,9 +120,9 @@ export default function SignupPage() {
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon.svg" alt="Locus" width={34} height={34} style={{ borderRadius: '9px', display: 'block' }} />
+            <img src="/icon.svg" alt="Jaune" width={34} height={34} style={{ borderRadius: '9px', display: 'block' }} />
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: C.white, letterSpacing: '-0.01em', lineHeight: 1 }}>Locus</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: C.white, letterSpacing: '-0.01em', lineHeight: 1 }}>Jaune</div>
               <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.16em', color: C.muted, marginTop: '2px' }}>Life OS</div>
             </div>
           </div>

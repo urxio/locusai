@@ -288,7 +288,7 @@ function MoodStep({
         What&apos;s on your mind today?
       </div>
       <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.5 }}>
-        A sentence is enough. Locus finds patterns over time.
+        A sentence is enough. Jaune finds patterns over time.
       </div>
 
       <textarea
@@ -533,7 +533,7 @@ function DoneStep({
               {isRedo ? 'Check-in updated.' : 'Check-in complete.'}
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '3px' }}>
-              {isRedo ? 'Your brief will regenerate with the new data.' : 'Locus has updated your daily brief.'}
+              {isRedo ? 'Your brief will regenerate with the new data.' : 'Jaune has updated your daily brief.'}
             </div>
           </div>
         </div>

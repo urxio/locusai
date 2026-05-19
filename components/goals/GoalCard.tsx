@@ -325,7 +325,7 @@ export default function GoalCard({
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '11px', fontWeight: 600, padding: '0', letterSpacing: '0.05em', textTransform: 'uppercase' }}
           >
             <svg width="11" height="11" viewBox="0 0 12 12" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
-            {isGenerating ? 'Locus is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
+            {isGenerating ? 'Jaune is planning steps…' : hasSteps ? `Steps (${doneCount}/${steps.length})` : 'Steps'}
           </button>
         )}
 
