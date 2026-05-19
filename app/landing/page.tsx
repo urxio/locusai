@@ -143,13 +143,19 @@ function EnergyCurveMock() {
   )
 }
 
-/* ─── Weekly Review mock (matches /review page) ─── */
+/* ─── Weekly Review mock (matches /review page exactly) ─── */
 function WeeklyReviewMock() {
+  const SAGE = 'oklch(0.74 0.06 150)'
+  const GOLD = 'oklch(0.78 0.11 78)'
+  const TEXT_0 = 'oklch(0.96 0.01 85)'
+  const TEXT_1 = 'oklch(0.78 0.012 75)'
+  const TEXT_3 = 'oklch(0.64 0.015 70)'
+
   const stats = [
-    { label: 'Check-ins', value: '5', sub: 'of 7 days', color: 'oklch(0.74 0.06 150)' },
-    { label: 'Avg energy', value: '5.6', sub: 'Steady', color: '#f0ede8' },
-    { label: 'Habits done', value: '19%', sub: '8 of 42', color: '#f0ede8' },
-    { label: 'Active goals', value: '3', sub: '22% avg', color: '#f0ede8' },
+    { label: 'Check-ins', value: '5', sub: 'of 7 days', color: SAGE },
+    { label: 'Avg energy', value: '5.6', sub: 'Steady', color: TEXT_0 },
+    { label: 'Habits done', value: '19%', sub: '8 of 42', color: TEXT_0 },
+    { label: 'Active goals', value: '3', sub: '22% avg', color: TEXT_0 },
   ]
   const habits = [
     { emoji: '💪', name: 'Workout', done: 0, target: 3 },
@@ -174,74 +180,79 @@ function WeeklyReviewMock() {
     'Workout, Spiritual Time, Read 30 min, Schedule Day, Self-control, Daily Text (read paper Bible), Good sleep fell short of halfway — consider reducing friction or resetting the target.',
   ]
 
+  const sectionLabel: React.CSSProperties = {
+    fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em',
+    textTransform: 'uppercase', color: TEXT_3, margin: 0,
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', marginBottom: '4px' }}>
-        <div>
-          <p style={{ ...G.subLabel, marginBottom: '10px' }}>Weekly Review</p>
-          <h3 className="lc-h2" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 400, color: '#f0ede8', lineHeight: 1.05, margin: 0, letterSpacing: '-0.01em' }}>
-            This <em style={{ fontStyle: 'italic', color: '#c9a84c' }}>week.</em>
+    <div>
+      {/* ── Header — label above title, nav buttons right ── */}
+      <header style={{ marginBottom: '32px' }}>
+        <p style={{ ...sectionLabel, marginBottom: '8px' }}>Weekly Review</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <h3 className="lc-h2" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 400, lineHeight: 1.1, color: TEXT_0, margin: 0 }}>
+            This <em style={{ fontStyle: 'italic', color: GOLD }}>week.</em>
           </h3>
-        </div>
-        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-          {[0, 1].map(i => (
-            <span key={i} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(240,237,232,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                {i === 0 ? <path d="M10 4L6 8l4 4" /> : <path d="M6 4l4 4-4 4" />}
-              </svg>
-            </span>
-          ))}
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+            {[0, 1].map(i => (
+              <span key={i} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid oklch(1 0 0 / 0.12)', background: 'transparent', color: TEXT_3, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: i === 1 ? 0.3 : 1 }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  {i === 0 ? <path d="M10 4L6 8l4 4" /> : <path d="M6 4l4 4-4 4" />}
+                </svg>
+              </span>
+            ))}
+          </div>
         </div>
       </header>
 
-      {/* Stat cards row */}
-      <div className="lc-review-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+      {/* ── Stats — 4 across (matches .review-stats-4) ── */}
+      <div className="lc-review-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px' }}>
         {stats.map(s => (
-          <div key={s.label} style={{ ...G.cardSm, padding: '18px 20px' }}>
-            <p style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(240,237,232,0.35)', marginBottom: '8px' }}>{s.label}</p>
-            <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: 'clamp(24px, 2.5vw, 32px)', fontWeight: 400, color: s.color, lineHeight: 1, marginBottom: '6px' }}>{s.value}</p>
-            <p style={{ fontSize: '11px', color: 'rgba(240,237,232,0.35)', margin: 0 }}>{s.sub}</p>
+          <div key={s.label} style={{ ...G.cardSm, padding: '20px 22px' }}>
+            <p style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: TEXT_3, marginBottom: '8px' }}>{s.label}</p>
+            <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: 'clamp(22px, 2.5vw, 30px)', fontWeight: 400, color: s.color, lineHeight: 1, marginBottom: '5px' }}>{s.value}</p>
+            <p style={{ fontSize: '11px', color: TEXT_3, margin: 0 }}>{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Energy + Habits card */}
-      <div style={{ ...G.cardSm, padding: '26px 28px' }}>
-        <div className="lc-review-mid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '36px' }}>
-          {/* Energy chart */}
+      {/* ── Mid: Energy + Habits (matches .review-mid wrapped in glass-card) ── */}
+      <div style={{ ...G.cardSm, padding: '24px 26px', marginBottom: '20px' }}>
+        <div className="lc-review-mid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+          {/* Energy curve */}
           <section>
-            <p style={{ ...G.subLabel, marginBottom: '16px' }}>Energy this week</p>
+            <p style={{ ...sectionLabel, marginBottom: '16px' }}>Energy this week</p>
             <EnergyCurveMock />
-            <div style={{ display: 'flex', marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', marginTop: '16px', borderTop: '1px solid oklch(1 0 0 / 0.07)', paddingTop: '16px' }}>
               {[{ label: 'Avg energy', value: '5.6' }, { label: 'Peak day', value: 'Sun' }, { label: 'Logged', value: '5/7' }].map((s, i) => (
-                <div key={s.label} style={{ flex: 1, textAlign: 'center', borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none', padding: '0 12px' }}>
-                  <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '20px', color: '#f0ede8', margin: '0 0 3px', fontWeight: 400 }}>{s.value}</p>
-                  <p style={{ fontSize: '10px', color: 'rgba(240,237,232,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>{s.label}</p>
+                <div key={s.label} style={{ flex: 1, textAlign: 'center', borderLeft: i > 0 ? '1px solid oklch(1 0 0 / 0.07)' : 'none', padding: '0 12px' }}>
+                  <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '20px', color: TEXT_0, margin: '0 0 3px', fontWeight: 400 }}>{s.value}</p>
+                  <p style={{ fontSize: '10px', color: TEXT_3, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>{s.label}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Habits list */}
+          {/* Habits */}
           <section>
-            <p style={{ ...G.subLabel, marginBottom: '16px' }}>Habits</p>
+            <p style={{ ...sectionLabel, marginBottom: '16px' }}>Habits</p>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {habits.map((h, i) => {
                 const pct = Math.round((h.done / h.target) * 100)
                 const onTrack = pct >= 100
-                const barColor = onTrack ? 'oklch(0.74 0.06 150)' : pct >= 50 ? '#c9a84c' : 'rgba(255,255,255,0.2)'
-                const valueColor = onTrack ? 'oklch(0.74 0.06 150)' : pct >= 50 ? '#c9a84c' : 'rgba(240,237,232,0.35)'
+                const barColor = onTrack ? SAGE : pct >= 50 ? GOLD : 'oklch(1 0 0 / 0.2)'
+                const valueColor = onTrack ? SAGE : pct >= 50 ? GOLD : TEXT_3
                 return (
-                  <li key={i} style={{ padding: '10px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+                  <li key={i} style={{ padding: '11px 0', borderTop: i === 0 ? 'none' : '1px solid oklch(1 0 0 / 0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                       <span style={{ fontSize: '15px', flexShrink: 0, lineHeight: 1 }}>{h.emoji}</span>
-                      <p style={{ flex: 1, fontSize: '14px', color: 'rgba(240,237,232,0.9)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</p>
+                      <p style={{ flex: 1, fontSize: '14px', color: TEXT_1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</p>
                       <span style={{ fontSize: '11px', fontWeight: 600, flexShrink: 0, minWidth: '36px', textAlign: 'right', color: valueColor }}>
                         {h.done}/{h.target}
                       </span>
                     </div>
-                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '4px', background: 'oklch(1 0 0 / 0.08)', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${Math.min(100, pct)}%`, background: barColor, borderRadius: '4px' }} />
                     </div>
                   </li>
@@ -252,21 +263,21 @@ function WeeklyReviewMock() {
         </div>
       </div>
 
-      {/* Goals card */}
-      <div style={{ ...G.cardSm, padding: '26px 28px' }}>
-        <p style={{ ...G.subLabel, marginBottom: '16px' }}>Goals</p>
+      {/* ── Goals — full width ── */}
+      <div style={{ ...G.cardSm, padding: '24px 26px', marginBottom: '32px' }}>
+        <p style={{ ...sectionLabel, marginBottom: '16px' }}>Goals</p>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {goals.map((g, i) => (
             <li key={i}>
-              <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '17px', color: '#f0ede8', margin: '0 0 8px', lineHeight: 1.3 }}>{g.title}</p>
-              <div style={{ height: '2px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginBottom: '6px' }}>
-                <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct > 0 ? '#c9a84c' : 'rgba(255,255,255,0.25)', borderRadius: '2px' }} />
+              <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '17px', color: TEXT_0, margin: '0 0 8px', lineHeight: 1.3 }}>{g.title}</p>
+              <div style={{ height: '2px', background: 'oklch(1 0 0 / 0.08)', borderRadius: '2px', overflow: 'hidden', marginBottom: '6px' }}>
+                <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct > 0 ? GOLD : 'oklch(1 0 0 / 0.25)', borderRadius: '2px' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px' }}>
-                <p style={{ fontSize: '13px', color: 'rgba(240,237,232,0.35)', fontStyle: 'italic', fontFamily: 'var(--font-serif, Georgia, serif)', margin: 0, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '13px', color: TEXT_3, fontStyle: 'italic', fontFamily: 'var(--font-serif, Georgia, serif)', margin: 0, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {g.next ? `Next — ${g.next}` : ''}
                 </p>
-                <span style={{ fontSize: '11px', color: g.pct > 0 ? '#c9a84c' : 'rgba(240,237,232,0.35)', opacity: g.pct > 0 ? 0.9 : 0.5, flexShrink: 0 }}>
+                <span style={{ fontSize: '11px', color: g.pct > 0 ? GOLD : TEXT_3, opacity: g.pct > 0 ? 0.9 : 0.5, flexShrink: 0 }}>
                   {g.pct}%
                 </span>
               </div>
@@ -275,13 +286,13 @@ function WeeklyReviewMock() {
         </ul>
       </div>
 
-      {/* Weekly Reflection */}
-      <div>
-        <p style={{ ...G.subLabel, marginBottom: '16px' }}>Weekly Reflection from Locus</p>
-        <div className="lc-review-reflect" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      {/* ── Weekly Reflection from Locus ── */}
+      <section>
+        <p style={{ ...sectionLabel, marginBottom: '20px' }}>Weekly Reflection from Locus</p>
+        <div className="lc-review-reflect" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           {[
-            { items: worked, color: 'oklch(0.74 0.06 150)', icon: '↑', title: 'What worked' },
-            { items: adjust, color: '#c9a84c', icon: '↻', title: 'What to adjust' },
+            { items: worked, color: SAGE, icon: '↑', title: 'What worked' },
+            { items: adjust, color: GOLD, icon: '↻', title: 'What to adjust' },
           ].map((col, i) => (
             <div key={i} style={{ ...G.cardSm, padding: '22px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -293,15 +304,15 @@ function WeeklyReviewMock() {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {col.items.map((item, j) => (
                   <li key={j} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '11px', color: col.color, opacity: 0.6, marginTop: '6px', flexShrink: 0 }}>—</span>
-                    <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '16px', fontWeight: 300, lineHeight: 1.65, color: 'rgba(240,237,232,0.9)', margin: 0 }}>{item}</p>
+                    <span style={{ fontSize: '11px', color: col.color, opacity: 0.6, marginTop: '3px', flexShrink: 0 }}>—</span>
+                    <p style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '17px', fontWeight: 300, lineHeight: 1.75, color: TEXT_0, margin: 0 }}>{item}</p>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   )
 }
