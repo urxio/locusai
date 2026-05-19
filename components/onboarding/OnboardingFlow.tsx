@@ -53,6 +53,24 @@ const labelStyle: React.CSSProperties = {
 }
 const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer', appearance: 'none' }
 
+/* ── Locus petal SVG (matches favicon) ── */
+const PetalSvg = ({ size, fill = '#131110' }: { size: number; fill?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100">
+    <g fill={fill} opacity="0.65">
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(45,50,50)"/>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(135,50,50)"/>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(225,50,50)"/>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(315,50,50)"/>
+    </g>
+    <g fill={fill}>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50"/>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(90,50,50)"/>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(180,50,50)"/>
+      <path d="M50,50 C36,46 34,19 50,7 C66,19 64,46 50,50" transform="rotate(270,50,50)"/>
+    </g>
+  </svg>
+)
+
 /* ── Locus avatar ── */
 const LocusIcon = () => (
   <div style={{
@@ -61,13 +79,7 @@ const LocusIcon = () => (
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     boxShadow: '0 1px 10px rgba(212,168,83,0.25)', marginTop: '1px',
   }}>
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="#131110">
-      <circle cx="8" cy="8" r="3"/>
-      <circle cx="8" cy="2" r="1.2"/>
-      <circle cx="8" cy="14" r="1.2"/>
-      <circle cx="2" cy="8" r="1.2"/>
-      <circle cx="14" cy="8" r="1.2"/>
-    </svg>
+    <PetalSvg size={18} />
   </div>
 )
 
@@ -262,7 +274,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
     <div style={{ width: '100%', maxWidth: '540px', animation: 'fadeUp 0.4s var(--ease) both' }}>
       <div style={{ textAlign: 'center', marginBottom: '28px' }}>
         <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 4px 20px rgba(212,168,83,0.3)' }}>
-          <svg width="22" height="22" viewBox="0 0 16 16" fill="#131110"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="2" r="1.2"/><circle cx="8" cy="14" r="1.2"/><circle cx="2" cy="8" r="1.2"/><circle cx="14" cy="8" r="1.2"/></svg>
+          <PetalSvg size={28} />
         </div>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400, color: 'var(--text-0)', lineHeight: 1.2 }}>
           {isRedo ? 'Update your profile' : 'Meet Jaune'}
@@ -286,13 +298,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 2px 8px rgba(212,168,83,0.25)',
           }}>
-            <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
-              <circle cx="8" cy="8" r="3"/>
-              <circle cx="8" cy="2" r="1.2"/>
-              <circle cx="8" cy="14" r="1.2"/>
-              <circle cx="2" cy="8" r="1.2"/>
-              <circle cx="14" cy="8" r="1.2"/>
-            </svg>
+            <PetalSvg size={17} />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1 }}>Jaune</div>
@@ -409,7 +415,7 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '28px' }}>
         <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 4px 20px rgba(212,168,83,0.3)' }}>
-          <svg width="22" height="22" viewBox="0 0 16 16" fill="#131110"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="2" r="1.2"/><circle cx="8" cy="14" r="1.2"/><circle cx="2" cy="8" r="1.2"/><circle cx="14" cy="8" r="1.2"/></svg>
+          <PetalSvg size={28} />
         </div>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400, color: 'var(--text-0)' }}>Here&apos;s what I&apos;ve got</div>
         <div style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '6px' }}>Review and edit before launching. You can always change this later.</div>
