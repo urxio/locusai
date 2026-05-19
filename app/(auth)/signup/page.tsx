@@ -85,6 +85,11 @@ export default function SignupPage() {
       },
     })
     if (error) { setError(error.message); setLoading(false); return }
+    // Supabase returns a user with no identities when the email is already registered
+    if (data.user && data.user.identities?.length === 0) {
+      setError('An account with this email already exists. Please sign in instead.')
+      setLoading(false); return
+    }
     if (data.session) { window.location.href = '/onboarding'; return }
     setDone(true); setLoading(false)
   }
