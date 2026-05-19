@@ -116,9 +116,25 @@ export default function LoginPage() {
     setLoading(true); resetError()
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError('Incorrect email or password.')
-      else if (!data?.session) setError('Sign-in failed. Please try again.')
-      else window.location.href = '/checkin'
+      if (error) {
+        // Check if the email is registered at all (signInWithOtp fails for unknown emails)
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          email, options: { shouldCreateUser: false },
+        })
+        const notFound = otpError && (
+          otpError.message.toLowerCase().includes('user not found') ||
+          otpError.message.toLowerCase().includes('no user') ||
+          otpError.message.toLowerCase().includes('email not found') ||
+          otpError.status === 422
+        )
+        setError(notFound
+          ? 'No account found with that email. Please create one.'
+          : 'Incorrect email or password.')
+      } else if (!data?.session) {
+        setError('Sign-in failed. Please try again.')
+      } else {
+        window.location.href = '/checkin'
+      }
     } catch {
       setError('Something went wrong. Please check your connection and try again.')
     } finally { setLoading(false) }
