@@ -272,28 +272,69 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
         </div>
       </div>
 
-      <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-md)', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 40px rgba(0,0,0,0.25)' }}>
-        <div ref={messagesBoxRef} style={{ height: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-0)', scrollbarWidth: 'none' }}>
+      <div style={{ background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', borderRadius: '20px', overflow: 'hidden', boxShadow: 'var(--glass-card-shadow)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+
+        {/* Identity bar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '13px 16px', flexShrink: 0,
+          borderBottom: '1px solid var(--glass-card-border-subtle)',
+        }}>
+          <div style={{
+            width: '30px', height: '30px', borderRadius: '9px', flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--gold) 0%, #a07830 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(212,168,83,0.25)',
+          }}>
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="#131110">
+              <circle cx="8" cy="8" r="3"/>
+              <circle cx="8" cy="2" r="1.2"/>
+              <circle cx="8" cy="14" r="1.2"/>
+              <circle cx="2" cy="8" r="1.2"/>
+              <circle cx="14" cy="8" r="1.2"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-0)', lineHeight: 1 }}>Jaune</div>
+            <div style={{ fontSize: '11px', color: 'var(--sage)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--sage)', display: 'inline-block', flexShrink: 0 }} />
+              {chatDone ? 'preparing your summary' : 'listening'}
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div ref={messagesBoxRef} style={{ height: '360px', overflowY: 'auto', display: 'flex', flexDirection: 'column', scrollbarWidth: 'none' }}>
           <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 20px 16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px 16px 12px' }}>
             {messages.map((msg, i) => {
               const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant'
               const showCursor = isLastAssistant && streaming && !msg.content
               if (msg.role === 'assistant') return (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <LocusIcon />
-                  <div style={{ fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.65, paddingTop: '4px', maxWidth: 'calc(100% - 42px)' }}>
-                    {showCursor
-                      ? <span style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', paddingTop: '6px' }}>
-                          {[0,180,360].map(d => <span key={d} style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${d}ms` }} />)}
-                        </span>
-                      : msg.content}
-                  </div>
+                <div key={i} style={{ display: 'flex', justifyContent: 'flex-start', maxWidth: '88%' }}>
+                  {showCursor
+                    ? <div style={{ display: 'flex', gap: '5px', alignItems: 'center', padding: '6px 0' }}>
+                        {[0, 150, 300].map(delay => (
+                          <span key={delay} style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--text-3)', animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${delay}ms` }} />
+                        ))}
+                      </div>
+                    : <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', lineHeight: 1.55, color: 'oklch(0.93 0.012 80 / 0.95)', margin: 0 }}>
+                        {msg.content}
+                      </p>
+                  }
                 </div>
               )
               return (
                 <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <div style={{ maxWidth: '75%', padding: '9px 14px', borderRadius: '16px 16px 4px 16px', background: 'var(--gold-dim)', border: '1px solid rgba(212,168,83,0.18)', fontSize: '14px', color: 'var(--text-0)', lineHeight: 1.6 }}>
+                  <div style={{
+                    maxWidth: '78%', padding: '11px 16px',
+                    borderRadius: '18px 4px 18px 18px',
+                    background: 'oklch(0.26 0.012 60 / 0.70)',
+                    border: '1px solid oklch(1 0 0 / 0.10)',
+                    fontSize: '15px', color: 'var(--text-0)', lineHeight: 1.55,
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                  }}>
                     {msg.content}
                   </div>
                 </div>
@@ -308,25 +349,52 @@ export default function OnboardingFlow({ userName, isRedo }: { userName: string;
             <div style={{ height: '1px' }} />
           </div>
         </div>
-        <div style={{ height: '1px', background: 'var(--border)' }} />
-        {!chatDone ? (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', padding: '12px 14px', background: 'var(--bg-1)' }}>
-            <textarea ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder={streaming ? '' : 'Type your reply…'} disabled={streaming} rows={1}
-              style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--text-0)', resize: 'none', lineHeight: 1.5, overflow: 'hidden', paddingTop: '2px' }} />
-            <button onClick={handleSend} disabled={!canSend} aria-label="Send"
-              style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, background: canSend ? 'var(--gold)' : 'var(--bg-4)', border: 'none', color: canSend ? '#131110' : 'var(--text-3)', cursor: canSend ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s, color 0.15s', fontSize: '16px', fontWeight: 700, fontFamily: 'inherit' }}>↑</button>
-          </div>
-        ) : (
-          <div style={{ padding: '13px 20px', background: 'var(--bg-1)', fontSize: '13px', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold-dim)', border: '1px solid var(--gold)', display: 'inline-block' }} />
-            Almost done…
-          </div>
-        )}
+
+        {/* Input bar */}
+        <div style={{ flexShrink: 0, borderTop: '1px solid var(--glass-card-border-subtle)' }}>
+          {error && (
+            <div style={{ fontSize: '13px', color: '#c08060', margin: '10px 16px 0', padding: '10px 14px', background: 'rgba(192,128,96,0.08)', border: '1px solid rgba(192,128,96,0.2)', borderRadius: '10px' }}>
+              {error}
+            </div>
+          )}
+          {!chatDone ? (
+            <>
+              <div className="glass-card" style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', margin: '12px 16px', padding: '12px 16px', borderRadius: '9999px' }}>
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder={streaming ? '' : 'Type your reply…'}
+                  disabled={streaming}
+                  rows={1}
+                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-sans)', fontSize: '15px', color: 'var(--text-0)', resize: 'none', lineHeight: 1.5, overflow: 'hidden', padding: '4px 0' }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!canSend}
+                  aria-label="Send"
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0, background: canSend ? 'var(--gold)' : 'oklch(1 0 0 / 0.08)', border: 'none', color: canSend ? '#131110' : 'var(--text-3)', cursor: canSend ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s, opacity 0.2s', alignSelf: 'flex-end', opacity: canSend ? 1 : 0.35 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 13V3M3 8l5-5 5 5"/>
+                  </svg>
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', padding: '0 16px 10px', opacity: 0.55 }}>
+                Enter to send · Shift+Enter for new line
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold-dim)', border: '1px solid var(--gold)', display: 'inline-block' }} />
+              Almost done…
+            </div>
+          )}
+        </div>
       </div>
 
-      {error && <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(200,80,60,0.08)', border: '1px solid rgba(200,80,60,0.18)', fontSize: '13px', color: '#e07060' }}>{error}</div>}
-      {!chatDone && <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '10px', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</div>}
-      <div style={{ textAlign: 'center', marginTop: '14px' }}>
+      <div style={{ textAlign: 'center', marginTop: '16px' }}>
         <a href="/checkin" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>{isRedo ? '← Back to brief' : 'Skip for now →'}</a>
       </div>
     </div>
