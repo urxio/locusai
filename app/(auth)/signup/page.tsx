@@ -81,7 +81,7 @@ export default function SignupPage() {
       email, password,
       options: {
         data: { name },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/email-confirmed`,
       },
     })
     if (error) { setError(error.message); setLoading(false); return }

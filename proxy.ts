@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/login', '/signup', '/auth/callback', '/landing', '/privacy']
+  const publicPaths = ['/login', '/signup', '/auth/callback', '/landing', '/privacy', '/email-confirmed']
   const isPublic = pathname === '/' || publicPaths.some(p => pathname.startsWith(p))
   // Onboarding is authenticated-only but not a "public" auth page
   const isOnboarding = pathname.startsWith('/onboarding')
