@@ -140,13 +140,13 @@ export default function HabitCard({ habit, loggedDates, streak, colorIndex, last
       {/* ── Top row: icon · name · calendar · streak/actions ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
 
-        {/* Circular icon — click to toggle today */}
+        {/* Rounded-square icon — click to toggle today */}
         <button
           onClick={() => onToggle(today)}
           title={todayDone ? 'Mark undone' : 'Mark done today'}
           disabled={pendingSet.has(`${habit.id}:${today}`)}
           style={{
-            width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+            width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
             background: todayDone ? habitColor : `${habitColor}22`,
             border: `1.5px solid ${todayDone ? habitColor : `${habitColor}44`}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
