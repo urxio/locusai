@@ -195,21 +195,21 @@ export default function LoginPage() {
         {/* Card */}
         <div style={{
           width: '100%', maxWidth: '400px',
-          background: 'rgba(14,12,10,0.82)',
-          backdropFilter: 'blur(28px)',
-          WebkitBackdropFilter: 'blur(28px)',
+          background: 'var(--glass-card-bg)',
+          backdropFilter: 'blur(32px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(180%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid var(--glass-card-border)',
           padding: '36px 32px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.50)',
+          boxShadow: 'var(--glass-card-shadow)',
         }}>
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon.svg" alt="Locus" width={34} height={34} style={{ borderRadius: '9px', display: 'block' }} />
+            <img src="/icon.svg" alt="Jaune" width={34} height={34} style={{ borderRadius: '9px', display: 'block' }} />
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: C.white, letterSpacing: '-0.01em', lineHeight: 1 }}>Locus</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: C.white, letterSpacing: '-0.01em', lineHeight: 1 }}>Jaune</div>
               <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.16em', color: C.muted, marginTop: '2px' }}>Life OS</div>
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function LoginPage() {
                 Welcome back
               </h1>
               <p style={{ fontSize: '13.5px', color: C.muted, lineHeight: 1.6, margin: '0 0 28px' }}>
-                Sign in to your Locus account.
+                Sign in to your Jaune account.
               </p>
 
               <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
