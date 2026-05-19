@@ -375,17 +375,27 @@ input:focus,    input:focus-visible {
   z-index: 1;
 }
 
-/* ── OS ICON DOCK (top bar) ── */
+/* ── OS ICON DOCK (top bar) — floats over content so cards scroll behind ── */
 .app-sidebar {
-  width: 100%;
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
   height: 60px;
-  flex-shrink: 0;
   display: flex;
   flex-direction: row;
   align-items: center;
-  position: relative;
   padding: 0 4px;
   gap: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Re-enable pointer events on actual interactive descendants */
+.app-sidebar a,
+.app-sidebar button,
+.app-sidebar > div:not(:empty) {
+  pointer-events: auto;
 }
 
 .app-main {
@@ -396,6 +406,7 @@ input:focus,    input:focus-visible {
   position: relative;
   z-index: 1;
   min-height: 0;
+  padding-bottom: 84px;
 }
 
 /* ── RESPONSIVE LAYOUT HELPERS ── */
