@@ -203,7 +203,7 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 function getWelcomeMessage() {
   const day = DAYS[new Date().getDay()]
   return (
-    `Welcome. I’m Jaune. You arrived on a ${day} — good time to start. ` +
+    `Welcome. I’m Jaune. You arrived on a ${day} — good time to start. ✨ ` +
     "I’m your daily intelligence — I learn your rhythm from check-ins, " +
     "hold the shape of your goals and habits, and each morning I write you a brief: what " +
     "deserves your attention, what the pattern in your week is telling you, and what can safely wait."
@@ -213,23 +213,23 @@ function getWelcomeMessage() {
 const LOCUS_MESSAGES = [
   getWelcomeMessage(),
 
-  "The habits you just saw are small on purpose. Eleven days of deep work, nine without " +
+  "The habits you just saw are small on purpose. Eleven days of deep work 🧠, nine without " +
   "the phone before 9am — those streaks don’t happen by accident. They happen because " +
   "someone decided to notice. That’s what I help you do, every single morning.",
 
   "Most tools ask you to do more. Jaune asks you to do the right thing — which is usually " +
   "a shorter list. The goals here aren’t aspirations. They’re commitments with steps, " +
-  "timelines, and a pace. I track whether they’re on track so you don’t carry that weight alone.",
+  "timelines, and a pace. I track whether they’re on track so you don’t carry that weight alone. 🎯",
 
-  "Your energy levels tell a story most people never read. A 7 on Monday, a 4 on Thursday — " +
+  "Your energy levels tell a story most people never read. A 7 on Monday, a 4 on Thursday ⚡ — " +
   "that’s not random, it’s a pattern. I learn it, name it, and fold it into your brief. " +
   "That’s what makes the advice feel like it actually knows you.",
 
   "The brief isn’t a to-do list. It’s a judgment — made with everything I know about your " +
-  "energy, your habits, your goals, and what you’ve been quietly avoiding. " +
+  "energy, your habits, your goals, and what you’ve been quietly avoiding. 🔍 " +
   "When you sign in, it’s built from your actual life, not example data.",
 
-  "Clarity is a habit. The people who use Jaune don’t become more productive — they become " +
+  "Clarity is a habit. 🌿 The people who use Jaune don’t become more productive — they become " +
   "more deliberate. There’s a real difference. " +
   "Sign in and find out what your week actually looks like when someone’s paying attention.",
 ]
