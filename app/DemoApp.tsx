@@ -198,10 +198,20 @@ function useLiveClock() {
   return now
 }
 
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+function getWelcomeMessage() {
+  const day = DAYS[new Date().getDay()]
+  return (
+    `Welcome. I’m Jaune. You arrived on a ${day} — good time to start. ` +
+    "I’m your daily intelligence — I learn your rhythm from check-ins, " +
+    "hold the shape of your goals and habits, and each morning I write you a brief: what " +
+    "deserves your attention, what the pattern in your week is telling you, and what can safely wait."
+  )
+}
+
 const LOCUS_MESSAGES = [
-  "Welcome to Jaune. I’m your daily intelligence — I learn your rhythm from check-ins, " +
-  "hold the shape of your goals and habits, and each morning I write you a brief: what " +
-  "deserves your attention, what the pattern in your week is telling you, and what can safely wait.",
+  getWelcomeMessage(),
 
   "The habits you just saw are small on purpose. Eleven days of deep work, nine without " +
   "the phone before 9am — those streaks don’t happen by accident. They happen because " +
