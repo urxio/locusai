@@ -7,6 +7,28 @@ import { localDateStr } from '@/lib/utils/date'
 import type { CheckIn } from '@/lib/types'
 import FollowupQuestion from './FollowupQuestion'
 
+const FOLLOWUP_DONE_KEY = 'locus_followupDone'
+type StoredFollowupDone = { date: string }
+
+function readFollowupDone(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const raw = localStorage.getItem(FOLLOWUP_DONE_KEY)
+    if (!raw) return false
+    const stored: StoredFollowupDone = JSON.parse(raw)
+    const today = new Date().toISOString().split('T')[0]
+    return stored.date === today
+  } catch { return false }
+}
+
+function saveFollowupDone() {
+  if (typeof window === 'undefined') return
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    localStorage.setItem(FOLLOWUP_DONE_KEY, JSON.stringify({ date: today }))
+  } catch {}
+}
+
 const BLOCKERS = [
   'Unclear priorities', 'Low energy', 'Too many meetings',
   'Waiting on others', 'Personal stress', 'Lack of clarity',
@@ -34,8 +56,8 @@ export default function CheckinFlow({
   const router = useRouter()
 
   const [followupQ, setFollowupQ] = useState<string | null>(null)
-  const [followupDone, setFollowupDone] = useState(false)
-  const followupFetchedRef = useRef(false)
+  const [followupDone, setFollowupDone] = useState(() => readFollowupDone())
+  const followupFetchedRef = useRef(readFollowupDone())
 
   useEffect(() => {
     if (step !== 'done' || followupFetchedRef.current || !moodNote.trim()) return
@@ -139,11 +161,12 @@ export default function CheckinFlow({
             followupFetchedRef.current = false
             setFollowupQ(null)
             setFollowupDone(false)
+            localStorage.removeItem(FOLLOWUP_DONE_KEY)
           }}
           onOpenJournal={onOpenJournal}
           followupQ={followupQ}
           followupDone={followupDone}
-          setFollowupDone={setFollowupDone}
+          setFollowupDone={(v: boolean) => { setFollowupDone(v); if (v) saveFollowupDone() }}
         />
       )}
     </div>
