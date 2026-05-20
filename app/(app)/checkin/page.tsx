@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getTodayCheckin } from '@/lib/db/checkins'
 import { getTodayBrief, getRecentBriefs } from '@/lib/db/briefs'
 import { readUserMemory } from '@/lib/ai/memory'
+import { getUserTimezone } from '@/lib/db/users'
+import { dateInTz } from '@/lib/utils/date'
 import CheckinTabs from '@/components/checkin/CheckinTabs'
 
 export const dynamic = 'force-dynamic'
@@ -11,12 +13,16 @@ export default async function CheckinPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [existing, memory, todayBrief, pastBriefs] = await Promise.all([
+  const [existing, memory, todayBrief, pastBriefs, tz] = await Promise.all([
     getTodayCheckin(user.id),
     readUserMemory(user.id),
     getTodayBrief(user.id),
     getRecentBriefs(user.id, 14),
+    getUserTimezone(user.id),
   ])
+
+  const today = dateInTz(tz)
+  const followupAlreadyDone = memory?.checkin_followup_dismissed_date === today
 
   return (
     <CheckinTabs
@@ -24,6 +30,7 @@ export default async function CheckinPage() {
       memory={memory}
       hasBrief={!!todayBrief}
       pastBriefs={pastBriefs}
+      followupAlreadyDone={followupAlreadyDone}
     />
   )
 }

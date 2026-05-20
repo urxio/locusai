@@ -11,15 +11,16 @@ import type { UserMemory } from '@/lib/ai/memory'
 export type Tab = 'checkin' | 'journal'
 
 type Props = {
-  existingCheckin: CheckIn | null
-  memory?:         UserMemory | null
-  hasBrief?:       boolean
-  pastBriefs?:     Brief[]
+  existingCheckin:    CheckIn | null
+  memory?:            UserMemory | null
+  hasBrief?:          boolean
+  pastBriefs?:        Brief[]
+  followupAlreadyDone?: boolean
 }
 
 export default function CheckinTabs({
   existingCheckin,
-  memory, hasBrief = false, pastBriefs = [],
+  memory, hasBrief = false, pastBriefs = [], followupAlreadyDone = false,
 }: Props) {
   const router = useRouter()
   const [briefReady, setBriefReady] = useState(hasBrief || !!existingCheckin)
@@ -36,6 +37,7 @@ export default function CheckinTabs({
         existingCheckin={existingCheckin}
         onCheckinSaved={handleCheckinSaved}
         onOpenJournal={() => router.push('/journal')}
+        followupAlreadyDone={followupAlreadyDone}
       />
 
       {briefReady && (

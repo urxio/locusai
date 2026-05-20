@@ -69,6 +69,8 @@ export type UserMemory = {
   }
   // Habit audit dismissals — { 'YYYY-MM-DD': ['habitId', ...] } — cross-device sync
   audit_dismissals?: Record<string, string[]>
+  // Date (YYYY-MM-DD local) when the check-in follow-up question was answered or skipped
+  checkin_followup_dismissed_date?: string
   // Narrative summaries of each day's check-in conversation — last 30 days
   daily_summaries?: Array<{
     date: string         // YYYY-MM-DD

@@ -26,6 +26,7 @@ export async function saveClarifyingAnswer(
 
   await patchUserMemory(user.id, {
     clarifying_qa: updatedQA,
+    checkin_followup_dismissed_date: briefDate,
     pending_clarifications: remainingQuestions.length
       ? { ...pending!, questions: remainingQuestions }
       : undefined,
@@ -47,4 +48,11 @@ export async function skipClarifyingQuestion(question: string): Promise<void> {
       ? { ...pending, questions: remainingQuestions }
       : undefined,
   })
+}
+
+export async function dismissCheckinFollowup(localDate: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await patchUserMemory(user.id, { checkin_followup_dismissed_date: localDate })
 }

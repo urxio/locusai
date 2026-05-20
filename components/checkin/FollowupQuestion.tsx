@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef, useEffect } from 'react'
-import { saveClarifyingAnswer } from '@/app/actions/clarifying-answer'
+import { saveClarifyingAnswer, dismissCheckinFollowup } from '@/app/actions/clarifying-answer'
 import { localDateStr } from '@/lib/utils/date'
 
 type Props = {
@@ -35,6 +35,7 @@ export default function FollowupQuestion({ question, context, onDone }: Props) {
   }
 
   const handleSkip = () => {
+    dismissCheckinFollowup(localDateStr()).catch(() => {})
     onDone()
   }
 

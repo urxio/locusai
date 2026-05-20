@@ -41,10 +41,12 @@ export default function CheckinFlow({
   existingCheckin,
   onCheckinSaved,
   onOpenJournal,
+  followupAlreadyDone = false,
 }: {
   existingCheckin: CheckIn | null
   onCheckinSaved?: () => void
   onOpenJournal?: () => void
+  followupAlreadyDone?: boolean
 }) {
   const [step, setStep] = useState<Step>(existingCheckin ? 'done' : 1)
   const [energy, setEnergy] = useState(existingCheckin?.energy_level ?? 7)
@@ -56,8 +58,8 @@ export default function CheckinFlow({
   const router = useRouter()
 
   const [followupQ, setFollowupQ] = useState<string | null>(null)
-  const [followupDone, setFollowupDone] = useState(() => readFollowupDone())
-  const followupFetchedRef = useRef(readFollowupDone())
+  const [followupDone, setFollowupDone] = useState(() => followupAlreadyDone || readFollowupDone())
+  const followupFetchedRef = useRef(followupAlreadyDone || readFollowupDone())
 
   useEffect(() => {
     if (step !== 'done' || followupFetchedRef.current || !moodNote.trim()) return
